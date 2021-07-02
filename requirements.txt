@@ -1,0 +1,5 @@
+discord
+python-dotenv
+aiohttp
+asyncio_dgram
+dnspython
