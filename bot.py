@@ -317,7 +317,8 @@ class StatusBot(discord.Client):
         config = self.get_guild_config(message.guild.id)
         if 'stopallowed' in config:
             await message.channel.send(f'Stopping...')
-            raise KeyboardInterrupt
+##            raise KeyboardInterrupt
+            await self.close()
         return await message.channel.send(f'You not have privileges to run this command.')
     
     async def tryupdate(self, message):
@@ -330,7 +331,8 @@ class StatusBot(discord.Client):
                 for key in files:
                     path = files[key]
                     data = await get_github_file(self.loop, path)
-                    writeFile(key, data)
+                    filename = os.path.join(self.rootdir, key)
+                    writeFile(filename, data)
                     await message.channel.send(f'File updated: "{key}".')
                 await message.channel.send('Done')
             return await message.channel.send(f'No update required.')
