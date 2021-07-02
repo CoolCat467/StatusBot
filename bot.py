@@ -211,7 +211,9 @@ class StatusBot(discord.Client):
         self.loop = eventloop
         self.pingers = {}
         self.rootdir = os.path.split(__file__)[0]
-        self.commands = {'setoption': self.setoption,
+        self.commands = {'stop': self.stop,
+                         'tryupdate': self.tryupdate,
+                         'setoption': self.setoption,
                          'getoption': self.getoption,
                          'help': self.help}
         super().__init__(*args, **kwargs)
@@ -314,9 +316,9 @@ class StatusBot(discord.Client):
     async def stop(self, message):
         config = self.get_guild_config(message.guild.id)
         if 'stopallowed' in config:
-            await message.channel.send(f'i dew it')
+            await message.channel.send(f'Stopping...')
             raise KeyboardInterrupt
-        return await message.channel.send(f'You not hav provilages')
+        return await message.channel.send(f'You not have privileges to run this command.')
     
     async def tryupdate(self, message):
         config = self.get_guild_config(message.guild.id)
@@ -329,11 +331,10 @@ class StatusBot(discord.Client):
                     path = files[key]
                     data = await get_github_file(self.loop, path)
                     writeFile(key, data)
-                    await message.channel.send(f'file: {key}, {path}')
+                    await message.channel.send(f'File updated: "{key}".')
                 await message.channel.send('Done')
             return await message.channel.send(f'No update required.')
-        return await message.channel.send(f'You not hav provilages')
-##                await message.channel.send(f'Files to update:\n{
+        return await message.channel.send(f'You not have privileges to run this command.')
     
     async def getoption(self, message):
         "Send message with value of option given in this guild's config."
