@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/bin/bash
 
 cd ~/Desktop/Bots
 python3 -m venv StatusBot
