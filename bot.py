@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -40,6 +40,10 @@ import update
 # file line 2 is "DISCORD_TOKEN=XXXXX"
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+
+intents = discord.Intents(messages=True,
+                          guilds=True,
+                          status=True)
 
 def writeFile(filename, data):
     "Write data to file."
@@ -325,6 +329,7 @@ class StatusBot(discord.Client):
         config = self.get_guild_config(message.guild.id)
         if 'updateallowed' in config:
             version = await get_github_file(self.loop, 'version.txt')
+            return await message.channel.send(f'Online version: {version}\nCurrent version: {__version__}')
             if version != __version__:
                 files = await get_github_file(self.loop, 'files.json')
                 files = json.loads(files)
