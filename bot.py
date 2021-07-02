@@ -41,9 +41,9 @@ import update
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-intents = discord.Intents(messages=True,
-                          guilds=True,
-                          status=True)
+# intents = discord.Intents(messages=True,
+#                           guilds=True,
+#                           status=True)
 
 def writeFile(filename, data):
     "Write data to file."
@@ -331,15 +331,19 @@ class StatusBot(discord.Client):
             version = await get_github_file(self.loop, 'version.txt')
             return await message.channel.send(f'Online version: {version}\nCurrent version: {__version__}')
             if version != __version__:
+                await message.channel.send(f'Retrieving file list...')
+                async def update_file(fname, gitpath):
+                    data = await get_github_file(self.loop, gitpath)
+                    filename = os.path.join(self.rootdir, fname)
+                    writeFile(filename, data)
                 files = await get_github_file(self.loop, 'files.json')
                 files = json.loads(files)
-                for key in files:
-                    path = files[key]
-                    data = await get_github_file(self.loop, path)
-                    filename = os.path.join(self.rootdir, key)
-                    writeFile(filename, data)
-                    await message.channel.send(f'File updated: "{key}".')
-                await message.channel.send('Done')
+                count = len(tuple(set(files.keys())))
+                await message.channel.send(f'{count} will now be updated. Please wait.')
+
+                coros = [update_file(key, files[key]) for key in files]
+                await asyncio.gather(*coros)
+                return await message.channel.send('Done. Bot will need to be restarted to apply changes.')
             return await message.channel.send(f'No update required.')
         return await message.channel.send(f'You not have privileges to run this command.')
     
