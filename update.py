@@ -4,7 +4,7 @@
 
 # Programmed by CoolCat467
 
-__title__ = 'TITLE'
+__title__ = 'Update with Github'
 __author__ = 'CoolCat467'
 __version__ = '0.0.0'
 __ver_major__ = 0
