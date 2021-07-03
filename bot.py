@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -215,8 +215,9 @@ class StatusBot(discord.Client):
         self.loop = eventloop
         self.pingers = {}
         self.rootdir = os.path.split(__file__)[0]
-        self.commands = {'stop': self.stop,
-                         'tryupdate': self.tryupdate,
+        self.commands = {'getmyid': self.getmyid,
+                         'stop': self.stop,
+                         'update': self.update,
                          'setoption': self.setoption,
                          'getoption': self.getoption,
                          'help': self.help}
@@ -315,38 +316,51 @@ class StatusBot(discord.Client):
         print(f'Setting status to {name}: {details}')
         atype = discord.ActivityType.custom
         activity = discord.Activity(name=name, type=atype, details=details)
-        return await self.change_presence(activity=activity)
+        await self.change_presence(activity=activity)
+        return
+
+    async def getmyid(self, message):
+        return await message.channel.send(f'Your user id is "{message.author.id}".')
     
     async def stop(self, message):
         config = self.get_guild_config(message.guild.id)
-        if 'stopallowed' in config:
-            await message.channel.send(f'Stopping...')
-##            raise KeyboardInterrupt
-            await self.close()
-        return await message.channel.send(f'You not have privileges to run this command.')
-    
-    async def tryupdate(self, message):
-        config = self.get_guild_config(message.guild.id)
-        if 'updateallowed' in config:
-            version = await get_github_file(self.loop, 'version.txt')
-            return await message.channel.send(f'Online version: {version}\nCurrent version: {__version__}')
-            if version != __version__:
-                await message.channel.send(f'Retrieving file list...')
-                async def update_file(fname, gitpath):
-                    data = await get_github_file(self.loop, gitpath)
-                    filename = os.path.join(self.rootdir, fname)
-                    writeFile(filename, data)
-                files = await get_github_file(self.loop, 'files.json')
-                files = json.loads(files)
-                count = len(tuple(set(files.keys())))
-                await message.channel.send(f'{count} will now be updated. Please wait.')
+        if 'stopusers' in config:
+            if message.author.id in config['stopusers']:
+                await message.channel.send(f'Stopping...')
+                await self.close()
+            return await message.channel.send(f'You not have privileges to run this command.')
+        return await message.channel.send('No one in this guild has permission to run this command.')
 
-                coros = [update_file(key, files[key]) for key in files]
-                await asyncio.gather(*coros)
-                return await message.channel.send('Done. Bot will need to be restarted to apply changes.')
-            return await message.channel.send(f'No update required.')
-        return await message.channel.send(f'You not have privileges to run this command.')
-    
+    async def update(self, message):
+        config = self.get_guild_config(message.guild.id)
+        if 'updateusers' in config:
+            if message.author.id in config['updateusers']:
+                await message.channel.send('Retrieving version from github...')
+                version = await get_github_file(self.loop, 'version.txt')
+                vertext = f'Current: v{__version__}\nOnline: v{version}'
+                await message.channel.send(vertext)
+                # if version != __version__:
+                newvers = map(int, version.split('.'))
+                curvers = (__ver_minor__, __ver_minor__, __ver_patch__)
+                less = lambda x, y:x<y
+                if any((less(*xy) for xy in zip(newvers, curvers))):
+                    async def update_file(fname, gitpath):
+                        data = await get_github_file(self.loop, gitpath)
+                        filename = os.path.join(self.rootdir, fname)
+                        writeFile(filename, data)
+                    await message.channel.send(f'Retrieving file list...')
+                    files = await get_github_file(self.loop, 'files.json')
+                    files = json.loads(files)
+                    count = len(tuple(set(files.keys())))
+                    await message.channel.send(f'{count} files will now be updated. Please wait.')
+
+                    coros = [update_file(key, files[key]) for key in files]
+                    await asyncio.gather(*coros, loop=self.loop)
+                    return await message.channel.send('Done. Bot will need to be restarted to apply changes.')
+                return await message.channel.send(f'No update required.')
+            return await message.channel.send(f'You not have privileges to run this command.')
+        return await message.channel.send('No one in this guild has permission to run this command.')
+
     async def getoption(self, message):
         "Send message with value of option given in this guild's config."
         args = message.content.split(' ')[2:]
@@ -365,7 +379,7 @@ class StatusBot(discord.Client):
         text = f"{__title__}'s Valid Commands:\n{commands}"
         return await message.channel.send(text)
     
-    @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
+    # @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
     async def setoption(self, message):
         "Set a config option. Send message in message.channel on falure"
         args = message.content.split(' ')[2:]
@@ -400,14 +414,16 @@ class StatusBot(discord.Client):
     
     async def process_command_message(self, message):
         "Process new command message. Calls self.command[command](message)."
-        args = message.content.split(' ')[1:]
-        command = args[0].lower()
-        if command in self.commands:
-            await self.commands[command](message)
-        else:
-            await message.channel.send(f'Command not found, please enter a valid command. Use "help" to see valid commands.')
-        return
-    
+        err = f' Please enter a valid command. Use "{self.prefix} help" to see valid commands.'
+        content = message.content
+        if ' ' in content:
+            args = content.split(' ')[1:]
+            command = args[0].lower()
+            if command in self.commands:
+                return await self.commands[command](message)
+            return await message.channel.send('Command not found.'+err)
+        return await message.channel.send('No command given.'+err)
+
     async def on_guild_join(self, guild):
         "Evaluate guild."
         return await self.eval_guild(guild)
@@ -422,22 +438,26 @@ class StatusBot(discord.Client):
         # Skip messages from ourselves.
         if message.author == self.user:
             return
-        msg = message.content
-        
-        if msg.lower().startswith(self.prefix) and ' ' in msg:
-            await self.process_command_message(message)
+
+        if hasattr(message.channel, 'send'):
+            if hasattr(message.guild, 'id'):
+                msg = message.content
+                if msg.lower().startswith(self.prefix):
+                    return await self.process_command_message(message)
+                return
+            return await message.channel.send(f'{__title__} does not support non-guild channels.')
         return
     
-##    async def on_error(self, event, *args, **kwargs):
-##        "Log error and continue."
-##        if event == 'on_message':
-##            print(f'Unhandled message: {args[0]}')
-##        values = os.sys.exc_info()
-##        logpath = os.path.join(self.rootdir, 'log.txt')
-##        msg = '\n'.join(map(str, values))
-##        msg = '#'*8+'\n'+'Error Event:\n'+str(event)+'\n'+msg+'\n'+'#'*8
-##        appendFile(logpath, msg)
-##        return
+    # async def on_error(self, event, *args, **kwargs):
+    #     "Log error and continue."
+    #     if event == 'on_message':
+    #         print(f'Unhandled message: {args[0]}')
+    #     values = os.sys.exc_info()
+    #     logpath = os.path.join(self.rootdir, 'log.txt')
+    #     msg = '\n'.join(map(str, values))
+    #     msg = '#'*8+'\n'+'Error Event:\n'+str(event)+'\n'+msg+'\n'+'#'*8
+    #     appendFile(logpath, msg)
+    #     return
     
     async def close(self):
         "Tell guilds bot shutting down."
