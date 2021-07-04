@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 3
+__ver_patch__ = 4
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -347,7 +347,7 @@ class StatusBot(discord.Client):
                 newvers = map(int, version.split('.'))
                 curvers = (__ver_minor__, __ver_minor__, __ver_patch__)
                 less = lambda x, y:x<y
-                if any((less(*xy) for xy in zip(newvers, curvers))):
+                if any((less(*xy) for xy in zip(curvers, newvers))):
                     async def update_file(fname, gitpath):
                         data = await get_github_file(self.loop, gitpath)
                         filename = os.path.join(self.rootdir, fname)
