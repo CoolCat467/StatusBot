@@ -33,12 +33,17 @@ they entered the command in, except in the case that the channel does not suppor
 being writen to.
 
 ## Commands
-As of v0.0.2, these are the following commands:
+As of v0.0.4, these are the following commands:
 `help` - Display all valid commands.
 `setoption <name> <value>` - Set option <name> to <value> for the guild you are currently
-  talking to StatusBot in. Current settable options as of v0.0.2:
+  talking to StatusBot in. Current settable options as of v0.0.4:
    `address` - Address of the java editon minecraft server StatusBot should monitor
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
+  If your id is the same as OWNER_ID or your id is in `setoptionusers`, more options are available.
+  All of the following options take 'clear' or a user id to add to list as an argument.
+   `setoptionusers` - List of user IDs able to modify more advanced settings.
+   `updateusers` - List of user IDs able to run the update command.
+   `stopusers` - List of user IDs able to stop the bot.
 `getoption <name>` - Tell you the value of option <name>.
 `getmyid` - Tell the user who sent the message what their unique discord id is.
 `stop` - Stop the bot. If `looprun.sh` was used, this has the effect of restarting the bot.
@@ -47,8 +52,6 @@ As of v0.0.2, these are the following commands:
 `update` - Attempt to update the bot to the newest version using this github repository.
   NOTE: This command works nearly identically the same as `stop`, but uses the `updateusers`
   config value instead.
-
-Note: Config values for `stop` and `update` are unsettable with `setoption` at this time.
 
 ## Automatic messaging
 When StatusBot is connected to a guild and has it's `address` (and preferably also it's `channel`)
