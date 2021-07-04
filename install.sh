@@ -4,11 +4,11 @@
 cd ~/Desktop
 mkdir Bots
 cd Bots
-# remove if it exists
-# rm -r StatusBot
-mv StatusBot old
 git clone https://github.com/CoolCat467/StatusBot
-mv old/.env StatusBot/.env
 cd StatusBot
+touch .env
+echo "# .env" > .env
+echo "DISCORD_TOKEN=" >> .env
+nano .env
 chmod 755 *
 . looprun.sh
