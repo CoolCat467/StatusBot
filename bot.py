@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # StatusBot for Discord
 
-"""Status Bot for Discord using Python 3.9.5"""
+"""Status Bot for Discord using Python 3"""
 
 # Programmed by CoolCat467
 
@@ -90,7 +90,7 @@ async def get_github_file(loop, path):
     data = await update.get_file(loop, __title__, path)
     return data.decode('utf-8')
 
-#https://gist.github.com/akaIDIOT/48c2474bd606cd2422ca
+# https://gist.github.com/akaIDIOT/48c2474bd606cd2422ca
 def call_periodic(loop, interval, function, onexit=lambda:None, *args):
     "Return PeriodicHandle to call function soon with loop every interval. If function returns False, loop will stop and onexit will be called. Function called with *args."
     # record the loop's time when call_periodic was called
@@ -322,9 +322,11 @@ class StatusBot(discord.Client):
         return
 
     async def getmyid(self, message):
+        "Tell the author of the message their user id."
         return await message.channel.send(f'Your user id is "{message.author.id}".')
     
     async def stop(self, message):
+        "Stop this bot."
         config = self.get_guild_config(message.guild.id)
         if 'stopusers' in config:
             if message.author.id in config['stopusers']:
@@ -334,6 +336,7 @@ class StatusBot(discord.Client):
         return await message.channel.send('No one in this guild has permission to run this command.')
 
     async def update(self, message):
+        "Preform update from github."
         config = self.get_guild_config(message.guild.id)
         if 'updateusers' in config:
             if message.author.id in config['updateusers']:
@@ -429,12 +432,7 @@ class StatusBot(discord.Client):
             await self.eval_guild(message.channel.guild)
             return await message.channel.send(f'Guild has been re-evaluated.')
         return await message.channel.send(f"Invalid option. Valid options are: {', '.join(valid)}.")
-    
-##    @setoption.error
-##    async def setoption_error(error, ctx):
-##        if isinstance(error, commands.CheckFailure):
-##            await self.send_message(ctx.message.channel, 'Insufficiant permissions to preform operation.')
-    
+
     async def process_command_message(self, message):
         "Process new command message. Calls self.command[command](message)."
         err = f' Please enter a valid command. Use "{self.prefix} help" to see valid commands.'
@@ -488,6 +486,7 @@ class StatusBot(discord.Client):
         async def stop_pinger(guild):
             if guild.id in self.pingers:
                 pinger = self.pingers[guild.id]
+##                if not pinger.canceled:
                 pinger.hault()
         coros = [stop_pinger(guild) for guild in self.guilds]
         await asyncio.gather(*coros, loop=self.loop)
@@ -510,7 +509,7 @@ bot = StatusBot(BOT_PREFIX, loop, loop=loop)
 
 def run():
     print('\nStarting bot...')
-    
+
     try:
         loop.run_until_complete(bot.start(TOKEN))
     except KeyboardInterrupt:
