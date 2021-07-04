@@ -1,9 +1,14 @@
-#!/bin/env bash
+#!/bin/bash
+# Install bot
 
-cd ~/Desktop/Bots
-python3 -m venv StatusBot
+cd ~/Desktop
+mkdir Bots
+cd Bots
+# remove if it exists
+# rm -r StatusBot
+mv StatusBot old
+git clone https://github.com/CoolCat467/StatusBot
+mv old/.env StatusBot/.env
 cd StatusBot
-source bin/activate
-python3 -m pip install -r requirements.txt
-deactivate
-
+chmod 755 *
+. looprun.sh
