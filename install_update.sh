@@ -1,11 +1,8 @@
 #!/bin/bash
-# Install bot
+# Install new verion of bot
 
 cd ~/Desktop
-mkdir Bots
 cd Bots
-# remove if it exists
-# rm -r StatusBot
 mv StatusBot old
 git clone https://github.com/CoolCat467/StatusBot
 mv old/.env StatusBot/.env
