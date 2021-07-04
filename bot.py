@@ -8,15 +8,16 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
 
 BOT_PREFIX = '!status'
+OWNER_ID = 344282497103691777
 
 import os
 import asyncio
@@ -32,6 +33,7 @@ import random
 # expecially asyncronous stuff.
 import server_status as mc
 
+# Update talks to raw.githubusercontent.com.
 import update
 
 # Aquire token.
@@ -339,7 +341,6 @@ class StatusBot(discord.Client):
                 version = await get_github_file(self.loop, 'version.txt')
                 vertext = f'Current: v{__version__}\nOnline: v{version}'
                 await message.channel.send(vertext)
-                # if version != __version__:
                 newvers = map(int, version.split('.'))
                 curvers = (__ver_minor__, __ver_minor__, __ver_patch__)
                 less = lambda x, y:x<y
@@ -384,22 +385,44 @@ class StatusBot(discord.Client):
         "Set a config option. Send message in message.channel on falure"
         args = message.content.split(' ')[2:]
         config = self.get_guild_config(message.guild.id)
-        valid = ('address', 'channel')
+        valid = ['address', 'channel']
+
+        if message.author.id == OWNER_ID:
+            valid += ['setoptionusers', 'updateusers', 'stopusers']
+        elif 'setoptionusers' in config:
+            if message.author.id in config['setoptionusers']:
+                valid += ['setoptionusers', 'updateusers', 'stopusers']
+        
         if len(args) == 0:
             return await message.channel.send(f"No option given. Valid options are: {', '.join(valid)}.")
         option = args[0].lower()
         if option in valid:
             if len(args) < 2:
                 msg = f'Insufficiant arguments for {option}.'
-                arghelp = {'address': 'Address java MC server accessable at',
-                           'channel': 'Name of the discord channel to send join-leave messages to.'}
+                arghelp = {'address': 'Address java MC server accessable at.',
+                           'channel': 'Name of the discord channel to send join-leave messages to.',
+                           'setoptionusers': 'List of user ids that can set advanced options using this command.',
+                           'updateusers': 'List of user ids that can preform the update command.',
+                           'stopusers': f'List of user ids that can shut down {__title__}.'}
                 msg += '\nArgument required: '+arghelp[option]
                 return await message.channel.send(msg)
             value = exceptChars(args[1])
             if option == 'channel':
-                valid = [chan.name for chan in message.guild.text_channels]
-                if not value in valid:
+                channelnames = [chan.name for chan in message.guild.text_channels]
+                if not value in channelnames:
                     return await message.channel.send('Channel not found.')
+            if option in ('setoptionusers', 'updateusers', 'stopusers'):
+                if value == 'clear':
+                    value = []
+                else:
+                    try:
+                        value = [int(value)]
+                    except TypeError:
+                        return await message.channel.send('Invalid value. ID must be an intiger.')
+                    if option in config:
+                        if value[0] in config[option]:
+                            return await message.channel.send('User ID already in this list!')
+                        value += config[option]
             config[option] = value
             self.write_guild_config(message.channel.guild.id, config)
             await message.channel.send(f'Updated value of option "{option}" to "{value}".')
@@ -448,16 +471,16 @@ class StatusBot(discord.Client):
             return await message.channel.send(f'{__title__} does not support non-guild channels.')
         return
     
-    # async def on_error(self, event, *args, **kwargs):
-    #     "Log error and continue."
-    #     if event == 'on_message':
-    #         print(f'Unhandled message: {args[0]}')
-    #     values = os.sys.exc_info()
-    #     logpath = os.path.join(self.rootdir, 'log.txt')
-    #     msg = '\n'.join(map(str, values))
-    #     msg = '#'*8+'\n'+'Error Event:\n'+str(event)+'\n'+msg+'\n'+'#'*8
-    #     appendFile(logpath, msg)
-    #     return
+    async def on_error(self, event, *args, **kwargs):
+        "Log error and continue."
+        if event == 'on_message':
+            print(f'Unhandled message: {args[0]}')
+        values = os.sys.exc_info()
+        logpath = os.path.join(self.rootdir, 'log.txt')
+        msg = '\n'.join(map(str, values))
+        msg = '#'*8+'\n'+'Error Event:\n'+str(event)+'\n'+msg+'\n'+'#'*8
+        appendFile(logpath, msg)
+        return
     
     async def close(self):
         "Tell guilds bot shutting down."
@@ -465,7 +488,6 @@ class StatusBot(discord.Client):
         async def stop_pinger(guild):
             if guild.id in self.pingers:
                 pinger = self.pingers[guild.id]
-##                if not pinger.canceled:
                 pinger.hault()
         coros = [stop_pinger(guild) for guild in self.guilds]
         await asyncio.gather(*coros, loop=self.loop)
@@ -488,7 +510,6 @@ bot = StatusBot(BOT_PREFIX, loop, loop=loop)
 
 def run():
     print('\nStarting bot...')
-##    bot.run(TOKEN)
     
     try:
         loop.run_until_complete(bot.start(TOKEN))
