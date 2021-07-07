@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 5
+__ver_patch__ = 6
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -222,6 +222,7 @@ class StatusBot(discord.Client):
                          'getjson': self.getjson,
                          'stop': self.stop,
                          'update': self.update,
+                         'refresh': self.refresh
                          'setoption': self.setoption,
                          'getoption': self.getoption,
                          'help': self.help}
@@ -346,7 +347,7 @@ class StatusBot(discord.Client):
                 await self.close()
             return await message.channel.send(f'You not have privileges to run this command.')
         return await message.channel.send('No one in this guild has permission to run this command.')
-
+    
     async def update(self, message):
         "Preform update from github."
         config = self.get_guild_config(message.guild.id)
@@ -376,7 +377,7 @@ class StatusBot(discord.Client):
                 return await message.channel.send(f'No update required.')
             return await message.channel.send(f'You not have privileges to run this command.')
         return await message.channel.send('No one in this guild has permission to run this command.')
-
+    
     async def getoption(self, message):
         "Send message with value of option given in this guild's config."
         args = message.content.split(' ')[2:]
@@ -395,13 +396,18 @@ class StatusBot(discord.Client):
         text = f"{__title__}'s Valid Commands:\n{commands}"
         return await message.channel.send(text)
     
+    async def refresh(self, message):
+        "Re-evaluate guild, then tell them it happened."
+        await self.eval_guild(message.channel.guild)
+        return await message.channel.send(f'Guild has been re-evaluated.')
+    
     # @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
     async def setoption(self, message):
-        "Set a config option. Send message in message.channel on falure"
+        "Set a config option. Send message in message.channel on falure."
         args = message.content.split(' ')[2:]
         config = self.get_guild_config(message.guild.id)
         valid = ['address', 'channel']
-
+        
         if message.author.id == OWNER_ID:
             valid += ['setoptionusers', 'updateusers', 'stopusers']
         elif 'setoptionusers' in config:
@@ -441,10 +447,11 @@ class StatusBot(discord.Client):
             config[option] = value
             self.write_guild_config(message.channel.guild.id, config)
             await message.channel.send(f'Updated value of option "{option}" to "{value}".')
-            await self.eval_guild(message.channel.guild)
-            return await message.channel.send(f'Guild has been re-evaluated.')
+            # await self.eval_guild(message.channel.guild)
+            # return await message.channel.send(f'Guild has been re-evaluated.')
+            return await self.refresh(message)
         return await message.channel.send(f"Invalid option. Valid options are: {', '.join(valid)}.")
-
+    
     async def process_command_message(self, message):
         "Process new command message. Calls self.command[command](message)."
         err = f' Please enter a valid command. Use "{self.prefix} help" to see valid commands.'
@@ -456,7 +463,7 @@ class StatusBot(discord.Client):
                 return await self.commands[command](message)
             return await message.channel.send('Command not found.'+err)
         return await message.channel.send('No command given.'+err)
-
+    
     async def on_guild_join(self, guild):
         "Evaluate guild."
         return await self.eval_guild(guild)
@@ -471,7 +478,7 @@ class StatusBot(discord.Client):
         # Skip messages from ourselves.
         if message.author == self.user:
             return
-
+        
         if hasattr(message.channel, 'send'):
             if hasattr(message.guild, 'id'):
                 msg = message.content
@@ -498,12 +505,12 @@ class StatusBot(discord.Client):
         async def stop_pinger(guild):
             if guild.id in self.pingers:
                 pinger = self.pingers[guild.id]
-##                if not pinger.canceled:
-                pinger.hault()
+                if not pinger.periodic.canceled:
+                    pinger.hault()
         coros = [stop_pinger(guild) for guild in self.guilds]
         await asyncio.gather(*coros, loop=self.loop)
         print('Pingers shut down...')
-
+        
         print('Telling guilds bot is shutting down.')
         async def tell_guild_shutdown(guild):
             channel = self.guess_guild_channel(guild.id)
