@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 4
+__ver_patch__ = 5
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -115,8 +115,9 @@ def call_periodic(loop, interval, function, onexit=lambda:None, *args):
 
         def cancel(self):
             if isinstance(self.delegate, asyncio.Handle):
-                self.delegate.cancel()
-                self.canceled = True
+                if not self.canceled:
+                    self.delegate.cancel()
+            self.canceled = True
         pass
     
     periodic = PeriodicHandle()  # can't pass result of loop.call_at here, it needs periodic as an arg to run
@@ -134,8 +135,9 @@ class ProcessGuild():
         self.last_ping = set()
         self.last_json = {}
         self.last_delay = 0
-        bot.loop.call_soon(self.setup_server)
-        self.nextupdatereturn = True
+        self.periodic = None
+        self.bot.loop.call_soon(self.setup_server)
+        self.come_back = True
         return
     
     def call_async(self, coro):
@@ -145,13 +147,13 @@ class ProcessGuild():
     def update(self, *args, **kwargs):
         "Setup self.asyncupdate task to run."
         self.call_async(self.asyncupdate(*args, **kwargs))
-        return self.nextupdatereturn
+        return self.come_back
     
     async def asyncupdate(self, close):
         "Update server status."
-        if close:
+        if close or not self.come_back:
             print('Closing')
-            self.nextupdatereturn = False
+            self.come_back = False
             return False
         channel = self.bot.get_channel(self.channelid)
         try:
@@ -184,16 +186,15 @@ class ProcessGuild():
             error = f'A {type(ex).__name__} Error Has Occored: {", ".join(ex.args)}'
             print(error)
             await channel.send(error)
-            await channel.send('Server is down (as far as I can tell), no longer monitoring server.')
-            self.nextupdatereturn = False
+            await channel.send('Connection to server has been lost. No longer monitoring server.')
+            self.come_back = False
             return False
-        except KeyboardInterrupt:
-            pass
-        self.nextupdatereturn = True
+        self.come_back = True
         return True
     
     def hault(self):
         "Delete pinger and tell channel pinger stopped."
+        self.periodic.cancel()
         if self.guildid in self.bot.pingers:
             del self.bot.pingers[self.guildid]
         channel = self.bot.get_channel(self.channelid)
@@ -207,7 +208,7 @@ class ProcessGuild():
         self.channelid = channel.id
         if 'address' in config:
             self.server = mc.Server.lookup(config['address'])
-            call_periodic(self.bot.loop, self.ping_delay, self.update, self.hault, not self.bot.is_closed)
+            self.periodic = call_periodic(self.bot.loop, self.ping_delay, self.update, self.hault, not self.bot.is_closed)
         return
     pass
 
@@ -218,6 +219,7 @@ class StatusBot(discord.Client):
         self.pingers = {}
         self.rootdir = os.path.split(__file__)[0]
         self.commands = {'getmyid': self.getmyid,
+                         'getjson': self.getjson,
                          'stop': self.stop,
                          'update': self.update,
                          'setoption': self.setoption,
@@ -287,7 +289,7 @@ class StatusBot(discord.Client):
                 self.pingers[guild.id] = ProcessGuild(self, guild.id)
                 await channel.send('Server pinger restarted.')
         else:
-            await channel.send('Server address not set, pinger not started. Please set it with "setoption server <address>".')
+            await channel.send(f'Server address not set, pinger not started. Please set it with "{self.prefix} setoption server <address>".')
         return
     
     async def eval_guilds(self):
@@ -324,6 +326,16 @@ class StatusBot(discord.Client):
     async def getmyid(self, message):
         "Tell the author of the message their user id."
         return await message.channel.send(f'Your user id is "{message.author.id}".')
+
+    async def getjson(self, message):
+        "Tell the author of the message the last json from server pinger."
+        if message.guild.id in self.pingers:
+            pinger = self.pingers[message.guild.id]
+            lastdict = pinger.last_json
+            msg = json.dumps(lastdict, sort_keys=True, indent=2)
+            return await message.channel.send(f'Last received json message:\n{msg}')
+            #return await message.channel.send(f'Sent you a message as a dm.')
+        return await message.channel.send('Server pinger is not running.')
     
     async def stop(self, message):
         "Stop this bot."
@@ -503,19 +515,19 @@ class StatusBot(discord.Client):
         return
     pass
 
-#discord.Intents.guilds
-loop = asyncio.get_event_loop()
-bot = StatusBot(BOT_PREFIX, loop, loop=loop)
-
 def run():
     print('\nStarting bot...')
-
+    
+    #discord.Intents.guilds
+    loop = asyncio.get_event_loop()
+    bot = StatusBot(BOT_PREFIX, loop, loop=loop)
+    
     try:
         loop.run_until_complete(bot.start(TOKEN))
     except KeyboardInterrupt:
         print('Closing bot...')
         loop.run_until_complete(bot.close())
-        # cancel all tasks lingering
+        # cancel all lingering tasks
     finally:
         loop.close()
     print('Bot has been deactivated.')
