@@ -4,7 +4,7 @@ StatusBot is a discord bot that will post information about a given Java Editon 
 
 ## Invite to your server
 Invite StatusBot to your discord server:
-`https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=68608&scope=bot`
+`https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=3072&scope=bot`
 Note, there may be random downtimes if problems occour, and because of the nature of
 this bot whoever runs the bot will have access to the address of your minecraft server and
 the name of the channel the bot will be sending messages in.
@@ -20,7 +20,7 @@ For update installation use this command:
 
 
 ## Usage
-As far as I can tell, StatusBot only needs the following permissions intiger: `68608`
+As far as I can tell, StatusBot only needs the following permissions intiger: `3072`
 If you preform a fresh install, you will need to set the discord token the bot will use.
 The program looks for this token in a file named `.env`. If you use the fresh installer,
 the installer will automatically create this file and open it with `nano` for you to paste
