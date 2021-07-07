@@ -43,12 +43,15 @@ they entered the command in, except in the case that the channel does not suppor
 being writen to.
 
 ## Commands
-As of v0.0.5, these are the following commands:
+As of v0.0.6, these are the following commands:
 
 `help` - Display all valid commands.
 
+`refresh` - Refresh, or re-evaluate, the guild the channel the message is sent in.
+ Restarts server pinger.
+
 `setoption <name> <value>` - Set option <name> to <value> for the guild you are currently
-  talking to StatusBot in. Current settable options as of v0.0.5:
+  talking to StatusBot in. Currently settable options:
   
    `address` - Address of the java editon minecraft server StatusBot should monitor
    
