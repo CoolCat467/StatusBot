@@ -43,12 +43,12 @@ they entered the command in, except in the case that the channel does not suppor
 being writen to.
 
 ## Commands
-As of v0.0.4, these are the following commands:
+As of v0.0.5, these are the following commands:
 
 `help` - Display all valid commands.
 
 `setoption <name> <value>` - Set option <name> to <value> for the guild you are currently
-  talking to StatusBot in. Current settable options as of v0.0.4:
+  talking to StatusBot in. Current settable options as of v0.0.5:
   
    `address` - Address of the java editon minecraft server StatusBot should monitor
    
@@ -66,6 +66,8 @@ As of v0.0.4, these are the following commands:
 `getoption <name>` - Tell you the value of option <name>.
 
 `getmyid` - Tell the user who sent the message what their unique discord id is.
+
+`getjson` - Tell the user who sent the message the last json received from pinging the server.
 
 `stop` - Stop the bot. If `looprun.sh` was used, this has the effect of restarting the bot.
   
