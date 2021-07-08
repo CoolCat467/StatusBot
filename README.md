@@ -90,3 +90,8 @@ and post the following message: `Server pinger started.` As long as the pinger i
 secconds (on default) StatusBot will connect to and ping the server found at `address` and see if
 any players have joined or left since the last time it pinged said server. If any players have
 joined or left the server, StatusBot will tell you!
+
+
+## Credits
+Most of the stuff to talk to minecraft server stolen from https://github.com/Dinnerbone/mcstatus with
+some changes.
