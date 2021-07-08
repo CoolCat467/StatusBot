@@ -222,7 +222,7 @@ class StatusBot(discord.Client):
                          'getjson': self.getjson,
                          'stop': self.stop,
                          'update': self.update,
-                         'refresh': self.refresh
+                         'refresh': self.refresh,
                          'setoption': self.setoption,
                          'getoption': self.getoption,
                          'help': self.help}
@@ -447,9 +447,9 @@ class StatusBot(discord.Client):
             config[option] = value
             self.write_guild_config(message.channel.guild.id, config)
             await message.channel.send(f'Updated value of option "{option}" to "{value}".')
-            # await self.eval_guild(message.channel.guild)
-            # return await message.channel.send(f'Guild has been re-evaluated.')
-            return await self.refresh(message)
+            await self.eval_guild(message.channel.guild)
+            return await message.channel.send(f'Guild has been re-evaluated.')
+            # return await self.refresh(message)
         return await message.channel.send(f"Invalid option. Valid options are: {', '.join(valid)}.")
     
     async def process_command_message(self, message):
@@ -504,9 +504,9 @@ class StatusBot(discord.Client):
         print('Shutting down pingers.')
         async def stop_pinger(guild):
             if guild.id in self.pingers:
-                pinger = self.pingers[guild.id]
-                if not pinger.periodic.canceled:
-                    pinger.hault()
+                #pinger = self.pingers[guild.id]
+                #if not pinger.periodic.canceled:
+                pinger.hault()
         coros = [stop_pinger(guild) for guild in self.guilds]
         await asyncio.gather(*coros, loop=self.loop)
         print('Pingers shut down...')
