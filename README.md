@@ -95,3 +95,4 @@ joined or left the server, StatusBot will tell you!
 ## Credits
 Most of the stuff to talk to minecraft server stolen from https://github.com/Dinnerbone/mcstatus with
 some changes.
+Parts of code stolen from WOOF (Web Offer One File) from https://github.com/simon-budig/woof
