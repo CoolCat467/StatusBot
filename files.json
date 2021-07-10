@@ -1,1 +1,22 @@
-{"server_status.py": "server_status.py", "connection.py": "connection.py", "address_tools.py": "address_tools.py", "looprun.sh": "looprun.sh", "update.py": "update.py", "run.sh": "run.sh", "pingers.py": "pingers.py", "requirements.txt": "requirements.txt", "pyvenv.cfg": "pyvenv.cfg", "install.sh": "install.sh", "bot.py": "bot.py"}
+{
+  "bot": {
+    "status": [
+      "address_tools.py",
+      "connection.py",
+      "pingers.py",
+      "server_status.py"
+    ],
+    "": [
+      "update.py",
+      "bot.py"
+    ]
+  },
+  "": [
+    "run.sh",
+    "looprun.sh",
+    "requirements.txt",
+    "pyvenv.cfg",
+    "install_update.sh",
+    "install.sh"
+  ]
+}
