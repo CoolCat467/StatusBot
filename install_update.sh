@@ -3,6 +3,8 @@
 
 cd ~/Desktop
 cd Bots
+echo "Removing previous old if exists."
+rm -r old
 echo "Moving current to old."
 mv StatusBot old
 echo "Installing updated bot..."
