@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -473,7 +473,9 @@ class StatusBot(discord.Client):
         
         if message.author.id in config['stopusers']:
             await message.channel.send(f'Stopping...')
-            await self.close()
+            def close_bot():
+                self.loop.create_task(self.close())
+            self.loop.call_later(3, close_bot)
             return
         await message.channel.send(f'You do not have permission to run this command.')
         return
@@ -819,17 +821,18 @@ class StatusBot(discord.Client):
         # Skip messages from ourselves.
         if message.author == self.user:
             return
+        
         # If we can send message to person,
         if hasattr(message.channel, 'send'):
             # If message is from a guild,
-            if hasattr(message.guild, 'id'):
+            if isinstance(message.guild, discord.guild.Guild):
                 # If message starts with our prefix,
                 if message.content.lower().startswith(self.prefix):
                     # we are, in reality, fastest typer in world. for sure.
                     async with message.channel.typing():
                         # Process message as guild
                         await self.process_command_message(message, 'guild')
-                    return
+                return
             # Otherwise, it's a dm, so process it as one.
             async with message.channel.typing():
                 await self.process_command_message(message, 'dm')
