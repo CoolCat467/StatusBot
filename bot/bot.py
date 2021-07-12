@@ -523,7 +523,7 @@ class StatusBot(discord.Client):
                 await message.channel.send(f'{len(paths)} files will now be updated. Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
-                update.update_files(self.loop, rootdir, paths, __title__, __author__, 'master', timeout)
+                await update.update_files(self.loop, rootdir, paths, __title__, __author__, 'master', timeout)
                 await message.channel.send('Done. Bot will need to be restarted to apply changes.')
                 return
             await message.channel.send(f'No update required.')
