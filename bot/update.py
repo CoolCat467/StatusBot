@@ -106,19 +106,16 @@ async def update_files(loop, basepath:str, paths:tuple, repo:str, user:str, bran
             sfile.close()
         del file
         return path
-    coros = [update_single(path) for path in paths]
+    coros = (update_single(path) for path in paths)
     return await gather(*coros)
 
 def run():
     import asyncio
     loop = asyncio.get_event_loop()
-##    file = loop.run_until_complete(get_file(loop, 'StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
-##    print([file.decode('utf-8').strip()])
-##    #loop.close()
-##    del asyncio
-##    basepath = os.path.expanduser('~/Desktop/StatusBot/bot')
-##    loop.run_until_complete(update_files(loop, basepath, ('version.txt', 'files.json'), 'StatusBot', 'CoolCat467', 'master', 3))
-
+    file = loop.run_until_complete(get_file(loop, 'StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
+    print(file.decode('utf-8').strip())
+    del asyncio
+    
 if __name__ == '__main__':
     print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
     run()
