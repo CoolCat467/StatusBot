@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -520,9 +520,10 @@ class StatusBot(discord.Client):
                 # Get max amount of time this could take.
                 maxtime = printTime(timeout*len(paths))
                 # Tell user number of files we are updating.
-                await message.channel.send(f'{len(paths)} files will now be updated. Please wait. This may take up to {maxtime}.')
+                await message.channel.send(f'{len(paths)} files will now be updated. Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
-                update.update_files(self.loop, self.rootdir, paths, __title__, __author__, 'master', timeout)
+                rootdir = os.path.split(self.rootdir)[0]
+                update.update_files(self.loop, rootdir, paths, __title__, __author__, 'master', timeout)
                 await message.channel.send('Done. Bot will need to be restarted to apply changes.')
                 return
             await message.channel.send(f'No update required.')
