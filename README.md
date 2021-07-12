@@ -27,6 +27,10 @@ the installer will automatically create this file and open it with `nano` for yo
 your token. If you use the update installer, it will move the old version to `old` and copy
 the old `.env` to the new folder.
 
+At the moment, StatusBot must install in `~/Desktop/Bots/StatusBot`. This will
+probably change in the future because that's a bit of an odd limitation, don't
+you think?
+
 In both installation cases, `looprun.sh` will be run, which will start the bot and restart
 it in the event of a critical error.
 
@@ -37,50 +41,91 @@ In the event of an error, information about the error is stored in `log.txt` in 
 folder.
 
 ## Using this bot
-StatusBot's command prefix is, on default, `!StatusBot`. The actual capitalization of
+StatusBot's command prefix is, on default, `!status`. The actual capitalization of
 most commands does not matter. StatusBot should respond to the user in the channel
 they entered the command in, except in the case that the channel does not support
 being writen to.
 
 ## Commands
-As of v0.0.6, these are the following commands:
+As of version 0.1.0, the following describes StatusBot's commands.
 
-`help` - Display all valid commands.
+### In Guilds:
+`help` - Display all of StatusBot's valid guild commands.
 
-`refresh` - Refresh, or re-evaluate, the guild the channel the message is sent in.
- Restarts server pinger.
+`refresh` - Refresh, or re-evaluate, the guild that the command message is sent in.
+ Restarts server pinger if guild `address` value is set.
 
 `setoption <name> <value>` - Set option <name> to <value> for the guild you are currently
-  talking to StatusBot in. Currently settable options:
+  talking to StatusBot in.
+   
+  If you are StatusBot's owner, you are the guild owner, or you are in the
+  `setoptionusers` list, the following settings can be modified:
   
    `address` - Address of the java editon minecraft server StatusBot should monitor
    
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
   
-  If your id is the same as OWNER_ID or your id is in `setoptionusers`, more options are available.
-  All of the following options take 'clear' or a user id to add to list as an argument.
+  If you are either StatusBot's owner or you are the guild owner, you modify the
+  `setoptionusers` list.
   
-   `setoptionusers` - List of user IDs able to modify more advanced settings.
-   
-   `updateusers` - List of user IDs able to run the update command.
-   
-   `stopusers` - List of user IDs able to stop the bot.
+  All of the following options take 'clear', a user id, or a username (including discriminator),
+  to add to list as an argument.
+  
+   `setoptionusers` - List of user IDs able to modify `address` and `channel` values.
 
-`getoption <name>` - Tell you the value of option <name>.
+`getoption <name>` - Tell you the value of option <name>. Anyone can retrieve any option.
 
 `getmyid` - Tell the user who sent the message what their unique discord id is.
 
 `getjson` - Tell the user who sent the message the last json received from pinging the server.
 
+`currentversion` - Tell the user the current version of StatusBot.
+
+`onlineversion` - Tell the user the current online verison of StatusBot.
+This value is controlled by `version.txt` in this repository.
+
+
+### In a DM:
+`help` - Display all of StatusBot's valid DM commands.
+
+`setoption <name> <value>` - Set global dm option <name> to <value>
+
+ All of the following options take 'clear', a user id, or a username (including discriminator),
+ to add to list as an argument.
+ 
+   `setoptionusers` - List of users who can modify the `updateusers` and `stopusers` lists.
+
+  NOTE: This option can only be set by the bot owner.
+
+   The following two options can only be set by users in the `setoptionusers` list.
+
+   `updateusers` - List of users who can run the `update` dm command
+
+   `stopusers` - List of users who can run the `stop` dm command
+
+`getoption <name>` - Get global dm option <name>
+
+ getoption in a dm is a bit different than it's counterpart in guild commands.
+ This version of getoption will only tell the user the values of the given option
+ if they are either the bot owner or in the `setoptionusers` list.
+
 `stop` - Stop the bot. If `looprun.sh` was used, this has the effect of restarting the bot.
   
-  NOTE: This command will only work if the guild the command message has `stopusers` defined
-  in it's config, and the messsage's author's discord id is within the list found in `stopusers`
+  NOTE: This command will only work if you are in the `stopusers` list in the
+  global dms config file.
 
 `update` - Attempt to update the bot to the newest version using this github repository.
   
-  NOTE: This command works nearly identically the same as `stop`, but uses the `updateusers`
-  config value instead.
+  NOTE: This command is nearly identically to the `stop` dm command, but uses the
+  `updateusers` global dm config value instead.
+
+`getmyid` - Tell the user who sent the message what their unique discord id is.
+
+`currentversion` - Tell the user the current version of StatusBot.
+
+`onlineversion` - Tell the user the current online verison of StatusBot.
+This value is controlled by `version.txt` in this repository.
+
 
 ## Automatic messaging
 When StatusBot is connected to a guild and has it's `address` (and preferably also it's `channel`)
