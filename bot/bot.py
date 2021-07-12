@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -481,7 +481,7 @@ class StatusBot(discord.Client):
     async def getcurrentvers(self, message) -> tuple:
         "Get current version, tell user in message.channel, and return that version as tuple."
         await message.channel.send(f'Current version: {__version__}')
-        return (__ver_minor__, __ver_minor__, __ver_patch__)
+        return (__ver_major__, __ver_minor__, __ver_patch__)
     
     async def getonlinevers(self, message) -> tuple:
         "Get online version, tell user in message.channel, and return said version as tuple."
