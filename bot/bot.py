@@ -568,7 +568,7 @@ class StatusBot(discord.Client):
             valid += ['setoptionusers', 'updateusers', 'stopusers']
         elif 'setoptionusers' in config:
             if message.author.id in config['setoptionusers']:
-                valid += ['updateusers', 'stopusers']
+                valid += ['setoptionusers', 'updateusers', 'stopusers']
         if len(args) == 0:
             await message.channel.send(f"No option given. Valid options are: {', '.join(valid)}.")
             return
@@ -820,16 +820,17 @@ class StatusBot(discord.Client):
             return
         # If we can send message to person,
         if hasattr(message.channel, 'send'):
-            # we are, in reality, fastest typer in world. for sure.
-            async with message.channel.typing():
-                # If message is from a guild,
-                if hasattr(message.guild, 'id'):
-                    # If message starts with our prefix,
-                    if message.content.lower().startswith(self.prefix):
+            # If message is from a guild,
+            if hasattr(message.guild, 'id'):
+                # If message starts with our prefix,
+                if message.content.lower().startswith(self.prefix):
+                    # we are, in reality, fastest typer in world. for sure.
+                    async with message.channel.typing():
                         # Process message as guild
                         await self.process_command_message(message, 'guild')
                     return
-                # Otherwise, it's a dm, so process it as one.
+            # Otherwise, it's a dm, so process it as one.
+            async with message.channel.typing():
                 await self.process_command_message(message, 'dm')
             return
         # can't send messages so skip.
