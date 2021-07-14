@@ -127,7 +127,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# Semi-private bot things
-bot/config/
-log.txt
