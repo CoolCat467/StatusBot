@@ -177,7 +177,8 @@ class Timer:
         self.bot = bot
         self.delay = delay
         self.running = False
-        self.bot.loop.create_task(self.wait_for_ready_start())
+        self.stopped = False
+        self.task = self.bot.loop.create_task(self.wait_for_ready_start())
         return
     
     async def hault(self) -> None:
@@ -204,6 +205,7 @@ class Timer:
                 self.running = False
             else:
                 await asyncio.sleep(self.delay)
+        self.stopped = True
         return
     pass
 
@@ -870,8 +872,8 @@ class StatusBot(discord.Client):
         async def stop_pinger(guild):
             if guild.id in self.pingers:
                 await self.pingers[guild.id].hault()
-##            while self.pingers[guild.id].running:
-##                asyncio.sleep(1)
+            while not self.pingers[guild.id].stopped:
+                asyncio.sleep(1)
         coros = (stop_pinger(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
         print('Pingers shut down...')
