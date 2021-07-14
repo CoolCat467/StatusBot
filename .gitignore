@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 # Semi-private bot things
-config/
+bot/config/
 log.txt
