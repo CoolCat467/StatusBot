@@ -13,7 +13,7 @@ __ver_major__ = 0
 __ver_minor__ = 1
 __ver_patch__ = 2
 
-from os import path
+import os
 import aiohttp
 import async_timeout
 
@@ -49,12 +49,12 @@ def get_paths(jdict:dict) -> list:
                 # If dictionary, read and add our own path.
                 add = read_dict(nxt)
                 for f in add:
-                    paths.append(path.join(path, f))
+                    paths.append(os.path.join(path, f))
             elif isinstance(nxt, (list, tuple)):
                 # If it's a list or tuple, add all to our own paths joined.
                 for f in nxt:
                     if isinstance(f, str):
-                        paths.append(path.join(path, f))
+                        paths.append(os.path.join(path, f))
         return paths
     return read_dict(jdict)
 
@@ -83,7 +83,7 @@ async def update_file(basepath:str, repo:str, path:str, user:str, branch:str='HE
     "Update file. Return False on exception, otherwise True."
     try:
         filedata = await get_file(repo, path, user, branch, timeout, **sessionkwargs)
-        savepath = path.join(basepath, path)
+        savepath = os.path.join(basepath, path)
         with open(savepath, 'wb') as sfile:
             sfile.write(filedata)
             sfile.close()
@@ -97,7 +97,7 @@ async def update_files(basepath:str, paths:tuple, repo:str, user:str, branch:str
     urlbase = get_address(user, repo, branch, '')
     async def update_single(path):
         "Update a single file."
-        savepath = path.abspath(path.join(basepath, path))
+        savepath = os.path.abspath(os.path.join(basepath, path))
         url = urlbase + path
         with open(savepath, 'wb') as sfile:
             sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
@@ -113,7 +113,8 @@ def run():
     file = loop.run_until_complete(get_file('StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
     print(file.decode('utf-8').strip())
     del asyncio
-    
+    return
+
 if __name__ == '__main__':
     print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
     run()
