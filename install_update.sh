@@ -1,10 +1,9 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
 # Install new verion of bot
 
 cd ~/Desktop
 cd Bots
-echo "Removing previous old if exists."
-rm -r old
 echo "Moving current to old."
 mv StatusBot old
 echo "Installing updated bot..."

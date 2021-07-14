@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 # StatusBot for Discord
 
-"""Status Bot for Discord using Python 3"""
+"Status Bot for Discord using Python 3"
 
 # Programmed by CoolCat467
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 3
+__ver_patch__ = 4
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -119,7 +119,15 @@ def splitTime(seconds:int) -> list:
         ret.append(t)
     return ret
 
-def printTime(seconds:int, onlyReq:bool=True) -> str:
+def combineAnd(data:list) -> str:
+    "Join values of text, and have 'and' with the last one properly."
+    if len(data) >= 2:
+        data[-1] = 'and ' + data[-1]
+    if len(data) > 2:
+        return ', '.join(data)
+    return ' '.join(data)
+
+def printTime(seconds:int) -> str:
     "Returns time using the output of splitTime."
     times = ('eons', 'eras', 'epochs', 'ages', 'millenniums',
              'centuries', 'decades', 'years', 'months', 'weeks',
@@ -127,17 +135,15 @@ def printTime(seconds:int, onlyReq:bool=True) -> str:
     single = [i[:-1] for i in times]
     single[5] = 'century'
     split = splitTime(seconds)
+    zipidxvalues = [(idx, split[idx]) for idx in range(len(split)) if split[idx]]
     data = []
-    for index, value in ((idx, split[idx]) for idx in range(len(split))):
-        if onlyReq and not value:
-            continue
+    for index, value in zipidxvalues:
         title = single[index] if abs(value) < 2 else times[index]
-        data.append(f'{value} {title}')
-    if len(data) >= 2:
-        data[-1] = 'and ' + data[-1]
-    if len(data) > 2:
-        return ', '.join(data)
-    return ' '.join(data)
+        if value == 1 and len(zipidxvalues) == 1:
+            data.append(title)
+        else:
+            data.append(f'{value} {title}')
+    return combineAnd(data)
 
 def get_time_of_day(hour:int) -> str:
     "Figure out and return what time of day it is."
@@ -162,73 +168,58 @@ async def get_github_file(loop, path, timeout=10):
     data = await update.get_file(loop, __title__, path, __author__, 'master', timeout)
     return data.decode('utf-8')
 
-# https://gist.github.com/akaIDIOT/48c2474bd606cd2422ca
-def call_periodic(loop, interval, function, onexit=lambda:None, *args):
-    "Return PeriodicHandle to call function soon with loop every interval. If function returns False, loop will stop and onexit will be called. Function called with *args."
-    # record the loop's time when call_periodic was called
-    start = loop.time()
-    
-    def run(handle):
-        # XXX: we could record before = loop.time() and warn when callback(*args) took longer than interval
-        # call callback now (possibly blocks run)
-        come_back = function(*args)
-        # reschedule run at the soonest time n * interval from start
-        # re-assign delegate to the new handle
-        if come_back:
-            handle.delegate = loop.call_later(interval - ((loop.time() - start) % interval), run, handle)
-        else:
-            onexit()
-            handle.cancel()
-    
-    class PeriodicHandle:  # not extending Handle, needs a lot of arguments that make no sense here
-        def __init__(self):
-            self.delegate = None
-            self.canceled = False
-        
-        def cancel(self):
-            if isinstance(self.delegate, asyncio.Handle):
-                if not self.canceled:
-                    self.delegate.cancel()
-            self.canceled = True
-        pass
-    
-    periodic = PeriodicHandle()  # can't pass result of loop.call_at here, it needs periodic as an arg to run
-    # set the delegate to be the Handle for call_at, causes periodic.cancel() to cancel the call to run
-    periodic.delegate = loop.call_at(start + interval, run, periodic)
-    # return the 'wrapper'
-    return periodic
-
-class GuildServerPinger():
-    "Server pinger for guild."
-    ping_delay = 60
-    def __init__(self, bot, guildid):
-        "Needs bot we work for, and id of guild we are pinging the server for."
+class Timer:
+    "Class that will run coroutine self.run every delay secconds."
+    delay = 60
+    def __init__(self, bot:discord.Client, delay:int) -> None:
         self.bot = bot
+        self.delay = delay
+        self.running = False
+        self.bot.loop.create_task(self.wait_for_ready_start())
+        return
+    
+    async def hault(self) -> None:
+        "Set self.running to False."
+        self.running = False
+        return
+    
+    async def run(self) -> bool:
+        "Return True."
+        return True
+    
+    async def wait_for_ready_start(self) -> None:
+        "Await self.bot.wait_until_ready(), then await self.start()."
+        await self.bot.wait_until_ready()
+        await self.start()
+        return
+    
+    async def start(self) -> None:
+        "Keep running self.run every self.delay seccond or until self.bot is closed or self.run returns True."
+        self.running = True
+        while self.running:
+            stop = await self.run()
+            if stop or self.bot.is_closed():
+                self.running = False
+            else:
+                await asyncio.sleep(self.delay)
+        return
+    pass
+
+class GuildServerPinger(Timer):
+    "Server pinger for guild."
+    def __init__(self, bot:discord.Client, guildid:int) -> None:
+        "Needs bot we work for, and id of guild we are pinging the server for."
         self.guildid = guildid
         self.server = mc.Server('')
         self.last_ping = set()
         self.last_json = {}
         self.last_delay = 0
-        self.periodic = None
-        self.bot.loop.call_soon(self.setup_server)
-        self.come_back = True
+        self.channel = None
+        super().__init__(bot, 60)
         return
     
-    def call_async(self, coro):
-        "Create a new task to run coroutine in self.bot.loop."
-        return self.bot.loop.create_task(coro)
-    
-    def update(self, *args, **kwargs):
-        "Setup self.asyncupdate task to run."
-        self.call_async(self.asyncupdate(*args, **kwargs))
-        return self.come_back
-    
-    async def asyncupdate(self, close):
-        "Update server status."
-        if close or not self.come_back:
-            self.come_back = False
-            return False
-        channel = self.bot.get_channel(self.channelid)
+    async def run(self) -> bool:
+        "Update server status. Return True if connection lost."
         try:
             json, ping = await self.server.async_status()
             self.last_json = json
@@ -236,52 +227,54 @@ class GuildServerPinger():
             current = []
             if 'players' in json:
                 if 'sample' in json['players']:
-                    current = [player['name'] for player in json['players']['sample']]
-            
+                    for player in json['players']['sample']:
+                        if 'name' in player:
+                            current.append(player['name'])
             current = set(current)
             if current != self.last_ping:
                 joined = tuple(current.difference(self.last_ping))
                 left = tuple(self.last_ping.difference(current))
                 
+                delay = printTime(self.delay)
+                def users_mesg(action:str, users:list) -> str:
+                    "Return users {action} the server: {users}"
+                    user = 'user' if len(users) == 1 else 'users'
+                    text = f'The following {user} have {action} the server in the last {delay}:\n'
+                    text += combineAnd(users)
+                    return text
+                
                 message = ''
                 if left:
-                    message += f'The following user(s) have left the server in the last {self.ping_delay} secconds:\n'
-                    message += ', '.join(left[:-1])+('and '+left[-1] if len(left) > 1 else left[-1])
-                    if joined:
-                        message += '\n'
+                    message += users_mesg('left', left)
                 if joined:
-                    message += f'The following user(s) have joined the server in the last {self.ping_delay} secconds:\n'
-                    message += ', '.join(joined[:-1])+('and '+joined[-1] if len(joined) > 1 else joined[-1])
+                    if message:
+                        message += '\n'
+                    message += users_mesg('joined', joined)
                 if message:
-                    await channel.send(message)
+                    await self.channel.send(message)
             self.last_ping = current
         except Exception as ex:
-            error = f'A {type(ex).__name__} Error Has Occored: {", ".join(ex.args)}'
+            error = f'A {type(ex).__name__} Error Has Occored'
+            if ex.args:
+                error += f': {", ".join(ex.args)}'
+            else:
+                error += '.'
             print(error)
-            await channel.send(error)
-            await channel.send('Connection to server has been lost. No longer monitoring server.')
-            self.come_back = False
-            return False
-        self.come_back = True
-        return True
+            await self.channel.send(error)
+            await self.channel.send('Connection to server has been lost.')
+            return True
+        return False
     
-    def hault(self):
-        "Delete pinger and tell channel pinger stopped."
-        self.periodic.cancel()
-        if self.guildid in self.bot.pingers:
-            del self.bot.pingers[self.guildid]
-        channel = self.bot.get_channel(self.channelid)
-        self.call_async(channel.send('Server pinger stopped.'))
-        pass
-    
-    def setup_server(self):
-        "Setup update to be called periodically if config is good."
+    async def start(self) -> None:
+        "If config is good, run pinger."
         config = self.bot.get_guild_config(self.guildid)
-        channel = self.bot.guess_guild_channel(self.guildid)
-        self.channelid = channel.id
+        self.channel = self.bot.guess_guild_channel(self.guildid)
         if 'address' in config:
             self.server = mc.Server.lookup(config['address'])
-            self.periodic = call_periodic(self.bot.loop, self.ping_delay, self.update, self.hault, not self.bot.is_closed)
+            await super().start()
+            await self.channel.send('Server pinger stopped.')
+        else:
+            await self.channel.send('No address for this guild defined, pinger not started.')
         return
     pass
 
@@ -384,11 +377,7 @@ class StatusBot(discord.Client):
         if not gid in self.pingers:
             self.pingers[gid] = GuildServerPinger(self, gid)
             return 'started'
-        elif self.pingers[gid].periodic.canceled:
-            try:
-                self.pingers[gid].hault()
-            except:
-                pass
+        elif not self.pingers[gid].running:
             del self.pingers[gid]
             self.pingers[gid] = GuildServerPinger(self, gid)
             return 'restarted'
@@ -488,7 +477,6 @@ class StatusBot(discord.Client):
     async def getonlinevers(self, message) -> tuple:
         "Get online version, tell user in message.channel, and return said version as tuple."
         # Get github version string
-##        async with message.channel.typing():
         version = await get_github_file(self.loop, 'version.txt')
         # Send message about it.
         await message.channel.send(f'Online version: {version}')
@@ -497,7 +485,6 @@ class StatusBot(discord.Client):
     
     async def update(self, message, timeout:int=20) -> None:
         "Preform update from github."
-##        async with message.channel.typing():
         config = self.get_dm_config()
         if not 'updateusers' in config:
             await message.channel.send(f'No one has permission to run this command.')
@@ -659,7 +646,7 @@ class StatusBot(discord.Client):
                         await message.channel.send('Channel not found in this guild.')
                         return
                     value = args[1]
-                elif option in {'setoptionusers'}:
+                elif option == 'setoptionusers':
                     if value.lower() == 'clear':
                         value = []
                     else:
@@ -880,10 +867,10 @@ class StatusBot(discord.Client):
         print('Shutting down pingers.')
         async def stop_pinger(guild):
             if guild.id in self.pingers:
-                #pinger = self.pingers[guild.id]
-                #if not pinger.periodic.canceled:
-                self.pingers[guild.id].hault()
-        coros = [stop_pinger(guild) for guild in self.guilds]
+                await self.pingers[guild.id].hault()
+##            while self.pingers[guild.id].running:
+##                asyncio.sleep(1)
+        coros = (stop_pinger(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
         print('Pingers shut down...')
         
@@ -892,7 +879,7 @@ class StatusBot(discord.Client):
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} shutting down.')
             return
-        coros = [tell_guild_shutdown(guild) for guild in self.guilds]
+        coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
         print('Closing...')
         await super().close()

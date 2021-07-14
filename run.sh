@@ -1,4 +1,6 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
+# Run bot in a virtual environment
 
 cd ~/Desktop/Bots
 python3 -m venv StatusBot

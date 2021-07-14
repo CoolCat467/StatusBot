@@ -8,17 +8,16 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 import os
 import aiohttp
 import async_timeout
 
 from asyncio import gather
-from functools import reduce
 
 TIMEOUT = 10
 

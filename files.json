@@ -4,7 +4,8 @@
       "address_tools.py",
       "connection.py",
       "pingers.py",
-      "server_status.py"
+      "server_status.py",
+      "__init__.py"
     ],
     "": [
       "update.py",
@@ -13,10 +14,15 @@
   },
   "": [
     "run.sh",
+    "run-quick.sh",
     "looprun.sh",
     "requirements.txt",
+    "files.json",
+    "version.txt",
     "pyvenv.cfg",
     "install_update.sh",
-    "install.sh"
+    "install.sh",
+    "create_installers.sh",
+    "README.md"
   ]
 }
