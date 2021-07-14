@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 4
+__ver_patch__ = 5
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -127,7 +127,7 @@ def combineAnd(data:list) -> str:
         return ', '.join(data)
     return ' '.join(data)
 
-def printTime(seconds:int) -> str:
+def printTime(seconds:int, singleTitleAllowed:bool=True) -> str:
     "Returns time using the output of splitTime."
     times = ('eons', 'eras', 'epochs', 'ages', 'millenniums',
              'centuries', 'decades', 'years', 'months', 'weeks',
@@ -136,13 +136,15 @@ def printTime(seconds:int) -> str:
     single[5] = 'century'
     split = splitTime(seconds)
     zipidxvalues = [(idx, split[idx]) for idx in range(len(split)) if split[idx]]
+    if singleTitleAllowed:
+        if len(zipidxvalues) == 1:
+            index, value = zipidxvalues[0]
+            if value == 1:
+                return single[index]
     data = []
     for index, value in zipidxvalues:
         title = single[index] if abs(value) < 2 else times[index]
-        if value == 1 and len(zipidxvalues) == 1:
-            data.append(title)
-        else:
-            data.append(f'{value} {title}')
+        data.append(f'{value} {title}')
     return combineAnd(data)
 
 def get_time_of_day(hour:int) -> str:
@@ -163,10 +165,10 @@ def exceptChars(text, valid=AZUP+AZLOW+NUMS+'.:-'):
     "Return every character in text that is also in valid string."
     return ''.join(i for i in text if i in valid)
 
-async def get_github_file(loop, path, timeout=10):
+async def get_github_file(path, timeout=10):
     f"Return text from github file in {__title__} decoded as utf-8"
-    data = await update.get_file(loop, __title__, path, __author__, 'master', timeout)
-    return data.decode('utf-8')
+    file = await update.get_file(__title__, path, __author__, 'master', timeout)
+    return file.decode('utf-8')
 
 class Timer:
     "Class that will run coroutine self.run every delay secconds."
@@ -477,7 +479,7 @@ class StatusBot(discord.Client):
     async def getonlinevers(self, message) -> tuple:
         "Get online version, tell user in message.channel, and return said version as tuple."
         # Get github version string
-        version = await get_github_file(self.loop, 'version.txt')
+        version = await get_github_file('version.txt')
         # Send message about it.
         await message.channel.send(f'Online version: {version}')
         # Make it tuple and return it
@@ -500,7 +502,7 @@ class StatusBot(discord.Client):
                 # If we need update, get file list.
                 await message.channel.send(f'Retrieving file list...')
                 try:
-                    response = await get_github_file(self.loop, 'files.json')
+                    response = await get_github_file('files.json')
                     paths = tuple(update.get_paths(json.loads(response)))
                 except:
                     # On failure, tell them we can't read file.
@@ -512,7 +514,7 @@ class StatusBot(discord.Client):
                 await message.channel.send(f'{len(paths)} files will now be updated. Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
-                await update.update_files(self.loop, rootdir, paths, __title__, __author__, 'master', timeout)
+                await update.update_files(rootdir, paths, __title__, __author__, 'master', timeout)
                 await message.channel.send('Done. Bot will need to be restarted to apply changes.')
                 return
             await message.channel.send(f'No update required.')

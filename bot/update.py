@@ -8,12 +8,12 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 1
+__ver_patch__ = 2
 
-import os
+from os import path
 import aiohttp
 import async_timeout
 
@@ -49,19 +49,19 @@ def get_paths(jdict:dict) -> list:
                 # If dictionary, read and add our own path.
                 add = read_dict(nxt)
                 for f in add:
-                    paths.append(os.path.join(path, f))
+                    paths.append(path.join(path, f))
             elif isinstance(nxt, (list, tuple)):
                 # If it's a list or tuple, add all to our own paths joined.
                 for f in nxt:
                     if isinstance(f, str):
-                        paths.append(os.path.join(path, f))
+                        paths.append(path.join(path, f))
         return paths
     return read_dict(jdict)
 
-async def download_coroutine(loop, url:str, timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
+async def download_coroutine(url:str, timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
     "Return content bytes found at url."
     # Make a session with our event loop and the magic headers that make it work right cause it's smart
-    async with aiohttp.ClientSession(loop=loop, **sessionkwargs) as session:
+    async with aiohttp.ClientSession(**sessionkwargs) as session:
         # Make sure we have a timeout, so that in the event of network failures or something code doesn't get stuck
         async with async_timeout.timeout(timeout):
             # Go to the url and get response
@@ -74,34 +74,33 @@ async def download_coroutine(loop, url:str, timeout:int=TIMEOUT, **sessionkwargs
         await session.close()
     return request_result
 
-async def get_file(loop, repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT) -> bytes:
+async def get_file(repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
     "Get a file from a github repository. Return data as bytes."
     url = get_address(user, repo, branch, path)
-    return await download_coroutine(loop, url, timeout)
+    return await download_coroutine(url, timeout, **sessionkwargs)
 
-async def update_file(loop, basepath:str, repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT) -> bool:
+async def update_file(basepath:str, repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> bool:
     "Update file. Return False on exception, otherwise True."
     try:
-        filedata = await get_file(loop, repo, path, user, branch, timeout)
-        savepath = os.path.join(basepath, path)
-        with open(savepath, 'w', encoding='utf-8') as sfile:
-            sfile.write(filedata.decode('utf-8'))
+        filedata = await get_file(repo, path, user, branch, timeout, **sessionkwargs)
+        savepath = path.join(basepath, path)
+        with open(savepath, 'wb') as sfile:
+            sfile.write(filedata)
             sfile.close()
         del file
     except:
         return False
     return True
 
-async def update_files(loop, basepath:str, paths:tuple, repo:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT) -> list:
+async def update_files(basepath:str, paths:tuple, repo:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> list:
     "Update multiple files all from the same github repository. Return list of paths."
     urlbase = get_address(user, repo, branch, '')
     async def update_single(path):
         "Update a single file."
-        savepath = os.path.join(basepath, path)
+        savepath = path.abspath(path.join(basepath, path))
         url = urlbase + path
-        file = await download_coroutine(loop, url, timeout)
-        with open(savepath, 'w', encoding='utf-8') as sfile:
-            sfile.write(file.decode('utf-8'))
+        with open(savepath, 'wb') as sfile:
+            sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
             sfile.close()
         del file
         return path
@@ -111,7 +110,7 @@ async def update_files(loop, basepath:str, paths:tuple, repo:str, user:str, bran
 def run():
     import asyncio
     loop = asyncio.get_event_loop()
-    file = loop.run_until_complete(get_file(loop, 'StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
+    file = loop.run_until_complete(get_file('StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
     print(file.decode('utf-8').strip())
     del asyncio
     
