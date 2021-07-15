@@ -184,6 +184,10 @@ class Timer:
     async def hault(self) -> None:
         "Set self.running to False."
         self.running = False
+        try:
+            self.task.cancel()
+        except:
+            pass
         return
     
     async def run(self) -> bool:
@@ -284,9 +288,9 @@ class GuildServerPinger(Timer):
 
 class StatusBot(discord.Client):
     "StatusBot needs prefix, eventloop, and any arguments to pass to discord.Client."
-    def __init__(self, prefix, eventloop, *args, **kwargs):
+    def __init__(self, prefix, *args, loop=asyncio.get_event_loop(), **kwargs):
         self.prefix = prefix
-        self.loop = eventloop
+        self.loop = loop
         self.pingers = {}
         self.rootdir = os.path.split(os.path.abspath(__file__))[0]
         self.gcommands = {'currentversion': self.getcurrentvers,
@@ -305,7 +309,7 @@ class StatusBot(discord.Client):
                           'setoption': self.setoption_dm,
                           'getoption': self.getoption_dm,
                           'help': self.help_dm}
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, loop=self.loop, **kwargs)
         return
     
     def get_guild_config_file(self, guildid:int) -> str:
@@ -909,7 +913,7 @@ def run() -> None:
     #intents.presences = True
     # 4867
     
-    bot = StatusBot(BOT_PREFIX, loop, loop=loop, intents=intents)
+    bot = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
     
     try:
         loop.run_until_complete(bot.start(TOKEN))
