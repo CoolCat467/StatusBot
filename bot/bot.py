@@ -288,7 +288,7 @@ class StatusBot(discord.Client):
         self.prefix = prefix
         self.loop = eventloop
         self.pingers = {}
-        self.rootdir = os.path.split(__file__)[0]
+        self.rootdir = os.path.split(os.path.abspath(__file__))[0]
         self.gcommands = {'currentversion': self.getcurrentvers,
                           'onlineversion': self.getonlinevers,
                           'getmyid': self.getmyid,
@@ -412,6 +412,7 @@ class StatusBot(discord.Client):
         print(f'{self.user} has connected to Discord!')
         print(f'Prefix: {self.prefix}')
         print(f'Intents: {self.intents}')
+        print(f'Root Dir: {self.rootdir}')
         
         configdir = os.path.join(self.rootdir, 'config')
         if not os.path.exists(configdir):
@@ -873,7 +874,7 @@ class StatusBot(discord.Client):
             if guild.id in self.pingers:
                 await self.pingers[guild.id].hault()
             while not self.pingers[guild.id].stopped:
-                asyncio.sleep(1)
+                await asyncio.sleep(0.005)
         coros = (stop_pinger(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
         print('Pingers shut down...')
