@@ -82,12 +82,11 @@ async def get_file(repo:str, path:str, user:str, branch:str='HEAD', timeout:int=
 async def update_file(basepath:str, repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> bool:
     "Update file. Return False on exception, otherwise True."
     try:
-        filedata = await get_file(repo, path, user, branch, timeout, **sessionkwargs)
-        savepath = os.path.join(basepath, path)
+        url = get_address(user, repo, branch, path)
+        savepath = os.path.abspath(os.path.join(basepath, path))
         with open(savepath, 'wb') as sfile:
-            sfile.write(filedata)
+            sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
             sfile.close()
-        del file
     except:
         return False
     return True
@@ -102,12 +101,12 @@ async def update_files(basepath:str, paths:tuple, repo:str, user:str, branch:str
         with open(savepath, 'wb') as sfile:
             sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
             sfile.close()
-        del file
         return path
     coros = (update_single(path) for path in paths)
     return await gather(*coros)
 
 def run():
+    "Demonstrate aquireing current version."
     import asyncio
     loop = asyncio.get_event_loop()
     file = loop.run_until_complete(get_file('StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
