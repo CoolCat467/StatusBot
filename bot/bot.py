@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 5
+__ver_patch__ = 6
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -121,6 +121,7 @@ def splitTime(seconds:int) -> list:
 
 def combineAnd(data:list) -> str:
     "Join values of text, and have 'and' with the last one properly."
+    data = list(data)
     if len(data) >= 2:
         data[-1] = 'and ' + data[-1]
     if len(data) > 2:
