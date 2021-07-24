@@ -281,7 +281,7 @@ class GuildServerPinger(Timer):
         except Exception as ex:
             error = f'`A {type(ex).__name__} Error Has Occored'
             if ex.args:
-                error += f': {", ".join(ex.args)}'
+                error += f': {", ".join(ex.args)}`'
             else:
                 error += '.`'
             print(error)
