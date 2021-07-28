@@ -582,8 +582,10 @@ class StatusBot(discord.Client):
         args = message.content.split(' ')[2:]
         config = self.get_guild_config(message.guild.id)
         valid = tuple(config.keys())
-        if len(args) == 0:
-            await message.channel.send(f"No option given. Valid options are: {', '.join(valid)}.")
+        validops = combineAnd(f'`{opt}`' for opt in valid)
+        validops = f' Valid options are: {validops}.
+        if not args:
+            await message.channel.send('Invalid option.'+validops)
             return
         option = args[0].lower()
         if option in valid:
@@ -603,7 +605,7 @@ class StatusBot(discord.Client):
                 value = ', '.join(names)
             await message.channel.send(f'Value of option "{option}": "{value}".')
             return
-        await message.channel.send(f"Invalid option. Valid options are: {', '.join(valid)}.")
+        await message.channel.send('Invalid option.'+validops)
         return
     
     async def getoption_dm(self, message) -> None:
