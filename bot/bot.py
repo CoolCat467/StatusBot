@@ -477,7 +477,7 @@ class StatusBot(discord.Client):
             pinger = self.pingers[message.guild.id]
             lastdict = pinger.last_json
             msg = json.dumps(lastdict, sort_keys=True, indent=2)
-            await message.channel.send(f'Last received json message:\n`{msg}`')
+            await message.channel.send(f'Last received json message:\n```{msg}```')
             #return await message.channel.send(f'Sent you a message as a dm.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
