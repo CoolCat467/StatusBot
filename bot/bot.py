@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 7
+__ver_patch__ = 8
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -173,6 +173,14 @@ def exceptChars(text:str, valid:str=AZUP+AZLOW+NUMS+'.:-') -> str:
     "Return every character in text that is also in valid string."
     return ''.join(i for i in text if i in valid)
 
+def parse_args(string:str, ignore:int=0, sep:str=' ') -> list:
+    "Return a list of arguments by splitting string by sep, ommiting first ignore args."
+    return string.split(sep)[ignore:]
+
+def wrap_list_values(items:tuple, wrap:str='`') -> list:
+    "Wrap all items in list of strings with wrap. Ex. 'cat' -> '`cat`'"
+    return [wrap+str(i)+wrap for i in iter(items)]
+
 async def get_github_file(path:str, timeout:int=10) -> str:
     f"Return text from github file in {__title__} decoded as utf-8"
     file = await update.get_file(__title__, path, __author__, 'master', timeout)
@@ -263,9 +271,9 @@ class GuildServerPinger(Timer):
                 delay = printTime(self.delay)
                 def users_mesg(action:str, users:list) -> str:
                     "Return users {action} the server: {users}"
-                    user = 'user' if len(users) == 1 else 'users'
-                    text = f'The following {user} have {action} the server in the last {delay}:\n'
-                    text += combineAnd([f'`{u}`' for u in users])
+                    user = 'user has' if len(users) == 1 else 'users have'
+                    text = f'The following {user} {action} the server in the last {delay}:\n'
+                    text += combineAnd(wrap_list_values(users, '`'))
                     return text
                 
                 message = ''
@@ -281,7 +289,7 @@ class GuildServerPinger(Timer):
         except Exception as ex:
             error = f'`A {type(ex).__name__} Error Has Occored'
             if ex.args:
-                error += f': {", ".join(ex.args)}`'
+                error += f': {combineAnd(ex.args)}`'
             else:
                 error += '.`'
             print(error)
@@ -305,7 +313,7 @@ class GuildServerPinger(Timer):
 
 class StatusBot(discord.Client):
     "StatusBot needs prefix, eventloop, and any arguments to pass to discord.Client."
-    def __init__(self, prefix, *args, loop=asyncio.get_event_loop(), **kwargs):
+    def __init__(self, prefix:str, *args, loop=asyncio.get_event_loop(), **kwargs):
         self.stopped = Event()
         self.updating = Lock()
         self.prefix = prefix
@@ -331,6 +339,10 @@ class StatusBot(discord.Client):
                           'help': self.help_dm}
         super().__init__(*args, loop=self.loop, **kwargs)
         return
+    
+    def __repr__(self):
+        up = self.__class__.__weakref__.__qualname__.split('.')[0]
+        return f'<{self.__class__.__name__} Object ({up} subclass)>'
     
     def get_guild_config_file(self, guildid:int) -> str:
         "Return the path to the config json file for a ceartain guild id."
@@ -391,8 +403,8 @@ class StatusBot(discord.Client):
     
     async def search_for_member_in_guilds(self, username):
         "Search for member in all guilds we connected to. Return None on failure."
-        coros = (guild.get_member_named(username) for guild in self.guilds)
-        members = await asyncio.gather(*coros)
+        members = (guild.get_member_named(username) for guild in self.guilds)
+##        members = await asyncio.gather(*coros)
         for member in members:
             if not member is None:
                 return member
@@ -414,13 +426,13 @@ class StatusBot(discord.Client):
         guildconfig = self.get_guild_config(guildid)
         channel = self.guess_guild_channel(guildid)
         if not 'channel' in guildconfig:
-            await channel.send('This is where I will post leave-join messages until an admin sets my "channel" option.')
+            await channel.send('This is where I will post leave-join messages until an admin sets my `channel` option.')
         if 'address' in guildconfig:
             action = await self.add_guild_pinger(guildid)
             if action != 'none':
                 await channel.send(f'Server pinger {action}.')
         else:
-            await channel.send(f'Server address not set, pinger not started. Please set it with "{self.prefix} setoption address <address>".')
+            await channel.send(f'Server address not set, pinger not started. Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
     
     async def eval_guilds(self) -> list:
@@ -466,6 +478,27 @@ class StatusBot(discord.Client):
 ##        await self.change_presence(status=discord.Status.online, activity=act)
 ##        return
     
+    async def get_user_name(self, uid:int, getmember=None) -> Union[str, None]:
+        "Return the name of user with id <uid>."
+        if getmember is None:
+            getmember = self.get_user
+        member = getmember(uid)
+        if member is None:
+            return member
+        return member.name+'#'+member.discriminator
+    
+    async def replace_ids_w_names(self, names:tuple) -> list:
+        "Replace user ids (intigers) with usernames in lists. Returns list of strings."
+        replaced = []
+        for item in names:
+            if isinstance(item, int):
+                username = await self.get_user_name(item)
+                if not username is None:
+                    replaced.append(f'{username} (id. {item})')
+                    continue
+            replaced.append(str(item))
+        return replaced
+    
     async def getmyid(self, message) -> None:
         "Tell the author of the message their user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
@@ -489,8 +522,8 @@ class StatusBot(discord.Client):
             pinger = self.pingers[message.guild.id]
             players = list(pinger.last_ping)
             if players:
-                players = [f'`{p}`' for p in players]
-                await message.channel.send(f'Players online in last received sample:\n{combineAnd(players)}.')
+                players = combineAnd(wrap_list_values(players, '`'))
+                await message.channel.send(f'Players online in last received sample:\n{players}.')
                 return
             await message.channel.send(f'No players were online in the last received sample.')
             return
@@ -577,40 +610,42 @@ class StatusBot(discord.Client):
         await message.channel.send(f'You do not have permission to run this command.')
         return
     
+    def get_valid_options(self, valid:list) -> str:
+        "Return string of ' Valid options are: {valid}' but with pretty formatting."
+        validops = combineAnd(wrap_list_values(valid))
+        return f' Valid options are: {validops}.'
+    
     async def getoption_guild(self, message) -> None:
         "Send message with value of option given in this guild's config."
-        args = message.content.split(' ')[2:]
+        args = parse_args(message.content, 2)
         config = self.get_guild_config(message.guild.id)
         valid = tuple(config.keys())
-        validops = combineAnd(f'`{opt}`' for opt in valid)
-        validops = f' Valid options are: {validops}.
+        
+        if not valid:
+            await message.channel.send('No options are set at this time.')
+            return
+        validops = self.get_valid_options(valid)            
+        
         if not args:
             await message.channel.send('Invalid option.'+validops)
             return
         option = args[0].lower()
         if option in valid:
             value = config[option]
+            if not value and value != 0:
+                await message.channel.send(f'Option `{option}` is not set.')
+                return
             if isinstance(value, (list, tuple)):
-                names = []
-                for uid in value:
-                    if isinstance(uid, int):
-                        member = self.get_user(uid)
-                        if not member is None:
-                            name = member.name+'#'+member.discriminator
-                            names.append(f'{name} (id. {uid})')
-                        else:
-                            names.append(str(uid))
-                    else:
-                        names.append(str(uid))
-                value = ', '.join(names)
-            await message.channel.send(f'Value of option "{option}": "{value}".')
+                names = await self.replace_ids_w_names(value)
+                value = combineAnd(wrap_list_values(names, '`'))[1:-1]
+            await message.channel.send(f'Value of option `{option}`: `{value}`.')
             return
         await message.channel.send('Invalid option.'+validops)
         return
     
     async def getoption_dm(self, message) -> None:
         "Send message with value of option given in the dm config."
-        args = message.content.split(' ')[1:]
+        args = parse_args(message.content, 1)
         config = self.get_dm_config()
         valid = []
         if message.author.id == OWNER_ID:
@@ -618,8 +653,12 @@ class StatusBot(discord.Client):
         elif 'setoptionusers' in config:
             if message.author.id in config['setoptionusers']:
                 valid += ['setoptionusers', 'updateusers', 'stopusers']
-        validops = combineAnd(f'`{opt}`' for opt in valid)
-        validops = f' Valid options are: {validops}.'
+        
+        if not valid:
+            await message.channel.send('No options are set at this time.')
+            return
+        validops = self.get_valid_options(valid) 
+        
         if len(args) == 0:
             await message.channel.send('No option given.'+validops)
             return
@@ -627,20 +666,12 @@ class StatusBot(discord.Client):
             option = args[0].lower()
             if option in valid:
                 value = config[option]
+                if not value and value != 0:
+                    await message.channel.send(f'Option `{option}` is not set.')
+                    return
                 if isinstance(value, (list, tuple)):
-                    names = []
-                    for uid in value:
-                        if isinstance(uid, int):
-                            member = self.get_user(uid)
-                            if not member is None:
-                                name = member.name+'#'+member.discriminator
-##                                name = member.mention
-                                names.append(f'`{name}` (id. `{uid}`)')
-                            else:
-                                names.append(f'`{uid}`')
-                        else:
-                            names.append(str(uid))
-                    value = ', '.join(names)
+                    names = await self.replace_ids_w_names(value)
+                    value = combineAnd(wrap_list_values(names, '`'))[1:-1]
                 await message.channel.send(f'Value of option `{option}`: `{value}`.')
                 return
             await message.channel.send('Invalid option.'+validops)
@@ -648,18 +679,22 @@ class StatusBot(discord.Client):
         await message.channel.send(f'You do not have permission to view the values of any options.')
         return
     
+    async def send_command_list(self, commands:dict, name:str, channel) -> str:
+        "Send message on channel telling user about all valid name commands."
+        sort = sorted(commands.keys(), reverse=True)
+        commands = '\n'.join(wrap_list_values(sort, '`'))
+        text = f"{__title__}'s Valid {name} Commands:\n{commands}"
+        await channel.send(text)
+        return
+    
     async def help_guild(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
-        commands = '\n'.join('`'+k+'`' for k in (sorted(self.gcommands.keys(), reverse=True)))
-        text = f"{__title__}'s Valid Guild Commands:\n{commands}"
-        await message.channel.send(text)
+        await self.send_command_list(self.gcommands, 'Guild', message.channel)
         return
     
     async def help_dm(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
-        commands = '\n'.join('`'+k+'`' for k in (sorted(self.dcommands.keys(), reverse=True)))
-        text = f"{__title__}'s Valid DM Commands:\n{commands}"
-        await message.channel.send(text)
+        await self.send_command_list(self.dcommands, 'DM', message.channel)
         return
     
     async def refresh(self, message) -> None:
@@ -671,7 +706,6 @@ class StatusBot(discord.Client):
     # @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
     async def setoption_guild(self, message) -> None:
         "Set a config option. Send message in message.channel on falure."
-        args = message.content.split(' ')[2:]
         config = self.get_guild_config(message.guild.id)
         valid = []
         
@@ -687,11 +721,11 @@ class StatusBot(discord.Client):
                 # give them access to almost everything.
                 valid += ['address', 'channel']
         
-        validops = combineAnd(f'`{opt}`' for opt in valid)
-        validops = f' Valid options are: {validops}.'
-        
         if not valid:
-            args = []
+            await message.channel.send('You do not have permission to set any options. If you feel this is a mistake, please contact server admin(s) and have them give you permission.')
+            return
+        args = parse_args(message.content, 2)
+        validops = self.get_valid_options(valid)
         
         if args:
             option = args[0].lower()
@@ -727,13 +761,14 @@ class StatusBot(discord.Client):
                                 await message.channel.send('User not found / User not in this guild.')
                                 return
                             value = member.id
-                        member = message.guild.get_member(value)
-##                        member = self.get_user(value)
-                        if member is None:
+##                        member = message.guild.get_member(value)
+####                        member = self.get_user(value)
+                        name = await self.get_user_name(value, message.guild.get_member)
+##                        if member is None:
+                        if name is None:
                             await message.channel.send('User not found / User not in this guild.')
                             return
-                        name = member.name+'#'+member.discriminator
-##                        name = member.mention
+##                        name = member.name+'#'+member.discriminator
                         value = [value]
                         if option in config:
                             if value[0] in config[option]:
@@ -746,10 +781,7 @@ class StatusBot(discord.Client):
                 await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
                 await self.refresh(message)
                 return
-        if valid:
-            await message.channel.send('Invalid option.'+validops)
-            return
-        await message.channel.send('You do not have permission to set any options. If you feel this is a mistake, please contact server admin(s) and have them give you permission.')
+        await message.channel.send('Invalid option.'+validops)
         return
     
     async def setoption_dm(self, message) -> None:
@@ -762,10 +794,12 @@ class StatusBot(discord.Client):
             if message.author.id in config['setoptionusers']:
                 valid += ['updateusers', 'stopusers']
         
-        validops = combineAnd(f'`{opt}`' for opt in valid)
-        validops = f' Valid options are: {validops}.'
+        if not valid:
+            await message.channel.send('You do not have permission to set any options.')
+            return
+        args = parse_args(message.clean_content, 1)
+        validops = self.get_valid_options(valid)
         
-        args = message.clean_content.split(' ')[1:]
         if args:
             option = args[0].lower()
             
@@ -794,12 +828,15 @@ class StatusBot(discord.Client):
                             await message.channel.send('User not found.')
                             return
                         value = member.id
-                    member = self.get_user(value)
-                    if member is None:
+##                    member = self.get_user(value)
+                    name = await self.get_user_name(value)
+##                    if member is None:
+##                        await message.channel.send('User not found.')
+##                        return
+##                    name = member.name+'#'+member.discriminator
+                    if name is None:
                         await message.channel.send('User not found.')
                         return
-                    name = member.name+'#'+member.discriminator
-##                    name = member.mention
                     value = [value]
                     if option in config:
                         if value[0] in config[option]:
@@ -821,7 +858,8 @@ class StatusBot(discord.Client):
         "Process new command message. Calls self.command[command](message)."
         if self.stopped.is_set():
             await message.channel.send(f'{__title__} is in the process of shutting down.')
-        err = ' Please enter a valid command. Use "`{}help`" to see valid commands.'
+            return
+        err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # 1 if it's guild, 0 if dm.
         midx = int(mode == 'guild')
         # Format error text depending on if dm or guild message.
@@ -840,7 +878,7 @@ class StatusBot(discord.Client):
                 return
             # Prefix doesn't have to be there in dm, so add space so args works right.
             content += ' '
-        args = content.split(' ')
+        args = parse_args(content)
         # Get command. zeroth if dm, first if guild because of prefix.
         command = args[midx].lower()
         # If command is valid, run it.
@@ -848,10 +886,11 @@ class StatusBot(discord.Client):
             await commands[command](message)
             return
         if not midx and content.startswith(self.prefix):
+            # if in a dm and starts with our prefix,
             await message.channel.send("When you talk to me in DMs, you don't have to start with my prefix for me to react!")
             return
         # Otherwse, send error of no command.
-        await message.channel.send('No command given.'+err)
+        await message.channel.send('No valid command given.'+err)
         return
     
     # Intents.guilds
@@ -877,7 +916,6 @@ class StatusBot(discord.Client):
     # Intents.dm_messages, Intents.guild_messages, Intents.messages
     async def on_message(self, message) -> None:
         "React to any new messages."
-##        print(message.clean_content, message.content)
         # Don't process anything if the bot is shutting down.
         if self.stopped.is_set():
             return
@@ -976,7 +1014,6 @@ class StatusBot(discord.Client):
 
 def run() -> None:
     "Run bot."
-    global bot
     if TOKEN is None:
         print('\nNo token set!\nEither add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,\nor set DISCORD_TOKEN environment variable.')
         return
