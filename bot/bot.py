@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 8
+__ver_patch__ = 9
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -178,8 +178,36 @@ def parse_args(string:str, ignore:int=0, sep:str=' ') -> list:
     return string.split(sep)[ignore:]
 
 def wrap_list_values(items:tuple, wrap:str='`') -> list:
-    "Wrap all items in list of strings with wrap. Ex. 'cat' -> '`cat`'"
+    "Wrap all items in list of strings with wrap. Ex. ['cat'] -> ['`cat`']"
     return [wrap+str(i)+wrap for i in iter(items)]
+
+async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwrap:bool=True) -> None:
+    "Use sendfunc to send text in segments over 2000 characters by splitting it into multiple messages."
+    send = str(text)
+    addaloc = 0
+    if wrapwith:
+        if replaceexistingwrap:
+            send = send.replace(wrapwith, '')
+        addaloc = int(len(wrapwith) * 2)
+    parts = []
+    count = len(send)+addaloc
+    if count > 2000:
+        last = 0
+        for i in range(0, len(send), 2000-addaloc):
+            parts.append(send[last:i])
+            last = i
+        del parts[0]
+        if last < count:
+            parts.append(send[last:])
+    else:
+        parts.append(send)
+    if wrapwith:
+        parts = wrap_list_values(parts, wrapwith)
+##    coros = [sendfunc(part) for part in parts]
+##    await asyncio.gather(*coros)
+    for part in parts:
+        await sendfunc(part)
+    return
 
 async def get_github_file(path:str, timeout:int=10) -> str:
     f"Return text from github file in {__title__} decoded as utf-8"
@@ -197,6 +225,9 @@ class Timer:
         self.stopped = False
         self.task = self.bot.loop.create_task(self.wait_for_ready_start())
         return
+    
+    def __repr__(self):
+        return '<Timer Object>'
     
     async def hault(self) -> None:
         "Set self.running to False, cancel self.task, and wait for it to cancel completely."
@@ -240,6 +271,8 @@ class Timer:
 
 class GuildServerPinger(Timer):
     "Server pinger for guild."
+    retrydelaymins = 2#2 mins
+    retrysegments = 5#5 seconds
     def __init__(self, bot:discord.Client, guildid:int) -> None:
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guildid = guildid
@@ -247,56 +280,82 @@ class GuildServerPinger(Timer):
         self.last_ping = set()
         self.last_json = {}
         self.last_delay = 0
+        self.state = 0
+        self.ticks = 0
         self.channel = None
         super().__init__(bot, 60)
         return
     
+    @property
+    def retrysegcount(self) -> int:
+        "Return integer of retry segment count"
+        return int((60 / self.retrysegments) * self.retrydelaymins)
+    
     async def run(self) -> bool:
         "Update server status. Return True if connection lost."
-        try:
-            json, ping = await self.server.async_status()
-            self.last_json = json
-            self.last_delay = ping
-            current = []
-            if 'players' in json:
-                if 'sample' in json['players']:
-                    for player in json['players']['sample']:
-                        if 'name' in player:
-                            current.append(player['name'])
-            current = set(current)
-            if current != self.last_ping:
-                joined = tuple(current.difference(self.last_ping))
-                left = tuple(self.last_ping.difference(current))
-                
-                delay = printTime(self.delay)
-                def users_mesg(action:str, users:list) -> str:
-                    "Return users {action} the server: {users}"
-                    user = 'user has' if len(users) == 1 else 'users have'
-                    text = f'The following {user} {action} the server in the last {delay}:\n'
-                    text += combineAnd(wrap_list_values(users, '`'))
-                    return text
-                
-                message = ''
-                if left:
-                    message += users_mesg('left', left)
-                if joined:
+        if self.state == 0:
+            try:
+                json, ping = await self.server.async_status()
+                self.last_json = json
+                self.last_delay = ping
+                current = []
+                if 'players' in json:
+                    if 'sample' in json['players']:
+                        for player in json['players']['sample']:
+                            if 'name' in player:
+                                current.append(player['name'])
+                current = set(current)
+                if current != self.last_ping:
+                    joined = tuple(current.difference(self.last_ping))
+                    left = tuple(self.last_ping.difference(current))
+                    
+                    delay = printTime(self.delay)
+                    def users_mesg(action:str, users:list) -> str:
+                        "Return users {action} the server: {users}"
+                        user = 'user has' if len(users) == 1 else 'users have'
+                        text = f'The following {user} {action} the server in the last {delay}:\n'
+                        text += combineAnd(wrap_list_values(users, '`'))
+                        return text
+                    
+                    message = ''
+                    if left:
+                        message += users_mesg('left', left)
+                    if joined:
+                        if message:
+                            message += '\n'
+                        message += users_mesg('joined', joined)
                     if message:
-                        message += '\n'
-                    message += users_mesg('joined', joined)
-                if message:
-                    await self.channel.send(message)
-            self.last_ping = current
-        except Exception as ex:
-            error = f'`A {type(ex).__name__} Error Has Occored'
-            if ex.args:
-                error += f': {combineAnd(ex.args)}`'
-            else:
-                error += '.`'
-            print(error)
-            await self.channel.send(error)
-            await self.channel.send('Connection to server has been lost.')
-            return True
-        return False
+                        await send_over_2000(self.channel.send, message)
+##                        await self.channel.send(message)
+                self.last_ping = current
+            except Exception as ex:
+                error = f'`A {type(ex).__name__} Error Has Occored'
+                if ex.args:
+                    error += f': {combineAnd(ex.args)}`'
+                else:
+                    error += '.`'
+                print(error)
+                await self.channel.send(error)
+                await self.channel.send('Connection to server has been lost.')
+                self.state = 1
+            return False
+        elif self.state == 1:
+            if self.ticks == 0:
+                try:
+                    json, ping = await self.server.async_status()
+                except:
+                    self.last_json = {}
+                    self.last_delay = float()
+                    self.last_ping = set()
+                else:
+                    self.state = 0
+                    self.ticks = 0
+                    await self.channel.send('Connection to server re-established.')
+                    return False
+            self.ticks = (self.ticks + 1) % self.retrysegcount
+            await asyncio.sleep(int(self.retrysegments))
+            return False
+        return True
     
     async def start(self) -> None:
         "If config is good, run pinger."
@@ -508,10 +567,15 @@ class StatusBot(discord.Client):
         "Tell the author of the message the last json from server pinger."
         if message.guild.id in self.pingers:
             pinger = self.pingers[message.guild.id]
-            lastdict = pinger.last_json
-            msg = json.dumps(lastdict, sort_keys=True, indent=2)
-            await message.channel.send(f'Last received json message:\n```{msg}```')
-            #return await message.channel.send(f'Sent you a message as a dm.')
+            if pinger.state == 0:
+                lastdict = pinger.last_json
+                msg = json.dumps(lastdict, sort_keys=True, indent=2)
+##                await message.channel.send(f'Last received json message:\n```{msg}```')
+                await message.channel.send(f'Last received json message:')
+                await send_over_2000(message.channel.send, msg, '```', False)
+                return
+            delay = printTime(pinger.retrysegcount)
+            await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
@@ -520,12 +584,18 @@ class StatusBot(discord.Client):
         "Tell the author of the message the usernames of the players currently connected to the guild's server."
         if message.guild.id in self.pingers:
             pinger = self.pingers[message.guild.id]
-            players = list(pinger.last_ping)
-            if players:
-                players = combineAnd(wrap_list_values(players, '`'))
-                await message.channel.send(f'Players online in last received sample:\n{players}.')
+            if pinger.state == 0:
+                players = list(pinger.last_ping)
+                if players:
+                    players = combineAnd(wrap_list_values(players, '`'))
+##                    await message.channel.send(f'Players online in last received sample:\n{players}.')
+                    await message.channel.send(f'Players online in last received sample:')
+                    await send_over_2000(message.channel.send, players)
+                    return
+                await message.channel.send(f'No players were online in the last received sample.')
                 return
-            await message.channel.send(f'No players were online in the last received sample.')
+            delay = printTime(pinger.retrysegcount)
+            await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
@@ -1043,4 +1113,4 @@ def run() -> None:
 
 if __name__ == '__main__':
     print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
-    run()
+##    run()
