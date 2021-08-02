@@ -1113,4 +1113,4 @@ def run() -> None:
 
 if __name__ == '__main__':
     print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
-##    run()
+    run()
