@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.9'
+__version__ = '0.1.10'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 9
+__ver_patch__ = 10
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -203,6 +203,8 @@ async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwra
         parts.append(send)
     if wrapwith:
         parts = wrap_list_values(parts, wrapwith)
+    # This would be great for asyncio.gather, but
+    # I'm not sure if that will throw off call order or not.
 ##    coros = [sendfunc(part) for part in parts]
 ##    await asyncio.gather(*coros)
     for part in parts:
@@ -262,7 +264,7 @@ class Timer:
         "Keep running self.run every self.delay seccond or until self.bot is closed or self.run returns True."
         while self.running:
             stop = await self.run()
-            if stop or self.bot.is_closed():
+            if stop or self.bot.pinger_close:
                 self.running = False
             else:
                 await asyncio.sleep(self.delay)
@@ -326,7 +328,6 @@ class GuildServerPinger(Timer):
                         message += users_mesg('joined', joined)
                     if message:
                         await send_over_2000(self.channel.send, message)
-##                        await self.channel.send(message)
                 self.last_ping = current
             except Exception as ex:
                 error = f'`A {type(ex).__name__} Error Has Occored'
@@ -403,6 +404,11 @@ class StatusBot(discord.Client):
         up = self.__class__.__weakref__.__qualname__.split('.')[0]
         return f'<{self.__class__.__name__} Object ({up} subclass)>'
     
+    @property
+    def pinger_close(self):
+        "Return True if pingers should close."
+        return self.stopped.is_set() or self.is_closed()
+    
     def get_guild_config_file(self, guildid:int) -> str:
         "Return the path to the config json file for a ceartain guild id."
         return os.path.join(self.rootdir, 'config', 'guilds', str(guildid)+'.json')
@@ -463,7 +469,6 @@ class StatusBot(discord.Client):
     async def search_for_member_in_guilds(self, username):
         "Search for member in all guilds we connected to. Return None on failure."
         members = (guild.get_member_named(username) for guild in self.guilds)
-##        members = await asyncio.gather(*coros)
         for member in members:
             if not member is None:
                 return member
@@ -519,7 +524,7 @@ class StatusBot(discord.Client):
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
         c = max(len(name) for name in guildnames)
-        print('\n'.join(n.center(c) for n in guildnames))
+        print('\n'.join(n.center(c) for n in guildnames)+'\n')
         await self.eval_guilds()
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
@@ -588,7 +593,6 @@ class StatusBot(discord.Client):
                 players = list(pinger.last_ping)
                 if players:
                     players = combineAnd(wrap_list_values(players, '`'))
-##                    await message.channel.send(f'Players online in last received sample:\n{players}.')
                     await message.channel.send(f'Players online in last received sample:')
                     await send_over_2000(message.channel.send, players)
                     return
@@ -662,11 +666,12 @@ class StatusBot(discord.Client):
                     return
                 # Get max amount of time this could take.
                 maxtime = printTime(timeout*len(paths))
-                # Tell user number of files we are updating.
+                # Stop everything if we are trying to shut down.
                 if self.stopped.is_set():
                     await message.channel.send(f'{__title__} is in the process of shutting down, canceling update.')
                     self.updating.release()
                     return
+                # Tell user number of files we are updating.
                 await message.channel.send(f'{len(paths)} files will now be updated. Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
@@ -680,9 +685,9 @@ class StatusBot(discord.Client):
         await message.channel.send(f'You do not have permission to run this command.')
         return
     
-    def get_valid_options(self, valid:list) -> str:
+    def get_valid_options(self, valid:list, wrap:str='`') -> str:
         "Return string of ' Valid options are: {valid}' but with pretty formatting."
-        validops = combineAnd(wrap_list_values(valid))
+        validops = combineAnd(wrap_list_values(valid, wrap))
         return f' Valid options are: {validops}.'
     
     async def getoption_guild(self, message) -> None:
@@ -753,8 +758,9 @@ class StatusBot(discord.Client):
         "Send message on channel telling user about all valid name commands."
         sort = sorted(commands.keys(), reverse=True)
         commands = '\n'.join(wrap_list_values(sort, '`'))
-        text = f"{__title__}'s Valid {name} Commands:\n{commands}"
+        text = f"{__title__}'s Valid {name} Commands:"
         await channel.send(text)
+        await send_over_2000(channel.send, commands)
         return
     
     async def help_guild(self, message) -> None:
@@ -832,13 +838,11 @@ class StatusBot(discord.Client):
                                 return
                             value = member.id
 ##                        member = message.guild.get_member(value)
-####                        member = self.get_user(value)
+##                        member = self.get_user(value)
                         name = await self.get_user_name(value, message.guild.get_member)
-##                        if member is None:
                         if name is None:
                             await message.channel.send('User not found / User not in this guild.')
                             return
-##                        name = member.name+'#'+member.discriminator
                         value = [value]
                         if option in config:
                             if value[0] in config[option]:
@@ -900,10 +904,6 @@ class StatusBot(discord.Client):
                         value = member.id
 ##                    member = self.get_user(value)
                     name = await self.get_user_name(value)
-##                    if member is None:
-##                        await message.channel.send('User not found.')
-##                        return
-##                    name = member.name+'#'+member.discriminator
                     if name is None:
                         await message.channel.send('User not found.')
                         return
@@ -924,14 +924,14 @@ class StatusBot(discord.Client):
         await message.channel.send('You do not have permission to set any options.')
         return
     
-    async def process_command_message(self, message, mode:str):
+    async def process_command_message(self, message, mode:str='guild') -> None:
         "Process new command message. Calls self.command[command](message)."
         if self.stopped.is_set():
             await message.channel.send(f'{__title__} is in the process of shutting down.')
             return
         err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # 1 if it's guild, 0 if dm.
-        midx = int(mode == 'guild')
+        midx = int(mode.lower() == 'guild')
         # Format error text depending on if dm or guild message.
         err = err.format(('', self.prefix+' ')[midx])
         # Command list depends on dm or guild too.
@@ -1037,9 +1037,9 @@ class StatusBot(discord.Client):
         class fakefile:
             def __init__(self):
                 self.data = []
-            def write(self, value):
+            def write(self, value:str) -> None:
                 self.data.append(value)
-            def getdata(self):
+            def getdata(self) -> str:
                 return ''.join(self.data)[:-1]
             pass
         yestotalyafile = fakefile()
