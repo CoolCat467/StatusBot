@@ -8,34 +8,35 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.1.10'
+__version__ = '0.2.0'
 __ver_major__ = 0
-__ver_minor__ = 1
-__ver_patch__ = 10
+__ver_minor__ = 2
+__ver_patch__ = 0
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
 
-BOT_PREFIX = '!status'
-OWNER_ID = 344282497103691777
-
-from typing import Union
-
 import os
 import asyncio
-import discord
-##from discord.ext import tasks, commands
-from dotenv import load_dotenv
 import json
 import random
 import traceback
+from typing import Union
+from dotenv import load_dotenv
 from threading import Event, Lock
+
+import discord
+##from discord.ext import tasks, commands
 
 # server_status is basically mcstatus from
 # https://github.com/Dinnerbone/mcstatus
 # with some slight modifications to make it better,
 # expecially asyncronous stuff.
 from status import server_status as mc
+
+# Gears is basically like discord's Cogs, but
+# by me.
+import gears
 
 # Update talks to raw.githubusercontent.com.
 import update
@@ -46,6 +47,9 @@ import update
 # file line 2 is "DISCORD_TOKEN=XXXXX"
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+
+BOT_PREFIX = '!status'
+OWNER_ID = 344282497103691777
 
 # Text globals
 AZUP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -59,7 +63,7 @@ def writeFile(filename:str, data:str) -> None:
     with open(filename, 'w', encoding='utf-8') as wfile:
         wfile.write(data)
         wfile.close()
-    return
+    return None
 
 def appendFile(filename:str, data:str) -> None:
     "Add data to file <filename>."
@@ -70,7 +74,7 @@ def appendFile(filename:str, data:str) -> None:
             wfile.close()
     else:
         writeFile(filename, data)
-    return
+    return None
 
 def readFile(filename:str) -> Union[str, None]:
     "Read data from file <filename>. Return None if file does not exist."
@@ -80,7 +84,7 @@ def readFile(filename:str) -> Union[str, None]:
             data = rfile.read()
             rfile.close()
         return data
-    return
+    return None
 
 def read_json(filename:str) -> Union[dict, None]:
     "Return json loads of filename read. Returns None if filename not exists."
@@ -89,16 +93,26 @@ def read_json(filename:str) -> Union[dict, None]:
             try:
                 data = json.load(rfile)
             except json.decoder.JSONDecodeError:
-                return
+                return None
             finally:
                 rfile.close()
         return data
-    return
+    return None
+
+def write_json(filename:str, dictionary:dict, indent:int=2) -> None:
+    "Write dicitonary as json to filename."
+    with open(filename, 'w', encoding='utf-8') as wfile:
+        try:
+            data = json.dump(dictionary, wfile, indent=indent)
+        finally:
+            wfile.close()
+    return None
 
 def splitTime(seconds:int) -> list:
     "Split time into decades, years, months, weeks, days, hours, minutes, and seconds."
     seconds = int(seconds)
-    def modTime(sec, num):
+    def modTime(sec:int, num:int) -> tuple[int]:
+        "Return number of times sec divides equally by number, then remainder."
         smod = sec % num
         return int((sec - smod) // num), smod
     ##values = (1, 60, 60, 24, 7, 365/12/7, 12, 10, 10, 10, 1000, 10, 10, 5)
@@ -148,7 +162,7 @@ def printTime(seconds:int, singleTitleAllowed:bool=True) -> str:
         if len(zipidxvalues) == 1:
             index, value = zipidxvalues[0]
             if value == 1:
-                return single[index]
+                return 'a '+single[index]
     data = []
     for index, value in zipidxvalues:
         title = single[index] if abs(value) < 2 else times[index]
@@ -209,72 +223,137 @@ async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwra
 ##    await asyncio.gather(*coros)
     for part in parts:
         await sendfunc(part)
-    return
+    return None
 
 async def get_github_file(path:str, timeout:int=10) -> str:
     f"Return text from github file in {__title__} decoded as utf-8"
     file = await update.get_file(__title__, path, __author__, 'master', timeout)
     return file.decode('utf-8')
 
-class Timer:
-    "Class that will run coroutine self.run every delay secconds."
-    delay = 60
-    haultadd = 2
-    def __init__(self, bot:discord.Client, delay:int) -> None:
-        self.bot = bot
-        self.delay = delay
-        self.running = False
-        self.stopped = False
-        self.task = self.bot.loop.create_task(self.wait_for_ready_start())
-        return
+class PingState(gears.AsyncState):
+    "State where we ping server."
+    def __init__(self):
+        super().__init__('ping')
+        return None
     
-    def __repr__(self):
-        return '<Timer Object>'
+    async def entry_actions(self) -> None:
+        "Reset failed to false and exception to None."
+        self.failed = False
+        self.exit_ex = None
+        return None
     
-    async def hault(self) -> None:
-        "Set self.running to False, cancel self.task, and wait for it to cancel completely."
-        # Self.running is false now.
-        self.running = False
-        # Cancel task
+    async def do_actions(self) -> None:
+        "Ping server. If failure, self.falied = True and if exceptions, save."
         try:
-            self.task.cancel()
-        except:
-            pass
-        if not self.stopped:
-            async def wait_for_canceled():
-                while not self.task.cancelled():
-                    await asyncio.sleep(0.1)
-                return True
-            self.stopped = await wait_for_canceled()
-        return
-    
-    async def run(self) -> bool:
-        "Return True."
-        return True
-    
-    async def wait_for_ready_start(self) -> None:
-        "Await self.bot.wait_until_ready(), then await self.start()."
-        await self.bot.wait_until_ready()
-        self.running = True
-        await self.start()
-        self.stopped = True
-        return
-    
-    async def start(self) -> None:
-        "Keep running self.run every self.delay seccond or until self.bot is closed or self.run returns True."
-        while self.running:
-            stop = await self.run()
-            if stop or self.bot.pinger_close:
-                self.running = False
+            json, ping = await self.machine.server.async_status()
+        except Exception as ex:
+            self.exit_ex = f'`A {type(ex).__name__} Error Has Occored'
+            if ex.args:
+                self.exit_ex += f': {combineAnd(ex.args)}`'
             else:
-                await asyncio.sleep(self.delay)
-        return
+                self.exit_ex += '.`'
+            self.failed = True
+            return None
+        # If success, get players.
+        self.machine.last_json = json
+        self.machine.last_delay = ping
+        current = []
+        if 'players' in json and 'sample' in json['players']:
+            for player in json['players']['sample']:
+                if 'name' in player:
+                    current.append(player['name'])
+        current = set(current)
+        # If different players,
+        if current != self.machine.last_ping:
+            # Find difference in depth.
+            joined = tuple(current.difference(self.machine.last_ping))
+            left = tuple(self.machine.last_ping.difference(current))
+            
+            delay = printTime(self.machine.delay)
+            def users_mesg(action:str, users:list) -> str:
+                "Return users {action} the server: {users}"
+                user = 'user has' if len(users) == 1 else 'users have'
+                text = f'The following {user} {action} the server in the last {delay}:\n'
+                text += combineAnd(wrap_list_values(users, '`'))
+                return text
+            # Collect left and joined messages.
+            message = ''
+            if left:
+                message += users_mesg('left', left)
+            if joined:
+                if message:
+                    message += '\n'
+                message += users_mesg('joined', joined)
+            # Send message to guild channel.
+            if message:
+                await send_over_2000(self.machine.channel.send, message)
+        # Update last ping.
+        self.machine.last_ping = current
+        return None
+    
+    async def check_conditions(self) -> Union[str, None]:
+        "If there was failure to connect to server, await restart."
+        if self.failed:
+            return 'await_restart'
+        return None
+    
+    async def exit_actions(self) -> None:
+        "When exiting, if we collected an exception, send it to channel."
+        if not self.exit_ex is None:
+            print(self.exit_ex)
+            await self.machine.channel.send(self.exit_ex)
+        return None
     pass
 
-class GuildServerPinger(Timer):
+class WaitRestartState(gears.AsyncState):
+    "State where we wait for server to restart."
+    def __init__(self, ignore_ticks:int):
+        super().__init__('await_restart')
+        self.ignore_ticks = ignore_ticks
+        return None
+    
+    async def entry_actions(self) -> None:
+        "Reset failed and say connection lost."
+        await self.machine.channel.send('Connection to server has been lost.')
+        self.success = False
+        self.ticks = 0
+        self.ping = 0
+        pass
+    
+    async def attempt_contact(self) -> bool:
+        "Attempt to talk to server."
+        try:
+            self.ping = await self.machine.server.async_ping()
+        except Exception:
+            pass
+        else:
+            return True
+        return False
+    
+    async def do_actions(self) -> None:
+        "Every once and a while try to talk to server again."
+        self.ticks = (self.ticks + 1) % self.ignore_ticks
+        
+        if self.ticks == 0:
+            self.success = await self.attempt_contact()
+        pass
+    
+    async def check_conditions(self) -> None:
+        "If contact attempt was sucessfull, switch back to ping."
+        if self.success:
+            return 'ping'
+        return None
+    
+    async def exit_actions(self) -> None:
+        "Tell guild connection re-established."
+        await self.machine.channel.send(f'Connection to server re-established with a ping of {self.ping}ms.')
+        return None
+    pass
+
+class GuildServerPinger(gears.StateTimer):
     "Server pinger for guild."
-    retrydelaymins = 2#2 mins
-    retrysegments = 5#5 seconds
+    tickspeed = 60
+    waitticks = 3
     def __init__(self, bot:discord.Client, guildid:int) -> None:
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guildid = guildid
@@ -282,81 +361,22 @@ class GuildServerPinger(Timer):
         self.last_ping = set()
         self.last_json = {}
         self.last_delay = 0
-        self.state = 0
         self.ticks = 0
         self.channel = None
-        super().__init__(bot, 60)
-        return
+        super().__init__(bot, self.guildid, self.tickspeed)
+        self.add_state(PingState())
+        self.add_state(WaitRestartState(self.waitticks))
+        return None
     
     @property
-    def retrysegcount(self) -> int:
-        "Return integer of retry segment count"
-        return int((60 / self.retrysegments) * self.retrydelaymins)
+    def wait_time(self):
+        "Total wait time when in await_restart state."
+        return self.tickspeed * self.waitticks
     
-    async def run(self) -> bool:
-        "Update server status. Return True if connection lost."
-        if self.state == 0:
-            try:
-                json, ping = await self.server.async_status()
-                self.last_json = json
-                self.last_delay = ping
-                current = []
-                if 'players' in json:
-                    if 'sample' in json['players']:
-                        for player in json['players']['sample']:
-                            if 'name' in player:
-                                current.append(player['name'])
-                current = set(current)
-                if current != self.last_ping:
-                    joined = tuple(current.difference(self.last_ping))
-                    left = tuple(self.last_ping.difference(current))
-                    
-                    delay = printTime(self.delay)
-                    def users_mesg(action:str, users:list) -> str:
-                        "Return users {action} the server: {users}"
-                        user = 'user has' if len(users) == 1 else 'users have'
-                        text = f'The following {user} {action} the server in the last {delay}:\n'
-                        text += combineAnd(wrap_list_values(users, '`'))
-                        return text
-                    
-                    message = ''
-                    if left:
-                        message += users_mesg('left', left)
-                    if joined:
-                        if message:
-                            message += '\n'
-                        message += users_mesg('joined', joined)
-                    if message:
-                        await send_over_2000(self.channel.send, message)
-                self.last_ping = current
-            except Exception as ex:
-                error = f'`A {type(ex).__name__} Error Has Occored'
-                if ex.args:
-                    error += f': {combineAnd(ex.args)}`'
-                else:
-                    error += '.`'
-                print(error)
-                await self.channel.send(error)
-                await self.channel.send('Connection to server has been lost.')
-                self.state = 1
-            return False
-        elif self.state == 1:
-            if self.ticks == 0:
-                try:
-                    json, ping = await self.server.async_status()
-                except:
-                    self.last_json = {}
-                    self.last_delay = float()
-                    self.last_ping = set()
-                else:
-                    self.state = 0
-                    self.ticks = 0
-                    await self.channel.send('Connection to server re-established.')
-                    return False
-            self.ticks = (self.ticks + 1) % self.retrysegcount
-            await asyncio.sleep(int(self.retrysegments))
-            return False
-        return True
+    async def initialize_state(self) -> None:
+        "Set state to ping."
+        await self.set_state('ping')
+        return None
     
     async def start(self) -> None:
         "If config is good, run pinger."
@@ -371,20 +391,21 @@ class GuildServerPinger(Timer):
         return
     pass
 
-class StatusBot(discord.Client):
+class StatusBot(discord.Client, gears.BaseBot):
     "StatusBot needs prefix, eventloop, and any arguments to pass to discord.Client."
     def __init__(self, prefix:str, *args, loop=asyncio.get_event_loop(), **kwargs):
+        self.loop = loop
+        discord.Client.__init__(self, *args, loop=self.loop, **kwargs)
         self.stopped = Event()
         self.updating = Lock()
         self.prefix = prefix
-        self.loop = loop
-        self.pingers = {}
         self.rootdir = os.path.split(os.path.abspath(__file__))[0]
         self.gcommands = {'currentversion': self.getcurrentvers,
                           'onlineversion': self.getonlinevers,
                           'getmyid': self.getmyid,
                           'getjson': self.getjson,
                           'getonline': self.getonline,
+                          'getping': self.getping,
                           'refresh': self.refresh,
                           'setoption': self.setoption_guild,
                           'getoption': self.getoption_guild,
@@ -397,7 +418,7 @@ class StatusBot(discord.Client):
                           'setoption': self.setoption_dm,
                           'getoption': self.getoption_dm,
                           'help': self.help_dm}
-        super().__init__(*args, loop=self.loop, **kwargs)
+        gears.BaseBot.__init__(self, self.loop)
         return
     
     def __repr__(self):
@@ -405,8 +426,8 @@ class StatusBot(discord.Client):
         return f'<{self.__class__.__name__} Object ({up} subclass)>'
     
     @property
-    def pinger_close(self):
-        "Return True if pingers should close."
+    def gear_close(self):
+        "Return True if gears should close."
         return self.stopped.is_set() or self.is_closed()
     
     def get_guild_config_file(self, guildid:int) -> str:
@@ -476,12 +497,14 @@ class StatusBot(discord.Client):
     
     async def add_guild_pinger(self, gid:int) -> str:
         "Create server pinger for guild if not exists. Return 'started', 'restarted', or 'none'."
-        if not gid in self.pingers:
-            self.pingers[gid] = GuildServerPinger(self, gid)
+        if not gid in self.gears:
+            self.add_gear(GuildServerPinger(self, gid))
             return 'started'
-        elif not self.pingers[gid].running:
-            del self.pingers[gid]
-            self.pingers[gid] = GuildServerPinger(self, gid)
+        elif not self.gears[gid].running:
+            if not self.gears[gid].stopped:
+                await self.gears[gear_name].hault()
+            self.remove_gear(gid)
+            self.add_gear(GuildServerPinger(self, gid))
             return 'restarted'
         return 'none'
     
@@ -495,6 +518,8 @@ class StatusBot(discord.Client):
             action = await self.add_guild_pinger(guildid)
             if action != 'none':
                 await channel.send(f'Server pinger {action}.')
+            else:
+                await channel.send('No action taken.')
         else:
             await channel.send(f'Server address not set, pinger not started. Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
@@ -530,18 +555,6 @@ class StatusBot(discord.Client):
         await self.change_presence(status=discord.Status.online, activity=act)
         return
     
-##    async def set_status(self, name:str) -> None:#, details:str) -> None:
-##        "Set status of self."
-##        print(f'Setting status to {name}')#: {details}')
-####        atype = discord.ActivityType.custom
-####        activity = discord.Activity(name=name, type=atype, details=details)
-####        await self.change_presence(activity=activity)
-##        #act = discord.Activity(name=name, details=details)
-##        #act = discord.CustomActivity(name)#, details=details)
-##        act = discord.Activity(type=discord.ActivityType.watching, name="a movie")
-##        await self.change_presence(status=discord.Status.online, activity=act)
-##        return
-    
     async def get_user_name(self, uid:int, getmember=None) -> Union[str, None]:
         "Return the name of user with id <uid>."
         if getmember is None:
@@ -570,16 +583,29 @@ class StatusBot(discord.Client):
     
     async def getjson(self, message) -> None:
         "Tell the author of the message the last json from server pinger."
-        if message.guild.id in self.pingers:
-            pinger = self.pingers[message.guild.id]
-            if pinger.state == 0:
+        if message.guild.id in self.gears:
+            pinger = self.gears[message.guild.id]
+            if pinger.active_state.name == 'ping':
                 lastdict = pinger.last_json
                 msg = json.dumps(lastdict, sort_keys=True, indent=2)
-##                await message.channel.send(f'Last received json message:\n```{msg}```')
                 await message.channel.send(f'Last received json message:')
                 await send_over_2000(message.channel.send, msg, '```', False)
                 return
-            delay = printTime(pinger.retrysegcount)
+            delay = printTime(pinger.wait_time)
+            await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
+            return
+        await message.channel.send('Server pinger is not running for this guild.')
+        return
+    
+    async def getping(self, message) -> None:
+        "Tell the author of the message the bot's latency to the guild's server."
+        if message.guild.id in self.gears:
+            pinger = self.gears[message.guild.id]
+            if pinger.active_state.name == 'ping':
+                msg = f'`{pinger.last_delay}ms`'
+                await message.channel.send(f"{__title__}'s last received latency to defined guild server:\n"+msg)
+                return None
+            delay = printTime(pinger.wait_time)
             await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
@@ -587,9 +613,9 @@ class StatusBot(discord.Client):
     
     async def getonline(self, message) -> None:
         "Tell the author of the message the usernames of the players currently connected to the guild's server."
-        if message.guild.id in self.pingers:
-            pinger = self.pingers[message.guild.id]
-            if pinger.state == 0:
+        if message.guild.id in self.gears:
+            pinger = self.gears[message.guild.id]
+            if pinger.active_state.name == 'ping':
                 players = list(pinger.last_ping)
                 if players:
                     players = combineAnd(wrap_list_values(players, '`'))
@@ -598,7 +624,7 @@ class StatusBot(discord.Client):
                     return
                 await message.channel.send(f'No players were online in the last received sample.')
                 return
-            delay = printTime(pinger.retrysegcount)
+            delay = printTime(pinger.wait_time)
             await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
@@ -1056,15 +1082,9 @@ class StatusBot(discord.Client):
     async def close(self) -> None:
         "Tell guilds bot shutting down."
         self.stopped.set()
-        print('\nShutting down pingers.\n')
-        async def stop_pinger(guild):
-            if guild.id in self.pingers:
-                print(f'Waiting for {guild.name}\'s pinger to stop...')
-                await self.pingers[guild.id].hault()
-                print(f'{guild.name}\'s pinger stopped.')
-        coros = (stop_pinger(guild) for guild in self.guilds)
-        await asyncio.gather(*coros)
-        print('\nPingers shut down...\n')
+        print('\nShutting down gears.\n')
+        await gears.BaseBot.close(self)
+        print('\nGears shut down...\n')
         
         print('Telling guilds bot is shutting down.\n')
         async def tell_guild_shutdown(guild):
@@ -1077,7 +1097,7 @@ class StatusBot(discord.Client):
         print('Waiting to aquire updating lock...\n')
         self.updating.acquire()
         print('Closing...')
-        await super().close()
+        await discord.Client.close(self)
         self.updating.release()
         return
     pass
