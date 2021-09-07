@@ -9,7 +9,8 @@
     ],
     "": [
       "update.py",
-      "bot.py"
+      "bot.py",
+      "gears.py"
     ]
   },
   "": [
