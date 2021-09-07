@@ -47,7 +47,7 @@ they entered the command in, except in the case that the channel does not suppor
 being writen to.
 
 ## Commands
-As of version 0.1.7, the following describes StatusBot's commands.
+As of version 0.2.0, the following describes StatusBot's commands.
 
 ### In Guilds:
 `help` - Display all of StatusBot's valid guild commands.
@@ -80,6 +80,8 @@ As of version 0.1.7, the following describes StatusBot's commands.
 `getjson` - Tell the user who sent the message the last json received from pinging the server.
 
 `getonline` - Tell the user who sent the message the last received list of known online players.
+
+`getping` - Tell the user who sent the message the latency of the connection to the server.
 
 `currentversion` - Tell the user the current version of StatusBot.
 
