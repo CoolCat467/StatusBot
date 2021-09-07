@@ -265,11 +265,14 @@ class Timer(Gear):
             pass
         if not self.stopped:
             async def wait_for_cancelled():
-                if self.task is None:
-                    return True
-                async with async_timeout.timeout(self.delay):
-                    while not self.task.cancelled():
-                        await asyncio.sleep(0.1)
+                try:
+                    if self.task is None:
+                        return True
+                    async with async_timeout.timeout(self.delay):
+                        while not self.task.cancelled():
+                            await asyncio.sleep(0.1)
+                except asyncio.TimeoutError:
+                    pass
                 return True
             self.stopped = await wait_for_cancelled()
         return None
@@ -326,6 +329,18 @@ class StateTimer(Timer, AsyncStateMachine):
         "Preform actions for AsyncStateTimer. Return False if no active state is set."
         await self.think()
         return self.active_state is None
+    
+    async def hault(self) -> None:
+        self.delay = 0
+        await self.set_state('Hault')
+        async def wait_stop():
+            while self.running:
+                await asyncio.sleep(0.1)
+        try:
+            async with async_timeout.timeout(self.delay*1.1):
+                await wait_stop()
+        except asyncio.TimeoutError:
+            await super().hault()
     pass
 
 def run():

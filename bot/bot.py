@@ -149,7 +149,7 @@ def combineAnd(data:list) -> str:
         return ', '.join(data)
     return ' '.join(data)
 
-def printTime(seconds:int, singleTitleAllowed:bool=True) -> str:
+def printTime(seconds:int, singleTitleAllowed:bool=False) -> str:
     "Returns time using the output of splitTime."
     times = ('eons', 'eras', 'epochs', 'ages', 'millenniums',
              'centuries', 'decades', 'years', 'months', 'weeks',
@@ -251,21 +251,23 @@ class PingState(gears.AsyncState):
             if ex.args:
                 self.exit_ex += f': {combineAnd(ex.args)}`'
             else:
-                self.exit_ex += '.`'
+                self.exit_ex += '`.'
             self.failed = True
+            print(self.exit_ex)
             return None
         # If success, get players.
         self.machine.last_json = json
         self.machine.last_delay = ping
         current = []
-        if 'players' in json and 'sample' in json['players']:
-            for player in json['players']['sample']:
-                if 'name' in player:
-                    current.append(player['name'])
+        if 'players' in json:
+            if 'sample' in json['players']:
+                for player in json['players']['sample']:
+                    if 'name' in player:
+                        current.append(player['name'])
         current = set(current)
         # If different players,
         if current != self.machine.last_ping:
-            # Find difference in depth.
+            # Find difference in players.
             joined = tuple(current.difference(self.machine.last_ping))
             left = tuple(self.machine.last_ping.difference(current))
             
@@ -300,7 +302,6 @@ class PingState(gears.AsyncState):
     async def exit_actions(self) -> None:
         "When exiting, if we collected an exception, send it to channel."
         if not self.exit_ex is None:
-            print(self.exit_ex)
             await self.machine.channel.send(self.exit_ex)
         return None
     pass
@@ -495,27 +496,27 @@ class StatusBot(discord.Client, gears.BaseBot):
                 return member
         return
     
-    async def add_guild_pinger(self, gid:int) -> str:
+    async def add_guild_pinger(self, gid:int, forceReset:bool=False) -> str:
         "Create server pinger for guild if not exists. Return 'started', 'restarted', or 'none'."
         if not gid in self.gears:
             self.add_gear(GuildServerPinger(self, gid))
             return 'started'
-        elif not self.gears[gid].running:
+        elif not self.gears[gid].running or forceReset:
             if not self.gears[gid].stopped:
-                await self.gears[gear_name].hault()
+                await self.gears[gid].hault()
             self.remove_gear(gid)
             self.add_gear(GuildServerPinger(self, gid))
             return 'restarted'
         return 'none'
     
-    async def eval_guild(self, guildid:int) -> int:
+    async def eval_guild(self, guildid:int, forceReset:bool=False) -> int:
         "Evaluate guild and it's config file and start pinger if able. Otherwise tell them to change settings."
         guildconfig = self.get_guild_config(guildid)
         channel = self.guess_guild_channel(guildid)
         if not 'channel' in guildconfig:
             await channel.send('This is where I will post leave-join messages until an admin sets my `channel` option.')
         if 'address' in guildconfig:
-            action = await self.add_guild_pinger(guildid)
+            action = await self.add_guild_pinger(guildid, forceReset)
             if action != 'none':
                 await channel.send(f'Server pinger {action}.')
             else:
@@ -799,9 +800,9 @@ class StatusBot(discord.Client, gears.BaseBot):
         await self.send_command_list(self.dcommands, 'DM', message.channel)
         return
     
-    async def refresh(self, message) -> None:
+    async def refresh(self, message, forceReset:bool=False) -> None:
         "Re-evaluate guild, then tell them it happened."
-        await self.eval_guild(message.channel.guild.id)
+        await self.eval_guild(message.channel.guild.id, forceReset)
         await message.channel.send(f'Guild has been re-evaluated.')
         return
     
@@ -879,7 +880,8 @@ class StatusBot(discord.Client, gears.BaseBot):
                 config[option] = value
                 self.write_guild_config(message.channel.guild.id, config)
                 await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
-                await self.refresh(message)
+                forceReset = option in ('address', 'channel')
+                await self.refresh(message, forceReset)
                 return
         await message.channel.send('Invalid option.'+validops)
         return
@@ -1082,7 +1084,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def close(self) -> None:
         "Tell guilds bot shutting down."
         self.stopped.set()
-        print('\nShutting down gears.\n')
+        print('\nShutting down gears.')
         await gears.BaseBot.close(self)
         print('\nGears shut down...\n')
         
