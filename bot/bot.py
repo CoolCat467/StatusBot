@@ -111,7 +111,7 @@ def write_json(filename:str, dictionary:dict, indent:int=2) -> None:
 def splitTime(seconds:int) -> list:
     "Split time into decades, years, months, weeks, days, hours, minutes, and seconds."
     seconds = int(seconds)
-    def modTime(sec:int, num:int) -> tuple[int]:
+    def modTime(sec:int, num:int) -> tuple:
         "Return number of times sec divides equally by number, then remainder."
         smod = sec % num
         return int((sec - smod) // num), smod
