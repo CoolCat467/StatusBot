@@ -157,7 +157,7 @@ def printTime(seconds:int, singleTitleAllowed:bool=False) -> str:
     single = [i[:-1] for i in times]
     single[5] = 'century'
     split = splitTime(seconds)
-    zipidxvalues = [(v,i) for v, i in enumerate(split) if v]
+    zipidxvalues = [(i, v) for i, v in enumerate(split) if v]
     if singleTitleAllowed:
         if len(zipidxvalues) == 1:
             index, value = zipidxvalues[0]
@@ -418,7 +418,7 @@ class GuildServerPinger(gears.StateTimer):
             try:
                 await super().start()
             except Exception:
-                log_active_exception(os.path.join(self.machine.bot.basepath, 'log.txt'))
+                log_active_exception(os.path.join(self.bot.rootdir, 'log.txt'))
             finally:
                 await self.channel.send('Server pinger stopped.')
         else:
@@ -586,7 +586,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         c = max(len(name) for name in guildnames)
         print('\n'.join(n.center(c) for n in guildnames)+'\n')
         ids = await self.eval_guilds(True)
-        print('\nGuilds evaluated:\n'+'\n'.join(combineAnd(ids)))
+        print('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
         return
