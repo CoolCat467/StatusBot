@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __ver_major__ = 0
 __ver_minor__ = 2
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -157,7 +157,7 @@ def printTime(seconds:int, singleTitleAllowed:bool=False) -> str:
     single = [i[:-1] for i in times]
     single[5] = 'century'
     split = splitTime(seconds)
-    zipidxvalues = [(idx, split[idx]) for idx in range(len(split)) if split[idx]]
+    zipidxvalues = [(v,i) for v, i in enumerate(split) if v]
     if singleTitleAllowed:
         if len(zipidxvalues) == 1:
             index, value = zipidxvalues[0]
@@ -195,6 +195,34 @@ def wrap_list_values(items:tuple, wrap:str='`') -> list:
     "Wrap all items in list of strings with wrap. Ex. ['cat'] -> ['`cat`']"
     return [wrap+str(i)+wrap for i in iter(items)]
 
+def log_active_exception(logpath, extra=None) -> None:
+    "Log active exception."
+    # Get values from exc_info
+    values = os.sys.exc_info()
+    # Get error message.
+    msg = '#'*16+'\n'
+    if not extra is None:
+        msg += str(extra)+'\n'
+    msg += 'Exception class:\n'+str(values[0])+'\n'
+    msg += 'Exception text:\n'+str(values[1])+'\n'
+    class fakefile:
+        def __init__(self):
+            self.data = []
+        def write(self, value:str) -> None:
+            self.data.append(value)
+        def getdata(self) -> str:
+            return ''.join(self.data)[:-1]
+        pass
+    yestotalyafile = fakefile()
+    traceback.print_exception(None, values[1],
+                              values[2],
+                              file=yestotalyafile)
+    msg += 'Traceback:\n'+yestotalyafile.getdata()+'\n'
+    msg += '#'*16+'\n'
+    print(msg)
+    appendFile(logpath, msg)
+    return None
+
 async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwrap:bool=True) -> None:
     "Use sendfunc to send text in segments over 2000 characters by splitting it into multiple messages."
     send = str(text)
@@ -226,7 +254,7 @@ async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwra
     return None
 
 async def get_github_file(path:str, timeout:int=10) -> str:
-    f"Return text from github file in {__title__} decoded as utf-8"
+    "Return text from github file in this project decoded as utf-8"
     file = await update.get_file(__title__, path, __author__, 'master', timeout)
     return file.decode('utf-8')
 
@@ -253,6 +281,7 @@ class PingState(gears.AsyncState):
             else:
                 self.exit_ex += '`.'
             self.failed = True
+            log_active_exception(os.path.join(self.machine.bot.basepath, 'log.txt'))
             print(self.exit_ex)
             return None
         # If success, get players.
@@ -319,7 +348,7 @@ class WaitRestartState(gears.AsyncState):
         self.success = False
         self.ticks = 0
         self.ping = 0
-        pass
+        return None
     
     async def attempt_contact(self) -> bool:
         "Attempt to talk to server."
@@ -347,7 +376,7 @@ class WaitRestartState(gears.AsyncState):
     
     async def exit_actions(self) -> None:
         "Tell guild connection re-established."
-        await self.machine.channel.send(f'Connection to server re-established with a ping of {self.ping}ms.')
+        await self.machine.channel.send(f'Connection to server re-established with a ping of `{self.ping}ms`.')
         return None
     pass
 
@@ -358,13 +387,14 @@ class GuildServerPinger(gears.StateTimer):
     def __init__(self, bot:discord.Client, guildid:int) -> None:
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guildid = guildid
+        super().__init__(bot, self.guildid, self.tickspeed)
         self.server = mc.Server('')
         self.last_ping = set()
         self.last_json = {}
         self.last_delay = 0
         self.ticks = 0
         self.channel = None
-        super().__init__(bot, self.guildid, self.tickspeed)
+        
         self.add_state(PingState())
         self.add_state(WaitRestartState(self.waitticks))
         return None
@@ -385,11 +415,15 @@ class GuildServerPinger(gears.StateTimer):
         self.channel = self.bot.guess_guild_channel(self.guildid)
         if 'address' in config:
             self.server = mc.Server.lookup(config['address'])
-            await super().start()
-            await self.channel.send('Server pinger stopped.')
+            try:
+                await super().start()
+            except Exception:
+                log_active_exception(os.path.join(self.machine.bot.basepath, 'log.txt'))
+            finally:
+                await self.channel.send('Server pinger stopped.')
         else:
             await self.channel.send('No address for this guild defined, pinger not started.')
-        return
+        return None
     pass
 
 class StatusBot(discord.Client, gears.BaseBot):
@@ -525,9 +559,9 @@ class StatusBot(discord.Client, gears.BaseBot):
             await channel.send(f'Server address not set, pinger not started. Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
     
-    async def eval_guilds(self) -> list:
+    async def eval_guilds(self, forceReset:bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        coros = (self.eval_guild(guild.id) for guild in self.guilds)
+        coros = (self.eval_guild(guild.id, forceReset) for guild in self.guilds)
         return await asyncio.gather(*coros)
     
     # Default, not affected by intents.
@@ -551,7 +585,8 @@ class StatusBot(discord.Client, gears.BaseBot):
             guildnames.append(f'{guild.name} (id: {guild.id})')
         c = max(len(name) for name in guildnames)
         print('\n'.join(n.center(c) for n in guildnames)+'\n')
-        await self.eval_guilds()
+        ids = await self.eval_guilds(True)
+        print('\nGuilds evaluated:\n'+'\n'.join(combineAnd(ids)))
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
         return
@@ -994,7 +1029,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     # Intents.guilds
     async def on_guild_join(self, guild) -> None:
         "Evaluate guild."
-        await self.eval_guild(guild.id)
+        await self.eval_guild(guild.id, True)
         return
     
     # Intents.members
@@ -1008,6 +1043,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     # Intents.guilds
     async def on_guild_remove(self, guild) -> None:
         "Remove config file for guild we are no longer in."
+        print(f'Guild lost: {guild.id}')
         os.remove(self.get_guild_config_file(guild.id))
         return
     
@@ -1051,33 +1087,12 @@ class StatusBot(discord.Client, gears.BaseBot):
         "Log error and continue."
         if event == 'on_message':
             print(f'Unhandled message: {args[0]}')
-        # Get values from exc_info
-        values = os.sys.exc_info()
-        # Get log path
         logpath = os.path.join(self.rootdir, 'log.txt')
-        # Get error message.
-        msg = '#'*8+'\n'+'Error Event:\n'+str(event)+'\n'
-        msg += 'Exception class:\n'+str(values[0])+'\n'
-        msg += 'Exception text:\n'+str(values[1])+'\n'
-        msg += 'Error args:\n'+'\n'.join(map(str, args))+'\n'
-        msg += 'Error kwargs:\n'
-        msg += '\n'.join(f'{key}:{kwargs[key]}' for key in kwargs)+'\n'
-        class fakefile:
-            def __init__(self):
-                self.data = []
-            def write(self, value:str) -> None:
-                self.data.append(value)
-            def getdata(self) -> str:
-                return ''.join(self.data)[:-1]
-            pass
-        yestotalyafile = fakefile()
-        traceback.print_exception(None, values[1],
-                                  values[2],
-                                  file=yestotalyafile)
-        msg += 'Traceback:\n'+yestotalyafile.getdata()+'\n'
-        msg += '#'*8
-        print(msg)
-        appendFile(logpath, msg)
+        extra = 'Error Event:\n'+str(event)+'\n'
+        extra += 'Error args:\n'+'\n'.join(map(str, args))+'\n'
+        extra += 'Error kwargs:\n'
+        extra += '\n'.join(f'{key}:{kwargs[key]}' for key in kwargs)
+        log_active_exception(extra)
         return
     
     # Default, not affected by intents
