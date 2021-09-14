@@ -8,14 +8,15 @@
 
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.0.0'
+__version__ = '0.1.0'
 __ver_major__ = 0
-__ver_minor__ = 0
+__ver_minor__ = 1
 __ver_patch__ = 0
 
 from typing import Union
 import asyncio
 import async_timeout
+import concurrent.futures
 
 __all__ = ['State', 'AsyncState',
            'StateMachine', 'AsyncStateMachine',
@@ -160,7 +161,7 @@ class AsyncStateMachine(StateMachine):
         return None
     pass
 
-class Gear:
+class Gear(object):
     "Class that get's run by bots."
     def __init__(self, bot, name:str):
         "Store self.bot, and set self.running and self.stopped to False."
@@ -187,7 +188,7 @@ class Gear:
         return f'<{self.__class__.__name__}>'
     pass
 
-class BaseBot:
+class BaseBot(object):
     "Bot base class. Must initialize AFTER discord bot class."
     def __init__(self, eventloop):
         self.loop = eventloop
@@ -250,7 +251,10 @@ class Timer(Gear):
         if hasattr(self.bot, 'wait_until_ready'):
             await self.bot.wait_until_ready()
         self.running = True
-        await self.start()
+        try:
+            await self.start()
+        except concurrent.futures.CancelledError:
+            print(f'{self.__class__.__name__} "{self.name}"\'s task canceled, likely from hault.')
         self.stopped = True
         return None
     
@@ -346,6 +350,7 @@ class StateTimer(Timer, AsyncStateMachine):
 def run():
     print('This is hacked example of StateTimer.')
     loop = asyncio.get_event_loop()
+    # hack bot to close loop when closed
     class _Bot(BaseBot):
         async def close(self):
             await super().close()
@@ -353,6 +358,7 @@ def run():
             self.loop.stop()
         pass
     mr_bot = _Bot(loop)
+    # hack state timer to create bot close task on completion
     class _StateTimerWithClose(StateTimer):
         async def wait_for_ready_start(self):
             await super().wait_for_ready_start()
@@ -360,6 +366,7 @@ def run():
             print('Close created.')
         pass
     multi_speed_clock = _StateTimerWithClose(mr_bot, 'MultiSpeedClock', 0.5)
+    # Define async state to just wait and then change state.
     class waitState(AsyncState):
         def __init__(self, delay, next_):
             super().__init__(f'wait_{delay}->{next_}')
@@ -376,16 +383,21 @@ def run():
             print(f'Going to next state {self.next}.')
             return self.next
         pass
-    
+    # Register states with state timer instance
     multi_speed_clock.add_state(waitState(3, 'Hault'))
     multi_speed_clock.add_state(waitState(5, 'wait_3->Hault'))
-    
+    # Tell mr. bot's loop to set the state of the state timer instance's state to the start one
     mr_bot.loop.run_until_complete(multi_speed_clock.set_state('wait_5->wait_3->Hault'))
+    # Add state timer insance as gear to mr bot
     mr_bot.add_gear(multi_speed_clock)
+    # Now run mr bot and their gears.
     try:
         mr_bot.loop.run_forever()
     except KeyboardInterrupt:
-        mr_bot.close()
+        pass
+    finally:
+        mr_bot.loop.close()
+    return None
 
 if __name__ == '__main__':
     run()

@@ -21,6 +21,7 @@ import asyncio
 import json
 import random
 import traceback
+import concurrent.futures
 from typing import Union
 from dotenv import load_dotenv
 from threading import Event, Lock
@@ -282,6 +283,9 @@ class PingState(gears.AsyncState):
                 self.exit_ex += '`.'
             self.failed = True
             print(self.exit_ex)
+            # No need to record detailed errors for timeouts.
+            if isinstance(ex, concurrent.futures.TimeoutError):
+                return None
             log_active_exception(os.path.join(self.machine.bot.rootdir, 'log.txt'))
             return None
         # If success, get players.
