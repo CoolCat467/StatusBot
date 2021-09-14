@@ -281,8 +281,8 @@ class PingState(gears.AsyncState):
             else:
                 self.exit_ex += '`.'
             self.failed = True
-            log_active_exception(os.path.join(self.machine.bot.basepath, 'log.txt'))
             print(self.exit_ex)
+            log_active_exception(os.path.join(self.machine.bot.rootdir, 'log.txt'))
             return None
         # If success, get players.
         self.machine.last_json = json
