@@ -286,7 +286,7 @@ class PingState(gears.AsyncState):
             # No need to record detailed errors for timeouts.
             if isinstance(ex, concurrent.futures.TimeoutError):
                 return None
-            log_active_exception(os.path.join(self.machine.bot.rootdir, 'log.txt'))
+            log_active_exception(self.machine.bot.logpath)
             return None
         # If success, get players.
         self.machine.last_json = json
@@ -422,7 +422,7 @@ class GuildServerPinger(gears.StateTimer):
             try:
                 await super().start()
             except Exception:
-                log_active_exception(os.path.join(self.bot.rootdir, 'log.txt'))
+                log_active_exception(self.bot.logpath)
             finally:
                 await self.channel.send('Server pinger stopped.')
         else:
@@ -439,6 +439,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         self.updating = Lock()
         self.prefix = prefix
         self.rootdir = os.path.split(os.path.abspath(__file__))[0]
+        self.logpath = os.path.join(self.rootdir, 'log.txt')
         self.gcommands = {'currentversion': self.getcurrentvers,
                           'onlineversion': self.getonlinevers,
                           'getmyid': self.getmyid,
@@ -1091,12 +1092,11 @@ class StatusBot(discord.Client, gears.BaseBot):
         "Log error and continue."
         if event == 'on_message':
             print(f'Unhandled message: {args[0]}')
-        logpath = os.path.join(self.rootdir, 'log.txt')
         extra = 'Error Event:\n'+str(event)+'\n'
         extra += 'Error args:\n'+'\n'.join(map(str, args))+'\n'
         extra += 'Error kwargs:\n'
         extra += '\n'.join(f'{key}:{kwargs[key]}' for key in kwargs)
-        log_active_exception(extra)
+        log_active_exception(self.logpath, extra=extra)
         return
     
     # Default, not affected by intents

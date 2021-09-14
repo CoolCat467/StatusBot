@@ -8,10 +8,10 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 import os
 import aiohttp
@@ -58,6 +58,18 @@ def get_paths(jdict:dict) -> list:
         return paths
     return read_dict(jdict)
 
+def make_dirpath_exist(filepath:str) -> None:
+    "Ensure full folder structure to filepath given exists. If not exists, creates it."
+    # Folder we want to ensure exists.
+    folder = os.path.dirname(filepath)
+    # If folder not exist
+    if not os.path.exists(folder):
+        # Ensure above folder exists
+        make_dirpath_exist(folder)
+        # Make folder
+        os.path.mkdir(folder)
+    return None
+
 async def download_coroutine(url:str, timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
     "Return content bytes found at url."
     # Make a session with our event loop and the magic headers that make it work right cause it's smart
@@ -97,6 +109,8 @@ async def update_files(basepath:str, paths:tuple, repo:str, user:str, branch:str
     async def update_single(path):
         "Update a single file."
         savepath = os.path.abspath(os.path.join(basepath, path))
+        # Ensure folder for it exists too.
+        make_dirpath_exist(savepath)
         url = urlbase + path
         with open(savepath, 'wb') as sfile:
             sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
