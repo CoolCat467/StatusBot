@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # Stolen and slightly modified from https://github.com/Dinnerbone/mcstatus
 
+"TCP and UDP Connections, both asynchronous and not."
+
 # This version of mcstatus's connection module
 # has support for varlongs and has general text reformatting
 # and spaceing changes. Slight changes to Asyncronous TCP and UDP
@@ -25,8 +27,8 @@ import asyncio_dgram
 
 from status.address_tools import ip_type
 
-class Connection(object):
-    """Base connection class."""
+class Connection:
+    "Base connection class."
     def __init__(self):
         """Initialize self.send and self.received to an empty bytearray."""
         self.sent = bytearray()
@@ -65,16 +67,20 @@ class Connection(object):
         self.sent = bytearray()
         return result
     
-    def _unpack(self, format, data):
+    @staticmethod
+    def _unpack(format_, data):
         """Unpack data as bytes with format in big-enidian."""
-        return struct.unpack('>' + format, bytes(data))[0]
+        return struct.unpack('>' + format_, bytes(data))[0]
     
-    def _pack(self, format, data):
+    @staticmethod
+    def _pack(format_, data):
         """Pack data in with format in big-endian mode."""
-        return struct.pack('>' + format, data)
+        return struct.pack('>' + format_, data)
     
     def read_varint(self):
-        """Read varint from self and return it. Max: 2 ** 31 - 1, Min: -(2 ** 31) Raises IOError when varint recieved is too big."""
+        """Read varint from self and return it.
+        Max: 2 ** 31 - 1, Min: -(2 ** 31)
+        Raises IOError when varint recieved is too big."""
         result = 0
         for i in range(5):
             part = self.read(1)[0]
@@ -84,9 +90,11 @@ class Connection(object):
         raise IOError('Recieved varint is too big!')
     
     def write_varint(self, value):
-        """Write varint with value value to self. Max: 2 ** 31 - 1, Min: -(2 ** 31). Raises ValueError if varint is too big."""
+        """Write varint with value value to self.
+        Max: 2 ** 31 - 1, Min: -(2 ** 31).
+        Raises ValueError if varint is too big."""
         remaining = unsigned_int32(value).value
-        for i in range(5):
+        for _ in range(5):
             if not remaining & -0x80:#remaining & ~0x7F == 0:
                 self.write(struct.pack('!B', remaining))
                 if value > 2 ** 31 - 1 or value < -(2 ** 31):
@@ -97,7 +105,9 @@ class Connection(object):
         raise ValueError(f'The value "{value}" is too big to send in a varint')
     
     def read_varlong(self):
-        """Read varlong from self and return it. Max: 2 ** 63 - 1, Min: -(2 ** 63). Raises IOError when varint recieved is too big."""
+        """Read varlong from self and return it.
+        Max: 2 ** 63 - 1, Min: -(2 ** 63).
+        Raises IOError when varint recieved is too big."""
         result = 0
         for i in range(10):
             part = self.read(1)[0]
@@ -107,9 +117,11 @@ class Connection(object):
         raise IOError('Recieved varlong is too big!')
     
     def write_varlong(self, value):
-        """Write varlong with value value to self. Max: 2 ** 63 - 1, Min: -(2 ** 63). Raises ValueError if varint is too big."""
+        """Write varlong with value value to self.
+        Max: 2 ** 63 - 1, Min: -(2 ** 63).
+        Raises ValueError if varint is too big."""
         remaining = unsigned_int64(value).value
-        for i in range(10):
+        for _ in range(10):
             if not remaining & -0x80:#remaining & ~0x7F == 0:
                 self.write(struct.pack('!B', remaining))
                 if value > 2 ** 63 - 1 or value < -(2 ** 31):
@@ -182,35 +194,39 @@ class Connection(object):
         self.write(self._pack('q', value))
     
     def read_ulong(self):
-        """-9223372036854775808 - 9223372036854775807. Read 8 bytes and return them unpacked with format Q."""
+        """-9223372036854775808 - 9223372036854775807.
+        Read 8 bytes and return them unpacked with format Q."""
         return self._unpack('Q', self.read(8))
     
     def write_ulong(self, value):
-        """-9223372036854775808 - 9223372036854775807. Write value packed with format Q."""
+        """-9223372036854775808 - 9223372036854775807.
+        Write value packed with format Q."""
         self.write(self._pack('Q', value))
     
     def read_buffer(self):
-        """Read a varint for length, then return a new connection from length read bytes."""
+        """Read a varint for length,
+        then return a new connection from length read bytes."""
         length = self.read_varint()
         result = Connection()
         result.receive(self.read(length))
         return result
     
     def write_buffer(self, buffer):
-        """Flush buffer, then write a varint of the length of the buffer's data, then write buffer data."""
+        """Flush buffer, then write a varint of the length of the buffer's
+        data, then write buffer data."""
         data = buffer.flush()
         self.write_varint(len(data))
         self.write(data)
     pass
 
 class AsyncReadConnection(Connection, ABC):
-    """Asyncronous Read connection base class."""
+    "Asyncronous Read connection base class."
     @abstractmethod
     async def read(self, length: int) -> bytearray:
-        """Read length bytes from self, return a bytearray."""
+        "Read length bytes from self, return a bytearray."
         ...
     
-    async def read_varint(self):
+    async def read_varint(self) -> int:
         result = 0
         for i in range(5):
             part = (await self.read(1))[0]
@@ -219,48 +235,54 @@ class AsyncReadConnection(Connection, ABC):
                 return signed_int32(result).value
         raise IOError('Recieved a varint that was too big!')
     
-    async def read_utf(self):
+    async def read_varlong(self) -> int:
+        result = 0
+        for i in range(10):
+            part = (await self.read(1))[0]
+            result |= (part & 0x7F) << (7 * i)
+            if not part & 0x80:
+                return signed_int64(result).value
+        raise IOError('Recieved varlong is too big!')
+    
+    async def read_utf(self) -> str:
         length = await self.read_varint()
         return (await self.read(length)).decode('utf8')
     
-    async def read_ascii(self):
+    async def read_ascii(self) -> str:
         result = bytearray()
         while len(result) == 0 or result[-1] != 0:
             result.extend(await self.read(1))
         return result[:-1].decode('ISO-8859-1')
     
-    async def read_short(self):
+    async def read_short(self) -> int:
         return self._unpack('h', await self.read(2))
     
-    async def read_ushort(self):
+    async def read_ushort(self) -> int:
         return self._unpack('H', await self.read(2))
     
-    async def read_int(self):
+    async def read_int(self) -> int:
         return self._unpack('i', await self.read(4))
     
-    async def read_uint(self):
+    async def read_uint(self) -> int:
         return self._unpack('I', await self.read(4))
     
-    async def read_long(self):
+    async def read_long(self) -> int:
         return self._unpack('q', await self.read(8))
     
-    async def read_ulong(self):
+    async def read_ulong(self) -> int:
         return self._unpack('Q', await self.read(8))
     
-    async def read_buffer(self):
+    async def read_buffer(self) -> int:
         length = await self.read_varint()
         result = Connection()
         result.receive(await self.read(length))
         return result
-    pass
 
-class TCPSocketConnection(Connection):
-    """TCP Connection to addr. Timout defaults to 3 secconds."""
-    def __init__(self, addr, timeout=3):
-        """Create a connection to addr with self.socket, set TCP NODELAY to True."""
-        super().__init__()
-        self.socket = socket.create_connection(addr, timeout=timeout)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+class SocketConnection(Connection):
+    "Socket connection."
+    __slots__ = ('socket',)
+    def __init__(self):
+        self.socket = socket.socket()
     
     def flush(self):
         """Raise TypeError, unsupported."""
@@ -273,6 +295,22 @@ class TCPSocketConnection(Connection):
     def remaining(self):
         """Raise TypeError, unsupported."""
         raise TypeError(f'{self.__class__.__name__} does not support remaining()')
+    
+    def close(self):
+        "Close self."
+        self.socket.shutdown(socket.SHUT_RDWR)
+        self.socket.close()
+    
+    def __del__(self):
+        "Shutdown and Close self.socket."
+        self.close()
+
+class TCPSocketConnection(SocketConnection):
+    """TCP Connection to addr. Timout defaults to 3 secconds."""
+    def __init__(self, addr, timeout=3):
+        """Create a connection to addr with self.socket, set TCP NODELAY to True."""
+        self.socket = socket.create_connection(addr, timeout=timeout)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     
     def read(self, length):
         """Return length bytes read from self.socket. Raises IOError when server doesn't respond."""
@@ -287,38 +325,19 @@ class TCPSocketConnection(Connection):
     def write(self, data):
         """Send data on self.socket."""
         self.socket.send(data)
-    
-    def close(self):
-        """Close self."""
-        self.socket.close()
-    
-    def __del__(self):
-        """Try to close self.socket."""
-        try:
-            self.close()
-        except:
-            pass
-    pass
 
-class UDPSocketConnection(Connection):
+class UDPSocketConnection(SocketConnection):
     """UDP Connection to addr. Default timout is 3 secconds."""
+    __slots__ = ('addr',)
     def __init__(self, addr, timeout=3):
-        """Set self.addr to addr, set self.socket to new socket, AF_INET if IPv4, AF_INET6 otherwise."""
-        super().__init__()
+        """Set self.addr to addr, set self.socket to new socket,
+        AF_INET if IPv4, AF_INET6 otherwise."""
         self.addr = addr
         self.socket = socket.socket(
             socket.AF_INET if ip_type(addr[0]) == 4 else socket.AF_INET6,
             socket.SOCK_DGRAM,
         )
         self.socket.settimeout(timeout)
-    
-    def flush(self):
-        """Raise TypeError, unsupported."""
-        raise TypeError(f'{self.__class__.__name__} does not support flush()')
-    
-    def receive(self, data):
-        """Raise TypeError, unsupported."""
-        raise TypeError(f'{self.__class__.__name__} does not support receive()')
     
     def remaining(self):
         """Return 65535."""
@@ -332,38 +351,25 @@ class UDPSocketConnection(Connection):
         return result
     
     def write(self, data):
-        """If data is a Connection insance, data is now Connection.flush(). Use self,socket to send data to self.addr."""
+        "Use self.socket to send data to self.addr."
         if isinstance(data, Connection):
             data = bytearray(data.flush())
         self.socket.sendto(data, self.addr)
-    
-    def close(self):
-        """Close self."""
-        self.socket.close()
-    
-    def __del__(self):
-        """Try to close self.socket."""
-        try:
-            self.close()
-        except:
-            pass
-    pass
 
 class TCPAsyncSocketConnection(AsyncReadConnection):
-    """Asyncronous TCP connection to addr. Default timeout is 3 secconds."""
-    reader = None
-    writer = None
-    
+    "Asyncronous TCP connection to addr. Default timeout is 3 secconds."
+    __slots__ = 'reader', 'writer'
     def __init__(self):
-        super().__init__()
+        self.reader = None
+        self.writer = None
     
     async def connect(self, addr, timeout=3):
-        """Use asyncio to open a connection to addr as a tuple of (host, port). Set self.reader and self.writer a asyncronous connection we wait for."""
+        "Use asyncio to open a connection to addr (host, port)."
         conn = asyncio.open_connection(addr[0], addr[1])
         self.reader, self.writer = await asyncio.wait_for(conn, timeout=timeout)
     
     async def read(self, length):
-        """Read up to length bytes from self.reader."""
+        "Read up to length bytes from self.reader."
         result = bytearray()
         while len(result) < length:
             new = await self.reader.read(length - len(result))
@@ -373,53 +379,46 @@ class TCPAsyncSocketConnection(AsyncReadConnection):
         return result
     
     def write(self, data):
-        """Write data to self.writer."""
+        "Write data to self.writer."
         self.writer.write(data)
     
     def close(self):
-        """Close self.writer."""
+        "Close self.writer."
         self.writer.close()
     
     def __del__(self):
-        try:
-            self.close()
-        except:
-            pass
-        try:
-            self.reader.close()
-        except:
-            pass
-    pass
+        self.close()
 
 class UDPAsyncSocketConnection(AsyncReadConnection):
     """Asyncronous UDP connection to addr. Default timeout is 3 secconds."""
-    stream = None
-    timeout = None
-    
+    __slots__ = 'stream', 'timeout'
     def __init__(self):
-        super().__init__()
+        self.stream = None
+        self.timeout = None
     
-    async def connect(self, addr, timeout=3):
-        """Connect to addr, which is tuple (host, port). self.stream is the dgram connection, and self.timeout is timeout."""
+    async def connect(self, addr: tuple, timeout: int=3):
+        "Connect to addr (host, port)"
         self.timeout = timeout
         conn = asyncio_dgram.connect((addr[0], addr[1]))
         self.stream = await asyncio.wait_for(conn, timeout=self.timeout)
     
     def flush(self):
-        """Raise TypeError, unsupported."""
+        "Raise TypeError, unsupported."
         raise TypeError(f'{self.__class__.__name__} does not support flush()')
     
     def receive(self, data):
-        """Raise TypeError, unsupported."""
+        "Raise TypeError, unsupported."
         raise TypeError(f'{self.__class__.__name__} does not support receive()')
     
     def remaining(self):
-        """Return 65535."""
+        "Return 65535."
+        #2 ** 16 - 1
         return 65535
     
     async def read(self, length):
-        """Return data by waiting for self.stream.recv() with a timeout of self.timeout. Length does nothing."""
-        data, remote_addr = await asyncio.wait_for(self.stream.recv(), timeout=self.timeout)
+        "Read from stream. Length does nothing."
+        data, remote_addr = await asyncio.wait_for(self.stream.recv(),
+                                                   timeout=self.timeout)
         return data
     
     async def write(self, data):
@@ -428,10 +427,15 @@ class UDPAsyncSocketConnection(AsyncReadConnection):
             data = bytearray(data.flush())
         await self.stream.send(data)
     
+    def close(self):
+        "Close self.stream"
+        self.stream.socket.shutdown(socket.SHUT_RDWR)
+        self.stream.socket.close()
+        self.stream.close()
+    
     def __del__(self):
         """Close self.stream."""
         try:
-            self.stream.close()
-        except:
-            pass
-    pass
+            self.close()
+        except (asyncio.exceptions.CancelledError, asyncio.exceptions.TimeoutError):
+            return

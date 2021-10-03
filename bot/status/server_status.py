@@ -2,41 +2,45 @@
 # -*- coding: utf-8 -*-
 # MC Server Status
 
+"Supply Server class to ping a Java Minecraft Server."
+
 # Programmed by CoolCat467
 # Stolen almost all code from https://github.com/Dinnerbone/mcstatus
 
 __title__ = 'MC Server Status'
 __author__ = 'CoolCat467'
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 __all__ = ['try_x_times', 'Server']
+
+from functools import wraps as _wraps
 
 from status.address_tools import lookup
 from status.connection import TCPAsyncSocketConnection, TCPSocketConnection
 from status.pingers import ServerPinger, AsyncServerPinger
-from functools import wraps
 
-def try_x_times(times:int=3):
-    '''Return a wraper that will attempt to run the function it wraps x times. If it fails the x th time, exception is allowed to go uncaught.'''
+def try_x_times(times: int=3):
+    '''Return a wraper that will attempt to run the function it wraps x times.
+    If it fails the x th time, exception is allowed to go uncaught.'''
     def try_wraper(function):
         'Wrapper for given function to try times before exit.'
-        @wraps(function)
+        @_wraps(function)
         def try_function_wraper(*args, **kwargs):
-            'Call a function with given arguments, raise exception on failure more than x times.'
-            exception = None
-            for attempt in range(times):
+            'Call func with given args, reraise exception if fails > x times.'
+            for time in range(times):
                 try:
                     return function(*args, **kwargs)
-                except Exception as e:
-                    exception = e
-            raise exception
+                except Exception:
+                    if time == times-1:
+                        raise
+            return None
         return try_function_wraper
     return try_wraper
 
-class Server():
+class Server:
     'Server class talks to minecraft servers.'
     def __init__(self, host:str, port:int=25565):
         'Requires a host and a port.'
@@ -45,7 +49,7 @@ class Server():
     
     @classmethod
     def lookup(cls, address:str):
-        'Parses the given address and checks DNS records for an SRV record that points to the Minecraft server.'
+        'Lookup Minecraft server from DNS records.'
         host, port = lookup(address, 25565, '_minecraft._tcp.{}', 'SRV')
         return cls(host, port)
     
@@ -97,7 +101,7 @@ class Server():
         finally:
             connection.close()
     
-    async def async_status(self, tries=3, **kwargs):
+    async def async_status(self, tries: int=3, **kwargs) -> (dict, float):
         "Request the server's status and return the json from the response."
         connection = TCPAsyncSocketConnection()
         await connection.connect((self.host, self.port))
@@ -114,15 +118,6 @@ class Server():
             return await get_status()
         finally:
             connection.close()
-    pass
-
-def run():
-    cat = Server.lookup('mc.hypixel.net')
-    import asyncio
-    print(asyncio.run(cat.async_status()))
-##    print(cat.status())
-    del asyncio
 
 if __name__ == '__main__':
-    print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
-    run()
+    print(f'{__title__} v{__version__}\nProgrammed by {__author__}.')

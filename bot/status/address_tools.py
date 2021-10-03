@@ -3,6 +3,8 @@
 # General address tools with code stolen from WOOF and mcstatus
 # (see respective comments in code for address)
 
+"General address tools with code stolen from WOOF and mcstatus"
+
 __all__ = ['ip_type', 'parse_address', 'lookup', 'find_ip']
 
 import socket
@@ -22,27 +24,31 @@ def ip_type(address):
         return None
 
 def parse_address(address):
-    """Return a tuple of (address, port) from address string, such as "127.0.0.1:8080" --> ('127.0.0.1', 8080)"""
-    tmp = urlparse('//'+address)
+    """Return a tuple of (address, port) from address string.
+    ex. "127.0.0.1:8080" --> ('127.0.0.1', 8080)"""
+    if not '//' in address[:8]:
+        address = '//'+address
+    tmp = urlparse(address)
     if not tmp.hostname:
         raise ValueError(f"Invalid address '{address}'")
     return tmp.hostname, tmp.port
 
-def lookup(address, defaultPort=80, formatHost='{}', qname='A'):
+def lookup(address, default_port=80, format_host='{}', qname='A'):
     """Look up address, and return MinecraftServer instance after sucessfull lookup."""
     host, port = parse_address(address)
     if port is None:
-        port = defaultPort
+        port = default_port
         try:
-            answers = dns.resolver.resolve(formatHost.format(host), qname)
+            answers = dns.resolver.resolve(format_host.format(host), qname)
+        except dns.exception.DNSException:
+            pass
+        else:
             if len(answers):
                 answer = answers[0]
                 if hasattr(answer, 'address'):
                     host = str(answer.address).rstrip('.')
                 if hasattr(answer, 'port'):
                     port = int(answer.port)
-        except Exception:
-            pass
     return host, port
 
 # Stolen from WOOF (Web Offer One File), Copyright (C) 2004-2009 Simon Budig,

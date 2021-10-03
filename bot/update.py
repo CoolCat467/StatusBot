@@ -8,16 +8,16 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 3
+__ver_patch__ = 4
 
 import os
+from asyncio import gather
+
 import aiohttp
 import async_timeout
-
-from asyncio import gather
 
 TIMEOUT = 10
 
@@ -25,10 +25,10 @@ def get_address(user:str, repo:str, branch:str, path:str) -> str:
     "Get raw github user content url of a specific file."
     return f'https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}'
 
-def is_new_ver_higher(current:tuple, new:tuple) -> bool:
+def is_new_ver_higher(current:tuple, newest:tuple) -> bool:
     "Return True if current version older than new version."
-    assert len(current) == len(new), 'Version lengths do not match!'
-    for old, new in zip(current, new):
+    assert len(current) == len(newest), 'Version lengths do not match!'
+    for old, new in zip(current, newest):
         if old < new:
             return True
         elif old == new:
@@ -38,7 +38,6 @@ def is_new_ver_higher(current:tuple, new:tuple) -> bool:
 
 def get_paths(jdict:dict) -> list:
     "Read dictionary and figure out paths of files we want to update."
-    paths = []
     def read_dict(cdict:dict) -> list:
         "Read a dictonary and return paths."
         paths = []
@@ -48,13 +47,13 @@ def get_paths(jdict:dict) -> list:
             if isinstance(nxt, dict):
                 # If dictionary, read and add our own path.
                 add = read_dict(nxt)
-                for f in add:
-                    paths.append(os.path.join(path, f))
+                for file in add:
+                    paths.append(os.path.join(path, file))
             elif isinstance(nxt, (list, tuple)):
                 # If it's a list or tuple, add all to our own paths joined.
-                for f in nxt:
-                    if isinstance(f, str):
-                        paths.append(os.path.join(path, f))
+                for file in nxt:
+                    if isinstance(file, str):
+                        paths.append(os.path.join(path, file))
         return paths
     return read_dict(jdict)
 
@@ -68,13 +67,13 @@ def make_dirpath_exist(filepath:str) -> None:
         make_dirpath_exist(folder)
         # Make folder
         os.path.mkdir(folder)
-    return None
 
 async def download_coroutine(url:str, timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
     "Return content bytes found at url."
-    # Make a session with our event loop and the magic headers that make it work right cause it's smart
+    # Make a session with our event loop
     async with aiohttp.ClientSession(**sessionkwargs) as session:
-        # Make sure we have a timeout, so that in the event of network failures or something code doesn't get stuck
+        # Make sure we have a timeout, so that in the event of
+        # network failures or something code doesn't get stuck
         async with async_timeout.timeout(timeout):
             # Go to the url and get response
             async with session.get(url) as response:
@@ -86,24 +85,29 @@ async def download_coroutine(url:str, timeout:int=TIMEOUT, **sessionkwargs) -> b
         await session.close()
     return request_result
 
-async def get_file(repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
+async def get_file(repo:str, path:str, user:str, branch:str='HEAD',
+                   timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
     "Get a file from a github repository. Return data as bytes."
     url = get_address(user, repo, branch, path)
     return await download_coroutine(url, timeout, **sessionkwargs)
 
-async def update_file(basepath:str, repo:str, path:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> bool:
+async def update_file(basepath:str, repo:str, path:str, user:str,
+                      branch:str='HEAD', timeout:int=TIMEOUT,
+                      **sessionkwargs) -> bool:
     "Update file. Return False on exception, otherwise True."
+    url = get_address(user, repo, branch, path)
+    savepath = os.path.abspath(os.path.join(basepath, path))
     try:
-        url = get_address(user, repo, branch, path)
-        savepath = os.path.abspath(os.path.join(basepath, path))
         with open(savepath, 'wb') as sfile:
             sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
             sfile.close()
-    except:
+    except Exception:
         return False
     return True
 
-async def update_files(basepath:str, paths:tuple, repo:str, user:str, branch:str='HEAD', timeout:int=TIMEOUT, **sessionkwargs) -> list:
+async def update_files(basepath:str, paths:tuple,
+                       repo:str, user:str, branch:str='HEAD',
+                       timeout:int=TIMEOUT, **sessionkwargs) -> list:
     "Update multiple files all from the same github repository. Return list of paths."
     urlbase = get_address(user, repo, branch, '')
     async def update_single(path):
@@ -118,16 +122,3 @@ async def update_files(basepath:str, paths:tuple, repo:str, user:str, branch:str
         return path
     coros = (update_single(path) for path in paths)
     return await gather(*coros)
-
-def run():
-    "Demonstrate aquireing current version."
-    import asyncio
-    loop = asyncio.get_event_loop()
-    file = loop.run_until_complete(get_file('StatusBot', 'version.txt', 'CoolCat467', 'HEAD', 5))
-    print(file.decode('utf-8').strip())
-    del asyncio
-    return
-
-if __name__ == '__main__':
-    print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
-    run()

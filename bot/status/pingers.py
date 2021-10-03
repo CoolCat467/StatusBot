@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # Stolen and slightly modified from https://github.com/Dinnerbone/mcstatus
 
+"Asynchronous and non-asynchronous Server Pinger classes."
+
 # This version of mcstatus's pingers module
 # has async and regular functions use the same parts with subfunctions
 
@@ -14,16 +16,17 @@ from random import randint
 from status.connection import Connection
 
 class ServerPinger:
-    """Server Pinger class, pings server with connection given."""
+    "Server Pinger class, pings server with connection given."
+    __slots__ = 'version', 'connection', 'host', 'port', 'ping_token'
     def __init__(
         self,
         connection,
         host: str = '',
         port: int = 0,
         version: int = 47,
-        ping_token=None,
+        ping_token: int = None,
     ):
-        """Requires connection object. Other values are optional, but makes it better."""
+        "Requires connection object. Other values optional, but makes better."
         if ping_token is None:
             ping_token = randint(0, (1 << 63) - 1)
         self.version = version
@@ -31,10 +34,9 @@ class ServerPinger:
         self.host = host
         self.port = port
         self.ping_token = ping_token
-        return
     
     def handshake(self):
-        """Preform handshake by writing buffer on self.connection."""
+        "Preform handshake by writing buffer on self.connection."
         packet = Connection()
         packet.write_varint(0)
         packet.write_varint(self.version)
@@ -43,23 +45,23 @@ class ServerPinger:
         packet.write_varint(1)  # Intention to query status
         
         self.connection.write_buffer(packet)
-        return
     
     def _read_status_request(self):
-        """Send request status packet to server."""
+        "Send request status packet to server."
         request = Connection()
         request.write_varint(0)  # Request status
         self.connection.write_buffer(request)
-        return
     
-    def _read_status_process_response(self, response):
+    @staticmethod
+    def _read_status_process_response(response) -> dict:
+        "Read response and return read value."
         if response.read_varint() != 0:
             raise IOError('Received invalid status response packet.')
         try:
             return json.loads(response.read_utf())
-        except ValueError:
-            raise IOError('Received invalid JSON')
-        return
+        except ValueError as ex:
+            raise IOError('Received invalid JSON') from ex
+        return {}
     
     def read_status(self) -> str:
         """Read status and return json response. Raises IOError."""
@@ -68,7 +70,7 @@ class ServerPinger:
         response = self.connection.read_buffer()
         return self._read_status_process_response(response)
     
-    def _test_ping_request(self):
+    def _test_ping_request(self) -> datetime.datetime:
         """Send test ping request. Return time sent at."""
         request = Connection()
         request.write_varint(1)  # Test ping
@@ -78,30 +80,30 @@ class ServerPinger:
         return sent
     
     def _test_ping_process_response(self, response, sent, received) -> float:
-        """Read response, make sure token is good, and return delta in secconds. Raises IOError on failure."""
+        "Read response, make sure token is good, return delta in ms. IOError on failure."
         if response.read_varint() != 1:
             raise IOError('Received invalid ping response packet.')
         received_token = response.read_long()
         if received_token != self.ping_token:
+            msg = 'Received mangled ping response packet (expected token '
             raise IOError(
-                f'Received mangled ping response packet (expected token {self.ping_token}, received {received_token})'
+                mgs+f'{self.ping_token}, received {received_token})'
             )
         
         delta = received - sent
         # We have no trivial way of getting a time delta :(
-        return (delta.days * 24 * 60 * 60 + delta.seconds) * 1000 + delta.microseconds / 1000.0
+        return (delta.days * 24 * 60 * 60 + delta.seconds) * 1000 + delta.microseconds / 1000
     
     def test_ping(self) -> float:
-        """Send test ping, return delay (in miliseconds) delta from response."""
+        "Send test ping, return delay (in miliseconds) delta from response."
         sent = self._test_ping_request()
         
         response = self.connection.read_buffer()
         received = datetime.datetime.now()
         return self._test_ping_process_response(response, sent, received)
-    pass
 
 class AsyncServerPinger(ServerPinger):
-    """Asyncronous Server Pinger class."""
+    "Asynchronous Server Pinger class."
     async def read_status(self) -> str:
         self._read_status_request()
         
@@ -114,4 +116,3 @@ class AsyncServerPinger(ServerPinger):
         response = await self.connection.read_buffer()
         received = datetime.datetime.now()
         return self._test_ping_process_response(response, sent, received)
-    pass

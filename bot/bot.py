@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 __ver_major__ = 0
 __ver_minor__ = 2
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -23,11 +23,14 @@ import random
 import traceback
 import concurrent.futures
 from typing import Union
-from dotenv import load_dotenv
 from threading import Event, Lock
 
+from dotenv import load_dotenv
 import discord
 ##from discord.ext import tasks, commands
+
+# Update talks to raw.githubusercontent.com.
+import update
 
 # server_status is basically mcstatus from
 # https://github.com/Dinnerbone/mcstatus
@@ -38,9 +41,6 @@ from status import server_status as mc
 # Gears is basically like discord's Cogs, but
 # by me.
 import gears
-
-# Update talks to raw.githubusercontent.com.
-import update
 
 # Aquire token.
 # Looks for file named ".env",
@@ -58,15 +58,14 @@ AZLOW = AZUP.lower()
 NUMS = '0123456789'
 
 
-def writeFile(filename:str, data:str) -> None:
+def write_file(filename:str, data:str) -> None:
     "Write data to file <filename>."
     filename = os.path.abspath(filename)
     with open(filename, 'w', encoding='utf-8') as wfile:
         wfile.write(data)
         wfile.close()
-    return None
 
-def appendFile(filename:str, data:str) -> None:
+def append_file(filename:str, data:str) -> None:
     "Add data to file <filename>."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
@@ -74,10 +73,9 @@ def appendFile(filename:str, data:str) -> None:
             wfile.write(data)
             wfile.close()
     else:
-        writeFile(filename, data)
-    return None
+        write_file(filename, data)
 
-def readFile(filename:str) -> Union[str, None]:
+def read_file(filename:str) -> Union[str, None]:
     "Read data from file <filename>. Return None if file does not exist."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
@@ -104,15 +102,14 @@ def write_json(filename:str, dictionary:dict, indent:int=2) -> None:
     "Write dicitonary as json to filename."
     with open(filename, 'w', encoding='utf-8') as wfile:
         try:
-            data = json.dump(dictionary, wfile, indent=indent)
+            json.dump(dictionary, wfile, indent=indent)
         finally:
             wfile.close()
-    return None
 
-def splitTime(seconds:int) -> list:
+def split_time(seconds:int) -> list:
     "Split time into decades, years, months, weeks, days, hours, minutes, and seconds."
     seconds = int(seconds)
-    def modTime(sec:int, num:int) -> tuple:
+    def mod_time(sec:int, num:int) -> tuple:
         "Return number of times sec divides equally by number, then remainder."
         smod = sec % num
         return int((sec - smod) // num), smod
@@ -137,11 +134,11 @@ def splitTime(seconds:int) -> list:
             1)
     ret = []
     for num in divs:
-        t, seconds = modTime(seconds, num)
-        ret.append(t)
+        edivs, seconds = mod_time(seconds, num)
+        ret.append(edivs)
     return ret
 
-def combineAnd(data:list) -> str:
+def combine_and(data:list) -> str:
     "Join values of text, and have 'and' with the last one properly."
     data = list(data)
     if len(data) >= 2:
@@ -150,41 +147,41 @@ def combineAnd(data:list) -> str:
         return ', '.join(data)
     return ' '.join(data)
 
-def printTime(seconds:int, singleTitleAllowed:bool=False) -> str:
-    "Returns time using the output of splitTime."
+def format_time(seconds:int, single_title_allowed:bool=False) -> str:
+    "Returns time using the output of split_time."
     times = ('eons', 'eras', 'epochs', 'ages', 'millenniums',
              'centuries', 'decades', 'years', 'months', 'weeks',
              'days', 'hours', 'minutes', 'seconds')
     single = [i[:-1] for i in times]
     single[5] = 'century'
-    split = splitTime(seconds)
-    zipidxvalues = [(i, v) for i, v in enumerate(split) if v]
-    if singleTitleAllowed:
-        if len(zipidxvalues) == 1:
-            index, value = zipidxvalues[0]
+    split = split_time(seconds)
+    zip_idx_values = [(i, v) for i, v in enumerate(split) if v]
+    if single_title_allowed:
+        if len(zip_idx_values) == 1:
+            index, value = zip_idx_values[0]
             if value == 1:
                 return 'a '+single[index]
     data = []
-    for index, value in zipidxvalues:
+    for index, value in zip_idx_values:
         title = single[index] if abs(value) < 2 else times[index]
         data.append(str(value)+' '+title)
-    return combineAnd(data)
+    return combine_and(data)
 
 def get_time_of_day(hour:int) -> str:
     "Figure out and return what time of day it is."
     if hour > 4 and hour < 12:
         return 'Morning'
-    elif hour > 11 and hour < 19:
+    if hour > 11 and hour < 19:
         # "It is usually from 12 PM to 6 PM,
         # but during winter it may be from 12 PM to 4 PM
         # and during summer it may be from 12 PM to 8 PM."
         return 'Afternoon'
-    elif hour > 18 and hour < 22:
+    if hour > 18 and hour < 22:
         return 'Evening'
-    ##elif hour > 21 or hour < 4:
+    ##if hour > 21 or hour < 4:
     return 'Night'
 
-def exceptChars(text:str, valid:str=AZUP+AZLOW+NUMS+'.:-') -> str:
+def except_chars(text:str, valid:str=AZUP+AZLOW+NUMS+'.:-') -> str:
     "Return every character in text that is also in valid string."
     return ''.join(i for i in text if i in valid)
 
@@ -206,37 +203,40 @@ def log_active_exception(logpath, extra=None) -> None:
         msg += str(extra)+'\n'
     msg += 'Exception class:\n'+str(values[0])+'\n'
     msg += 'Exception text:\n'+str(values[1])+'\n'
-    class fakefile:
+    class FakeFile:
+        "Fake file class implementing write attribute."
         def __init__(self):
             self.data = []
         def write(self, value:str) -> None:
+            "Append value to data."
             self.data.append(value)
         def getdata(self) -> str:
+            "Return data collected."
             return ''.join(self.data)[:-1]
-        pass
-    yestotalyafile = fakefile()
+    yes_totaly_a_file = FakeFile()
     traceback.print_exception(None, values[1],
                               values[2],
-                              file=yestotalyafile)
-    msg += 'Traceback:\n'+yestotalyafile.getdata()+'\n'
+                              file=yes_totaly_a_file)
+    msg += 'Traceback:\n'+yes_totaly_a_file.getdata()+'\n'
     msg += '#'*16+'\n'
     print(msg)
-    appendFile(logpath, msg)
-    return None
+    append_file(logpath, msg)
 
-async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwrap:bool=True) -> None:
-    "Use sendfunc to send text in segments over 2000 characters by splitting it into multiple messages."
+async def send_over_2000(send_func, text:str, wrap_with:str='',
+                         replace_existing_wrap:bool=True) -> None:
+    "Use send_func to send text in segments over 2000 characters by"\
+    "splitting it into multiple messages."
     send = str(text)
-    addaloc = 0
-    if wrapwith:
-        if replaceexistingwrap:
-            send = send.replace(wrapwith, '')
-        addaloc = int(len(wrapwith) * 2)
+    add_aloc = 0
+    if wrap_with:
+        if replace_existing_wrap:
+            send = send.replace(wrap_with, '')
+        add_aloc = int(len(wrap_with) * 2)
     parts = []
-    count = len(send)+addaloc
+    count = len(send)+add_aloc
     if count > 2000:
         last = 0
-        for i in range(0, len(send), 2000-addaloc):
+        for i in range(0, len(send), 2000-add_aloc):
             parts.append(send[last:i])
             last = i
         del parts[0]
@@ -244,14 +244,14 @@ async def send_over_2000(sendfunc, text:str, wrapwith:str='', replaceexistingwra
             parts.append(send[last:])
     else:
         parts.append(send)
-    if wrapwith:
-        parts = wrap_list_values(parts, wrapwith)
+    if wrap_with:
+        parts = wrap_list_values(parts, wrap_with)
     # This would be great for asyncio.gather, but
     # I'm not sure if that will throw off call order or not.
-##    coros = [sendfunc(part) for part in parts]
+##    coros = [send_func(part) for part in parts]
 ##    await asyncio.gather(*coros)
     for part in parts:
-        await sendfunc(part)
+        await send_func(part)
     return None
 
 async def get_github_file(path:str, timeout:int=10) -> str:
@@ -261,9 +261,11 @@ async def get_github_file(path:str, timeout:int=10) -> str:
 
 class PingState(gears.AsyncState):
     "State where we ping server."
+    __slots__ = 'failed', 'exit_ex'
     def __init__(self):
         super().__init__('ping')
-        return None
+        self.failed = False
+        self.exit_ex = None
     
     async def entry_actions(self) -> None:
         "Reset failed to false and exception to None."
@@ -274,29 +276,28 @@ class PingState(gears.AsyncState):
     async def do_actions(self) -> None:
         "Ping server. If failure, self.falied = True and if exceptions, save."
         try:
-            json, ping = await self.machine.server.async_status()
+            json_data, ping = await self.machine.server.async_status()
         except Exception as ex:
             self.exit_ex = f'`A {type(ex).__name__} Error Has Occored'
             if ex.args:
-                self.exit_ex += f': {combineAnd(ex.args)}`'
+                sargs = list(map(str, ex.args))
+                self.exit_ex += ': '+combine_and(sargs)
             else:
                 self.exit_ex += '`.'
             self.failed = True
             print(self.exit_ex)
             # No need to record detailed errors for timeouts.
-            if isinstance(ex, concurrent.futures.TimeoutError):
-                return None
-            log_active_exception(self.machine.bot.logpath)
+            if not isinstance(ex, concurrent.futures.TimeoutError):
+                log_active_exception(self.machine.bot.logpath)
             return None
         # If success, get players.
-        self.machine.last_json = json
+        self.machine.last_json = json_data
         self.machine.last_delay = ping
         current = []
-        if 'players' in json:
-            if 'sample' in json['players']:
-                for player in json['players']['sample']:
-                    if 'name' in player:
-                        current.append(player['name'])
+        if 'players' in json_data and 'sample' in json_data['players']:
+            for player in json_data['players']['sample']:
+                if 'name' in player:
+                    current.append(player['name'])
         current = set(current)
         # If different players,
         if current != self.machine.last_ping:
@@ -304,21 +305,19 @@ class PingState(gears.AsyncState):
             joined = tuple(current.difference(self.machine.last_ping))
             left = tuple(self.machine.last_ping.difference(current))
             
-            delay = printTime(self.machine.delay)
             def users_mesg(action:str, users:list) -> str:
-                "Return users {action} the server: {users}"
-                user = 'user has' if len(users) == 1 else 'users have'
-                text = f'The following {user} {action} the server in the last {delay}:\n'
-                text += combineAnd(wrap_list_values(users, '`'))
+                "Returns [{action}]: {users}"
+                text = f'[{action}]:\n'
+                text += combine_and(wrap_list_values(users, '`'))
                 return text
             # Collect left and joined messages.
             message = ''
             if left:
-                message += users_mesg('left', left)
+                message += users_mesg('Left', left)
             if joined:
                 if message:
                     message += '\n'
-                message += users_mesg('joined', joined)
+                message += users_mesg('Joined', joined)
             # Send message to guild channel.
             if message:
                 await send_over_2000(self.machine.channel.send, message)
@@ -337,14 +336,16 @@ class PingState(gears.AsyncState):
         if not self.exit_ex is None:
             await self.machine.channel.send(self.exit_ex)
         return None
-    pass
 
 class WaitRestartState(gears.AsyncState):
     "State where we wait for server to restart."
+    __slots__ = 'ignore_ticks', 'success', 'ticks', 'ping'
     def __init__(self, ignore_ticks:int):
         super().__init__('await_restart')
         self.ignore_ticks = ignore_ticks
-        return None
+        self.success = None
+        self.ticks = 0
+        self.ping = None
     
     async def entry_actions(self) -> None:
         "Reset failed and say connection lost."
@@ -370,7 +371,6 @@ class WaitRestartState(gears.AsyncState):
         
         if self.ticks == 0:
             self.success = await self.attempt_contact()
-        pass
     
     async def check_conditions(self) -> None:
         "If contact attempt was sucessfull, switch back to ping."
@@ -380,12 +380,13 @@ class WaitRestartState(gears.AsyncState):
     
     async def exit_actions(self) -> None:
         "Tell guild connection re-established."
-        await self.machine.channel.send(f'Connection to server re-established with a ping of `{self.ping}ms`.')
+        await self.machine.channel.send(
+            f'Connection to server re-established with a ping of `{self.ping}ms`.')
         return None
-    pass
 
 class GuildServerPinger(gears.StateTimer):
     "Server pinger for guild."
+    __slots__ = 'guildid', 'server', 'last_ping', 'last_json', 'last_delay', 'channel'
     tickspeed = 60
     waitticks = 3
     def __init__(self, bot:discord.Client, guildid:int) -> None:
@@ -396,12 +397,10 @@ class GuildServerPinger(gears.StateTimer):
         self.last_ping = set()
         self.last_json = {}
         self.last_delay = 0
-        self.ticks = 0
         self.channel = None
         
         self.add_state(PingState())
         self.add_state(WaitRestartState(self.waitticks))
-        return None
     
     @property
     def wait_time(self):
@@ -428,7 +427,19 @@ class GuildServerPinger(gears.StateTimer):
         else:
             await self.channel.send('No address for this guild defined, pinger not started.')
         return None
-    pass
+
+def get_valid_options(valid:list, wrap:str='`') -> str:
+    "Return string of ' Valid options are: {valid}' but with pretty formatting."
+    validops = combine_and(wrap_list_values(valid, wrap))
+    return f' Valid options are: {validops}.'
+
+async def send_command_list(commands:dict, name:str, channel) -> str:
+    "Send message on channel telling user about all valid name commands."
+    sort = sorted(commands.keys(), reverse=True)
+    commands = '\n'.join(wrap_list_values(sort, '`'))
+    text = f"{__title__}'s Valid {name} Commands:"
+    await channel.send(text)
+    await send_over_2000(channel.send, commands)
 
 class StatusBot(discord.Client, gears.BaseBot):
     "StatusBot needs prefix, eventloop, and any arguments to pass to discord.Client."
@@ -459,11 +470,10 @@ class StatusBot(discord.Client, gears.BaseBot):
                           'getoption': self.getoption_dm,
                           'help': self.help_dm}
         gears.BaseBot.__init__(self, self.loop)
-        return
     
     def __repr__(self):
-        up = self.__class__.__weakref__.__qualname__.split('.')[0]
-        return f'<{self.__class__.__name__} Object ({up} subclass)>'
+##        up = self.__class__.__weakref__.__qualname__.split('.')[0]
+        return f'<{self.__class__.__name__} Object>'# ({up} subclass)>'
     
     @property
     def gear_close(self):
@@ -485,7 +495,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         if guildconfig is None:
             # Guild does not have config
             # Therefore, create file for them
-            writeFile(guildfile, '{}')
+            write_file(guildfile, '{}')
             guildconfig = {}
         return guildconfig
     
@@ -494,21 +504,19 @@ class StatusBot(discord.Client, gears.BaseBot):
         dmfile = self.get_dm_config_file()
         dmconfig = read_json(dmfile)
         if dmconfig is None:
-            writeFile(dmfile, '{}')
+            write_file(dmfile, '{}')
             dmconfig = {}
         return dmconfig
     
     def write_guild_config(self, guildid:int, config:dict) -> None:
         "Write guild config file from config dictionary."
         guildfile = self.get_guild_config_file(guildid)
-        writeFile(guildfile, json.dumps(config, indent=2))
-        return
+        write_file(guildfile, json.dumps(config, indent=2))
     
     def write_dm_config(self, config:dict) -> None:
         "Write DMs config file from config dictionary."
         dmfile = self.get_dm_config_file()
-        writeFile(dmfile, json.dumps(config, indent=2))
-        return
+        write_file(dmfile, json.dumps(config, indent=2))
     
     def guess_guild_channel(self, gid:int):
         "Guess guild channel and return channel."
@@ -535,12 +543,12 @@ class StatusBot(discord.Client, gears.BaseBot):
                 return member
         return
     
-    async def add_guild_pinger(self, gid:int, forceReset:bool=False) -> str:
+    async def add_guild_pinger(self, gid:int, force_reset:bool=False) -> str:
         "Create server pinger for guild if not exists. Return 'started', 'restarted', or 'none'."
         if not gid in self.gears:
             self.add_gear(GuildServerPinger(self, gid))
             return 'started'
-        elif not self.gears[gid].running or forceReset:
+        if force_reset or not self.gears[gid].running:
             if not self.gears[gid].stopped:
                 await self.gears[gid].hault()
             self.remove_gear(gid)
@@ -548,25 +556,27 @@ class StatusBot(discord.Client, gears.BaseBot):
             return 'restarted'
         return 'none'
     
-    async def eval_guild(self, guildid:int, forceReset:bool=False) -> int:
-        "Evaluate guild and it's config file and start pinger if able. Otherwise tell them to change settings."
+    async def eval_guild(self, guildid:int, force_reset:bool=False) -> int:
+        "(Re)Start guild pinger if able. Otherwise tell them to change settings."
         guildconfig = self.get_guild_config(guildid)
         channel = self.guess_guild_channel(guildid)
         if not 'channel' in guildconfig:
-            await channel.send('This is where I will post leave-join messages until an admin sets my `channel` option.')
+            await channel.send('This is where I will post leave-join messages'\
+                               'until an admin sets my `channel` option.')
         if 'address' in guildconfig:
-            action = await self.add_guild_pinger(guildid, forceReset)
+            action = await self.add_guild_pinger(guildid, force_reset)
             if action != 'none':
                 await channel.send(f'Server pinger {action}.')
             else:
                 await channel.send('No action taken.')
         else:
-            await channel.send(f'Server address not set, pinger not started. Please set it with `{self.prefix} setoption address <address>`.')
+            await channel.send('Server address not set, pinger not started.'\
+                               f'Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
     
-    async def eval_guilds(self, forceReset:bool=False) -> list:
+    async def eval_guilds(self, force_reset:bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        coros = (self.eval_guild(guild.id, forceReset) for guild in self.guilds)
+        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
         return await asyncio.gather(*coros)
     
     # Default, not affected by intents.
@@ -588,8 +598,8 @@ class StatusBot(discord.Client, gears.BaseBot):
         guildnames = []
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
-        c = max(len(name) for name in guildnames)
-        print('\n'.join(n.center(c) for n in guildnames)+'\n')
+        spaces = max(len(name) for name in guildnames)
+        print('\n'.join(name.ljust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
         print('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
@@ -629,11 +639,12 @@ class StatusBot(discord.Client, gears.BaseBot):
             if pinger.active_state.name == 'ping':
                 lastdict = pinger.last_json
                 msg = json.dumps(lastdict, sort_keys=True, indent=2)
-                await message.channel.send(f'Last received json message:')
+                await message.channel.send('Last received json message:')
                 await send_over_2000(message.channel.send, msg, '```', False)
                 return
-            delay = printTime(pinger.wait_time)
-            await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
+            delay = format_time(pinger.wait_time)
+            await message.channel.send(
+                f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
@@ -644,29 +655,32 @@ class StatusBot(discord.Client, gears.BaseBot):
             pinger = self.gears[message.guild.id]
             if pinger.active_state.name == 'ping':
                 msg = f'`{pinger.last_delay}ms`'
-                await message.channel.send(f"{__title__}'s last received latency to defined guild server:\n"+msg)
+                await message.channel.send(
+                    f"{__title__}'s last received latency to defined guild server:\n"+msg)
                 return None
-            delay = printTime(pinger.wait_time)
-            await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
+            delay = format_time(pinger.wait_time)
+            await message.channel.send(
+                f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
     
     async def getonline(self, message) -> None:
-        "Tell the author of the message the usernames of the players currently connected to the guild's server."
+        "Tell author of the message the usernames of the players connected to the guild's server."
         if message.guild.id in self.gears:
             pinger = self.gears[message.guild.id]
             if pinger.active_state.name == 'ping':
                 players = list(pinger.last_ping)
                 if players:
-                    players = combineAnd(wrap_list_values(players, '`'))
-                    await message.channel.send(f'Players online in last received sample:')
+                    players = combine_and(wrap_list_values(players, '`'))
+                    await message.channel.send('Players online in last received sample:')
                     await send_over_2000(message.channel.send, players)
                     return
-                await message.channel.send(f'No players were online in the last received sample.')
+                await message.channel.send('No players were online in the last received sample.')
                 return
-            delay = printTime(pinger.wait_time)
-            await message.channel.send(f'Cannot connect to server at this time, try again in {delay}.')
+            delay = format_time(pinger.wait_time)
+            await message.channel.send(
+                f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
@@ -675,24 +689,27 @@ class StatusBot(discord.Client, gears.BaseBot):
         "Stop this bot. Sends stop message."
         config = self.get_dm_config()
         if not 'stopusers' in config:
-            await message.channel.send(f'No one has permission to run this command.')
+            await message.channel.send('No one has permission to run this command.')
             return
         
         if message.author.id in config['stopusers']:
-            await message.channel.send(f'Stopping...')
+            await message.channel.send('Stopping...')
             # Set stopped event
             self.stopped.set()
             def close_bot():
                 self.loop.create_task(self.close())
             self.loop.call_later(3, close_bot)
             return
-        await message.channel.send(f'You do not have permission to run this command.')
+        await message.channel.send('You do not have permission to run this command.')
         return
     
     async def getcurrentvers(self, message) -> tuple:
         "Get current version, tell user in message.channel, and return that version as tuple."
-        await message.channel.send(f'Current version: {__version__}')
-        return (__ver_major__, __ver_minor__, __ver_patch__)
+        proj_root = os.path.split(self.rootdir)[0]
+        version = read_file(os.path.join(proj_root, 'version.txt'))
+        await message.channel.send(f'Current version: {version}')
+##        return (__ver_major__, __ver_minor__, __ver_patch__)
+        return tuple(map(int, version.strip().split('.')))
     
     async def getonlinevers(self, message) -> tuple:
         "Get online version, tell user in message.channel, and return said version as tuple."
@@ -706,7 +723,8 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def update(self, message, timeout:int=20) -> None:
         "Preform update from github."
         if self.stopped.is_set():
-            await message.channel.send(f'{__title__} is in the process of shutting down, canceling update.')
+            await message.channel.send(
+                f'{__title__} is in the process of shutting down, canceling update.')
             return
         config = self.get_dm_config()
         if not 'updateusers' in config:
@@ -722,7 +740,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             # Figure out if we need update.
             if update.is_new_ver_higher(curvers, newvers):
                 # If we need update, get file list.
-                await message.channel.send(f'Retrieving file list...')
+                await message.channel.send('Retrieving file list...')
                 try:
                     response = await get_github_file('files.json')
                     paths = tuple(update.get_paths(json.loads(response)))
@@ -732,30 +750,27 @@ class StatusBot(discord.Client, gears.BaseBot):
                     self.updating.release()
                     return
                 # Get max amount of time this could take.
-                maxtime = printTime(timeout*len(paths))
+                maxtime = format_time(timeout*len(paths))
                 # Stop everything if we are trying to shut down.
                 if self.stopped.is_set():
-                    await message.channel.send(f'{__title__} is in the process of shutting down, canceling update.')
+                    await message.channel.send(
+                        f'{__title__} is in the process of shutting down, canceling update.')
                     self.updating.release()
                     return
                 # Tell user number of files we are updating.
-                await message.channel.send(f'{len(paths)} files will now be updated. Please wait. This may take up to {maxtime} at most.')
+                await message.channel.send(f'{len(paths)} files will now be updated.'\
+                                           'Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
                 await update.update_files(rootdir, paths, __title__, __author__, 'master', timeout)
                 await message.channel.send('Done. Bot will need to be restarted to apply changes.')
                 self.updating.release()
                 return
-            await message.channel.send(f'No update required.')
+            await message.channel.send('No update required.')
             self.updating.release()
             return
-        await message.channel.send(f'You do not have permission to run this command.')
+        await message.channel.send('You do not have permission to run this command.')
         return
-    
-    def get_valid_options(self, valid:list, wrap:str='`') -> str:
-        "Return string of ' Valid options are: {valid}' but with pretty formatting."
-        validops = combineAnd(wrap_list_values(valid, wrap))
-        return f' Valid options are: {validops}.'
     
     async def getoption_guild(self, message) -> None:
         "Send message with value of option given in this guild's config."
@@ -766,7 +781,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         if not valid:
             await message.channel.send('No options are set at this time.')
             return
-        validops = self.get_valid_options(valid)            
+        validops = get_valid_options(valid)            
         
         if not args:
             await message.channel.send('Invalid option.'+validops)
@@ -779,7 +794,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                 return
             if isinstance(value, (list, tuple)):
                 names = await self.replace_ids_w_names(value)
-                value = combineAnd(wrap_list_values(names, '`'))[1:-1]
+                value = combine_and(wrap_list_values(names, '`'))[1:-1]
             await message.channel.send(f'Value of option `{option}`: `{value}`.')
             return
         await message.channel.send('Invalid option.'+validops)
@@ -799,7 +814,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         if not valid:
             await message.channel.send('No options are set at this time.')
             return
-        validops = self.get_valid_options(valid) 
+        validops = get_valid_options(valid) 
         
         if len(args) == 0:
             await message.channel.send('No option given.'+validops)
@@ -813,37 +828,28 @@ class StatusBot(discord.Client, gears.BaseBot):
                     return
                 if isinstance(value, (list, tuple)):
                     names = await self.replace_ids_w_names(value)
-                    value = combineAnd(wrap_list_values(names, '`'))[1:-1]
+                    value = combine_and(wrap_list_values(names, '`'))[1:-1]
                 await message.channel.send(f'Value of option `{option}`: `{value}`.')
                 return
             await message.channel.send('Invalid option.'+validops)
             return
-        await message.channel.send(f'You do not have permission to view the values of any options.')
-        return
-    
-    async def send_command_list(self, commands:dict, name:str, channel) -> str:
-        "Send message on channel telling user about all valid name commands."
-        sort = sorted(commands.keys(), reverse=True)
-        commands = '\n'.join(wrap_list_values(sort, '`'))
-        text = f"{__title__}'s Valid {name} Commands:"
-        await channel.send(text)
-        await send_over_2000(channel.send, commands)
+        await message.channel.send('You do not have permission to view the values of any options.')
         return
     
     async def help_guild(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
-        await self.send_command_list(self.gcommands, 'Guild', message.channel)
+        await send_command_list(self.gcommands, 'Guild', message.channel)
         return
     
     async def help_dm(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
-        await self.send_command_list(self.dcommands, 'DM', message.channel)
+        await send_command_list(self.dcommands, 'DM', message.channel)
         return
     
-    async def refresh(self, message, forceReset:bool=False) -> None:
+    async def refresh(self, message, force_reset:bool=False) -> None:
         "Re-evaluate guild, then tell them it happened."
-        await self.eval_guild(message.channel.guild.id, forceReset)
-        await message.channel.send(f'Guild has been re-evaluated.')
+        await self.eval_guild(message.channel.guild.id, force_reset)
+        await message.channel.send('Guild has been re-evaluated.')
         return
     
     # @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
@@ -865,65 +871,74 @@ class StatusBot(discord.Client, gears.BaseBot):
                 valid += ['address', 'channel']
         
         if not valid:
-            await message.channel.send('You do not have permission to set any options. If you feel this is a mistake, please contact server admin(s) and have them give you permission.')
+            await message.channel.send(
+                'You do not have permission to set any options. If you feel this is a mistake,'\
+                'please contact server admin(s) and have them give you permission.')
             return
         args = parse_args(message.content, 2)
-        validops = self.get_valid_options(valid)
+        validops = get_valid_options(valid)
         
-        if args:
-            option = args[0].lower()
-            if option in valid:
-                if len(args) < 2:
-                    msg = f'Insufficiant arguments for {option}.'
-                    arghelp = {'address': 'Server address of a java edition minecraft server.',
-                               'channel': 'Name of the discord channel to send join-leave messages to.',
-                               'setoptionusers': '`clear`, a discord id, or the username of a new user to add to the permission list.'}
-                    msg += '\nArgument required: '+arghelp[option]
-                    await message.channel.send(msg)
-                    return
-                value = exceptChars(args[1], AZUP+AZLOW+NUMS+'.:-#')
-                if option == 'channel':
-                    channelnames = [chan.name for chan in message.guild.text_channels]
-                    if not args[1] in channelnames:
-                        await message.channel.send('Channel not found in this guild.')
-                        return
-                    value = args[1]
-                elif option == 'setoptionusers':
-                    if value.lower() == 'clear':
-                        value = []
-                    else:
-                        try:
-                            uid = int(value)
-                        except ValueError:
-                            # DANGER
-                            if not '#' in args[1]:
-                                await message.channel.send('Username does not have discriminator (ex. #1234).')
-                                return
-                            member = message.guild.get_member_named(args[1])
-                            if member is None:
-                                await message.channel.send('User not found / User not in this guild.')
-                                return
-                            value = member.id
-##                        member = message.guild.get_member(value)
-##                        member = self.get_user(value)
-                        name = await self.get_user_name(value, message.guild.get_member)
-                        if name is None:
-                            await message.channel.send('User not found / User not in this guild.')
-                            return
-                        value = [value]
-                        if option in config:
-                            if value[0] in config[option]:
-                                await message.channel.send(f'User `{name}` already in this list!')
-                                return
-                            value = config[option]+value
-                        await message.channel.send(f'Adding user `{name}` (id `{value[-1]}`)')
-                config[option] = value
-                self.write_guild_config(message.channel.guild.id, config)
-                await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
-                forceReset = option in ('address', 'channel')
-                await self.refresh(message, forceReset)
+        if not args:
+            await message.channel.send('No arguments.'+validops)
+            return
+        
+        option = args[0].lower()
+        if not option in valid:
+            await message.channel.send('Invalid option.'+validops)
+            return
+        
+        if len(args) < 2:
+            msg = f'Insufficiant arguments for {option}.'
+            base = '`clear`, a discord id, or the username of a new user to add to the '
+            arghelp = {'address': 'Server address of a java edition minecraft server.',
+                       'channel': 'Name of the discord channel to send join-leave messages to.',
+                       'setoptionusers': base+'permission list.'}
+            msg += '\nArgument required: '+arghelp[option]
+            await message.channel.send(msg)
+            return
+        
+        value = except_chars(args[1], AZUP+AZLOW+NUMS+'.:-#')
+        if option == 'channel':
+            channelnames = [chan.name for chan in message.guild.text_channels]
+            if not args[1] in channelnames:
+                await message.channel.send('Channel not found in this guild.')
                 return
-        await message.channel.send('Invalid option.'+validops)
+            value = args[1]
+        elif option == 'setoptionusers':
+            if value.lower() == 'clear':
+                value = []
+            else:
+                try:
+                    value = int(value)
+                except ValueError:
+                    # DANGER
+                    if not '#' in args[1]:
+                        await message.channel.send(
+                            'Username does not have discriminator (ex. #1234).')
+                        return
+                    member = message.guild.get_member_named(args[1])
+                    if member is None:
+                        await message.channel.send('User not found / User not in this guild.')
+                        return
+                    value = member.id
+##                    member = message.guild.get_member(value)
+##                    member = self.get_user(value)
+                name = await self.get_user_name(value, message.guild.get_member)
+                if name is None:
+                    await message.channel.send('User not found / User not in this guild.')
+                    return
+                value = [value]
+                if option in config:
+                    if value[0] in config[option]:
+                        await message.channel.send(f'User `{name}` already in this list!')
+                        return
+                    value = config[option]+value
+                await message.channel.send(f'Adding user `{name}` (id `{value[-1]}`)')
+        config[option] = value
+        self.write_guild_config(message.channel.guild.id, config)
+        await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
+        force_reset = option in ('address', 'channel')
+        await self.refresh(message, force_reset)
         return
     
     async def setoption_dm(self, message) -> None:
@@ -940,56 +955,61 @@ class StatusBot(discord.Client, gears.BaseBot):
             await message.channel.send('You do not have permission to set any options.')
             return
         args = parse_args(message.clean_content, 1)
-        validops = self.get_valid_options(valid)
+        validops = get_valid_options(valid)
         
-        if args:
-            option = args[0].lower()
-            
-            if option in valid:
-                if len(args) < 2:
-                    msg = f'Insufficiant arguments for {option}.'
-                    arghelp = {'stopusers': '`clear`, a discord user id, or the username of a new user to add to the permission list of users who can stop the bot.',
-                               'updateusers': '`clear`, a discord user id, or the username of a new user to add to the permission list of users who can update the bot.',
-                               'setoptionusers': '`clear`, a discord user id, or the username of a new user to add to the permission list of users who can change the stop and update permissions of the bot.'}
-                    msg += '\nArgument required: '+arghelp[option]
-                    await message.channel.send(msg)
-                    return
-                value = args[1]
-                if value.lower() == 'clear':
-                    value = []
-                else:
-                    try:
-                        uid = int(value)
-                    except ValueError:
-                        # DANGER
-                        if not '#' in args[1]:
-                            await message.channel.send('Username does not have discriminator (ex. #1234).')
-                            return
-                        member = await self.search_for_member_in_guilds(value)
-                        if member is None:
-                            await message.channel.send('User not found.')
-                            return
-                        value = member.id
-##                    member = self.get_user(value)
-                    name = await self.get_user_name(value)
-                    if name is None:
+        if not args:
+            if valid:
+                await message.channel.send('Invalid option.'+validops)
+                return
+            await message.channel.send('You do not have permission to set any options.')
+            return
+        
+        option = args[0].lower()
+        
+        if option in valid:
+            if len(args) < 2:
+                msg = f'Insufficiant arguments for {option}.'
+                base = '`clear`, a discord user id, or the username of a new user to add'\
+                       'to the permission list of users who can '
+                arghelp = {'stopusers': base+'stop the bot.',
+                           'updateusers': base+'update the bot.',
+                           'setoptionusers': base+'change stop and update permissions.'}
+                msg += '\nArgument required: '+arghelp[option]
+                await message.channel.send(msg)
+                return
+            value = args[1]
+            if value.lower() == 'clear':
+                value = []
+            else:
+                try:
+                    value = int(value)
+                except ValueError:
+                    # DANGER
+                    if not '#' in args[1]:
+                        await message.channel.send(
+                            'Username does not have discriminator (ex. #1234).')
+                        return
+                    member = await self.search_for_member_in_guilds(value)
+                    if member is None:
                         await message.channel.send('User not found.')
                         return
-                    value = [value]
-                    if option in config:
-                        if value[0] in config[option]:
-                            await message.channel.send(f'User `{name}` (id `{value[-1]}`) already in this list!')
-                            return
-                        value = config[option]+value
-                    await message.channel.send(f'Adding user `{name}` (id `{value[-1]}`)')
-                config[option] = value
-                self.write_dm_config(config)
-                await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
-                return
-        if valid:
-            await message.channel.send('Invalid option.'+validops)
-            return
-        await message.channel.send('You do not have permission to set any options.')
+                    value = member.id
+##                name = self.get_user(value)
+                name = await self.get_user_name(value)
+                if name is None:
+                    await message.channel.send('User not found.')
+                    return
+                value = [value]
+                if option in config:
+                    if value[0] in config[option]:
+                        await message.channel.send(
+                            f'User `{name}` (id `{value[-1]}`) already in this list!')
+                        return
+                    value = config[option]+value
+                await message.channel.send(f'Adding user `{name}` (id `{value[-1]}`)')
+            config[option] = value
+            self.write_dm_config(config)
+            await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
         return
     
     async def process_command_message(self, message, mode:str='guild') -> None:
@@ -1025,7 +1045,10 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         if not midx and content.startswith(self.prefix):
             # if in a dm and starts with our prefix,
-            await message.channel.send("When you talk to me in DMs, you don't have to start with my prefix for me to react!")
+            await message.channel.send(
+                "When you talk to me in DMs, there is no need to start with"\
+                "my prefix for me to react!"
+            )
             return
         # Otherwse, send error of no command.
         await message.channel.send('No valid command given.'+err)
@@ -1037,20 +1060,24 @@ class StatusBot(discord.Client, gears.BaseBot):
         await self.eval_guild(guild.id, True)
         return
     
-    # Intents.members
-    async def on_member_join(self, member) -> None:
-        pass
-    
-    # Intents.members
-    async def on_member_remove(self, member) -> None:
-        pass
+##    # Intents.members
+##    async def on_member_join(self, member) -> None:
+##        "Member joined a guild we are in."
+##        pass
+##    
+##    # Intents.members
+##    async def on_member_remove(self, member) -> None:
+##        "Member left a guild we are in."
+##        return None
     
     # Intents.guilds
     async def on_guild_remove(self, guild) -> None:
         "Remove config file for guild we are no longer in."
-        print(f'Guild lost: {guild.id}')
+        msg = f'Guild lost: {guild.id}'
+        print(msg)
+        append_file(self.logpath, '#'*8+msg+'#'*8)
         os.remove(self.get_guild_config_file(guild.id))
-        return
+        return None
     
     # Intents.dm_messages, Intents.guild_messages, Intents.messages
     async def on_message(self, message) -> None:
@@ -1095,7 +1122,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         extra = 'Error Event:\n'+str(event)+'\n'
         extra += 'Error args:\n'+'\n'.join(map(str, args))+'\n'
         extra += 'Error kwargs:\n'
-        extra += '\n'.join(f'{key}:{kwargs[key]}' for key in kwargs)
+        extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
         log_active_exception(self.logpath, extra=extra)
         return
     
@@ -1121,22 +1148,29 @@ class StatusBot(discord.Client, gears.BaseBot):
         await discord.Client.close(self)
         self.updating.release()
         return
-    pass
 
 def run() -> None:
     "Run bot."
     if TOKEN is None:
-        print('\nNo token set!\nEither add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,\nor set DISCORD_TOKEN environment variable.')
+        print('''\nNo token set!
+Either add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,
+or set DISCORD_TOKEN environment variable.''')
         return
     print('\nStarting bot...')
     
     loop = asyncio.get_event_loop()
-    intents = discord.Intents()
-    intents.dm_messages = True
-    intents.guild_messages = True
-    intents.messages = True
-    intents.guilds = True
-    intents.members = True
+##    intents = discord.Intents()
+##    intents.dm_messages = True
+##    intents.guild_messages = True
+##    intents.messages = True
+##    intents.guilds = True
+##    intents.members = True
+    intents = discord.Intents(
+        dm_messages = True,
+        guild_messages = True,
+        messages = True,
+        guilds = True,
+        members = True)
     # 4867
     
     bot = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
@@ -1153,5 +1187,5 @@ def run() -> None:
     return
 
 if __name__ == '__main__':
-    print('%s v%s\nProgrammed by %s.' % (__title__, __version__, __author__))
+    print(f'{__title__} v{__version__}\nProgrammed by {__author__}.')
     run()
