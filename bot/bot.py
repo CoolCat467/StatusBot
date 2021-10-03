@@ -599,7 +599,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
         spaces = max(len(name) for name in guildnames)
-        print('\n'.join(name.ljust(spaces) for name in guildnames)+'\n')
+        print('\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
         print('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
