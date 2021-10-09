@@ -759,7 +759,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                     return
                 # Tell user number of files we are updating.
                 await message.channel.send(f'{len(paths)} files will now be updated.'\
-                                           'Please wait. This may take up to {maxtime} at most.')
+                                           f'Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
                 await update.update_files(rootdir, paths, __title__, __author__, 'master', timeout)
