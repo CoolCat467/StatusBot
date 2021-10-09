@@ -384,7 +384,10 @@ class TCPAsyncSocketConnection(AsyncReadConnection):
     
     def close(self):
         "Close self.writer."
-        self.writer.close()
+        if hasattr(self.writer, 'close'):
+            self.writer.close()
+        if hasattr(self.reader, 'close'):
+            self.reader.close()
     
     def __del__(self):
         self.close()
