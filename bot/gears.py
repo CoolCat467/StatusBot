@@ -8,10 +8,10 @@
 
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 from typing import Union
 import asyncio
@@ -226,7 +226,7 @@ class Timer(Gear):
     "Class that will run coroutine self.run every delay seconds."
     __slots__ = 'delay', 'task'
     def __init__(self, bot:BaseBot, name:str, delay:int=60) -> None:
-        "self.name = name+'Timer'. Delay is seconds."
+        "self.name = name. Delay is secconds."
         super().__init__(bot, name)#+'Timer')
         self.delay = max(0, int(delay))
         self.task = None
@@ -283,7 +283,10 @@ class Timer(Gear):
             if stop or self.bot.gear_close:
                 self.running = False
             else:
-                await asyncio.sleep(self.delay)
+                try:
+                    await asyncio.sleep(self.delay)
+                except concurrent.futures.CancelledError:
+                    self.running = False
 
 class _StateTimerExitState(AsyncState):
     "State Timer Exit State. Cause StateTimer to finally finish."
@@ -308,6 +311,7 @@ class StateTimer(Timer, AsyncStateMachine):
     
     async def initialize_state(self) -> None:
         "In subclass, set initial asyncronous state."
+##        await self.set_state('Hault')
         return None
     
     async def start(self) -> None:
@@ -323,7 +327,6 @@ class StateTimer(Timer, AsyncStateMachine):
     
     async def hault(self) -> None:
         self.delay = 0
-##        await self.set_state('Hault')
         self.active_state = None
         async def wait_stop():
             while self.running:

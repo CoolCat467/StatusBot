@@ -9,7 +9,7 @@
 # and spaceing changes. Slight changes to Asyncronous TCP and UDP
 # closing as well.
 
-__all__ = ['Connection', 'AsyncReadConnection',
+__all__ = ['BaseConnection', 'Connection', 'AsyncReadConnection',
            'TCPSocketConnection', 'UDPSocketConnection',
            'TCPAsyncSocketConnection', 'UDPAsyncSocketConnection']
 
@@ -27,57 +27,45 @@ import asyncio_dgram
 
 from status.address_tools import ip_type
 
-class Connection:
+class BaseConnection(ABC):
     "Base connection class."
-    def __init__(self):
-        """Initialize self.send and self.received to an empty bytearray."""
-        self.sent = bytearray()
-        self.received = bytearray()
+    @abstractmethod
+    def read(self, length: int) -> bytearray:
+        "Read length bytes from self, return a bytearray."
+        ...
     
-    def __repr__(self):
+    @abstractmethod
+    def write(self, data: bytes) -> None:
+        "Write data to self."
+        ...
+    
+    def __repr__(self) -> str:
+        "Return representation of self."
         return f'{self.__class__.__name__} Object'
     
-    def read(self, length):
-        """Return self.recieved up to length bytes, then cut recieved up to that point."""
-        result = self.received[:length]
-        self.received = self.received[length:]
-        return result
+    def flush(self) -> None:
+        "Raise TypeError, unsupported."
+        raise TypeError(f'{self.__class__.__name__} does not support flush()')
     
-    def write(self, data):
-        """Extend self.sent from data."""
-        if isinstance(data, Connection):
-            data = data.flush()
-        if isinstance(data, str):
-            data = bytearray(data, 'utf-8')
-        self.sent.extend(data)
+    def receive(self, data: None) -> None:
+        "Raise TypeError, unsupported."
+        raise TypeError(f'{self.__class__.__name__} does not support receive()')
     
-    def receive(self, data):
-        """Extend self.received with data."""
-        if not isinstance(data, bytearray):
-            data = bytearray(data)
-        self.received.extend(data)
-    
-    def remaining(self):
-        """Return length of self.received."""
-        return len(self.received)
-    
-    def flush(self):
-        """Return self.sent. Clears self.sent."""
-        result = self.sent
-        self.sent = bytearray()
-        return result
+    def remaining(self) -> None:
+        "Raise TypeError, unsupported."
+        raise TypeError(f'{self.__class__.__name__} does not support remaining()')
     
     @staticmethod
-    def _unpack(format_, data):
-        """Unpack data as bytes with format in big-enidian."""
+    def _unpack(format_, data: bytes) -> str:
+        "Unpack data as bytes with format in big-enidian."
         return struct.unpack('>' + format_, bytes(data))[0]
     
     @staticmethod
-    def _pack(format_, data):
-        """Pack data in with format in big-endian mode."""
+    def _pack(format_, data: str) -> bytes:
+        "Pack data in with format in big-endian mode."
         return struct.pack('>' + format_, data)
     
-    def read_varint(self):
+    def read_varint(self) -> int:
         """Read varint from self and return it.
         Max: 2 ** 31 - 1, Min: -(2 ** 31)
         Raises IOError when varint recieved is too big."""
@@ -89,7 +77,7 @@ class Connection:
                 return signed_int32(result).value
         raise IOError('Recieved varint is too big!')
     
-    def write_varint(self, value):
+    def write_varint(self, value: int) -> None:
         """Write varint with value value to self.
         Max: 2 ** 31 - 1, Min: -(2 ** 31).
         Raises ValueError if varint is too big."""
@@ -104,7 +92,7 @@ class Connection:
             remaining >>= 7
         raise ValueError(f'The value "{value}" is too big to send in a varint')
     
-    def read_varlong(self):
+    def read_varlong(self) -> int:
         """Read varlong from self and return it.
         Max: 2 ** 63 - 1, Min: -(2 ** 63).
         Raises IOError when varint recieved is too big."""
@@ -116,7 +104,7 @@ class Connection:
                 return signed_int64(result).value
         raise IOError('Recieved varlong is too big!')
     
-    def write_varlong(self, value):
+    def write_varlong(self, value: int) -> None:
         """Write varlong with value value to self.
         Max: 2 ** 63 - 1, Min: -(2 ** 63).
         Raises ValueError if varint is too big."""
@@ -131,74 +119,77 @@ class Connection:
             remaining >>= 7
         raise ValueError(f'The value "{value}" is too big to send in a varlong')
     
-    def read_utf(self):
-        """Read up to 32767 bytes by reading a varint, then decode bytes as utf8."""
+    def read_utf(self) -> str:
+        "Read up to 32767 bytes by reading a varint, then decode bytes as utf8."
         length = self.read_varint()
         return self.read(length).decode('utf8')
     
-    def write_utf(self, value):
-        """Write varint of length of value up to 32767 bytes, then write value encoded with utf8."""
+    def write_utf(self, value: str) -> None:
+        "Write varint of length of value up to 32767 bytes, then write value encoded with utf8."
         self.write_varint(len(value))
         self.write(bytearray(value, 'utf8'))
     
-    def read_ascii(self):
-        """Read self until last value is not zero, then return that decoded with ISO-8859-1"""
+    def read_ascii(self) -> str:
+        "Read self until last value is not zero, then return that decoded with ISO-8859-1"
         result = bytearray()
         while len(result) == 0 or result[-1] != 0:
             result.extend(self.read(1))
         return result[:-1].decode('ISO-8859-1')
     
-    def write_ascii(self, value):
-        """Write value encoded with ISO-8859-1, then write an additional 0x00 at the end."""
+    def write_ascii(self, value: str) -> None:
+        "Write value encoded with ISO-8859-1, then write an additional 0x00 at the end."
         self.write(bytearray(value, 'ISO-8859-1'))
         self.write(bytearray.fromhex('00'))
     
-    def read_short(self):
-        """-32768 - 32767. Read two bytes from self and unpack with format h."""
+    def read_short(self) -> int:
+        """-32768 - 32767.
+        Read two bytes from self and unpack with format h."""
         return self._unpack('h', self.read(2))
     
-    def write_short(self, value):
-        """-32768 - 32767. Write value packed with format h."""
+    def write_short(self, value: int) -> None:
+        """-32768 - 32767.
+        Write value packed with format h."""
         self.write(self._pack('h', value))
     
-    def read_ushort(self):
-        """0 - 65535. Read two bytes and return unpacked with format H."""
+    def read_ushort(self) -> int:
+        """0 - 65535.
+        Read two bytes and return unpacked with format H."""
         return self._unpack('H', self.read(2))
     
-    def write_ushort(self, value):
+    def write_ushort(self, value: int) -> None:
         """0 - 65535. Write value packed as format H."""
         self.write(self._pack('H', value))
     
-    def read_int(self):
+    def read_int(self) -> int:
         """0 - something big. Return 4 bytes read and unpacked in format i."""
         return self._unpack('i', self.read(4))
     
-    def write_int(self, value):
+    def write_int(self, value: int) -> None:
         """0 - something big. Write value packed with format i."""
         self.write(self._pack('i', value))
     
-    def read_uint(self):
+    def read_uint(self) -> int:
         """-2147483648 - 2147483647. Read 4 bytes and return unpacked with format I."""
         return self._unpack('I', self.read(4))
     
-    def write_uint(self, value):
+    def write_uint(self, value: int) -> None:
         """-2147483648 - 2147483647. Write value packed with format I."""
         self.write(self._pack('I', value))
     
-    def read_long(self):
+    def read_long(self) -> int:
         """0 - something big. Read 8 bytes and return unpacked with format q."""
         return self._unpack('q', self.read(8))
     
-    def write_long(self, value):
+    def write_long(self, value: int) -> None:
         """Write value packed with format q."""
         self.write(self._pack('q', value))
     
-    def read_ulong(self):
+    def read_ulong(self) -> int:
         """-9223372036854775808 - 9223372036854775807.
         Read 8 bytes and return them unpacked with format Q."""
         return self._unpack('Q', self.read(8))
     
-    def write_ulong(self, value):
+    def write_ulong(self, value: int) -> None:
         """-9223372036854775808 - 9223372036854775807.
         Write value packed with format Q."""
         self.write(self._pack('Q', value))
@@ -211,21 +202,52 @@ class Connection:
         result.receive(self.read(length))
         return result
     
-    def write_buffer(self, buffer):
+    def write_buffer(self, buffer) -> None:
         """Flush buffer, then write a varint of the length of the buffer's
         data, then write buffer data."""
         data = buffer.flush()
         self.write_varint(len(data))
-        self.write(data)
-    pass
+        self.write(data)    
 
-class AsyncReadConnection(Connection, ABC):
-    "Asyncronous Read connection base class."
-    @abstractmethod
-    async def read(self, length: int) -> bytearray:
-        "Read length bytes from self, return a bytearray."
-        ...
+class Connection(BaseConnection):
+    "Base connection class."
+    def __init__(self):
+        "Initialize self.send and self.received to an empty bytearray."
+        self.sent = bytearray()
+        self.received = bytearray()
     
+    def read(self, length: int) -> bytes:
+        """Return self.recieved up to length bytes, then cut recieved up to that point."""
+        result = self.received[:length]
+        self.received = self.received[length:]
+        return result
+    
+    def write(self, data: bytearray) -> None:
+        "Extend self.sent from data."
+        if isinstance(data, Connection):
+            data = data.flush()
+        if isinstance(data, str):
+            data = bytearray(data, 'utf-8')
+        self.sent.extend(data)
+    
+    def receive(self, data: bytearray) -> None:
+        """Extend self.received with data."""
+        if not isinstance(data, bytearray):
+            data = bytearray(data)
+        self.received.extend(data)
+    
+    def remaining(self) -> int:
+        """Return length of self.received."""
+        return len(self.received)
+    
+    def flush(self) -> bytearray:
+        """Return self.sent. Clears self.sent."""
+        result = self.sent
+        self.sent = bytearray()
+        return result
+
+class AsyncReadConnection(BaseConnection):
+    "Asyncronous Read connection base class."
     async def read_varint(self) -> int:
         result = 0
         for i in range(5):
@@ -278,41 +300,29 @@ class AsyncReadConnection(Connection, ABC):
         result.receive(await self.read(length))
         return result
 
-class SocketConnection(Connection):
+class SocketConnection(BaseConnection):
     "Socket connection."
     __slots__ = ('socket',)
     def __init__(self):
         self.socket = socket.socket()
     
-    def flush(self):
-        """Raise TypeError, unsupported."""
-        raise TypeError(f'{self.__class__.__name__} does not support flush()')
-    
-    def receive(self, data):
-        """Raise TypeError, unsupported."""
-        raise TypeError(f'{self.__class__.__name__} does not support receive()')
-    
-    def remaining(self):
-        """Raise TypeError, unsupported."""
-        raise TypeError(f'{self.__class__.__name__} does not support remaining()')
-    
-    def close(self):
+    def close(self) -> None:
         "Close self."
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
     
-    def __del__(self):
+    def __del__(self) -> None:
         "Shutdown and Close self.socket."
         self.close()
 
 class TCPSocketConnection(SocketConnection):
-    """TCP Connection to addr. Timout defaults to 3 secconds."""
+    """TCP Connection to addr. Timeout defaults to 3 secconds."""
     def __init__(self, addr, timeout=3):
         """Create a connection to addr with self.socket, set TCP NODELAY to True."""
         self.socket = socket.create_connection(addr, timeout=timeout)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         """Return length bytes read from self.socket. Raises IOError when server doesn't respond."""
         result = bytearray()
         while len(result) < length:
@@ -322,7 +332,7 @@ class TCPSocketConnection(SocketConnection):
             result.extend(new)
         return result
     
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """Send data on self.socket."""
         self.socket.send(data)
 
@@ -339,20 +349,20 @@ class UDPSocketConnection(SocketConnection):
         )
         self.socket.settimeout(timeout)
     
-    def remaining(self):
-        """Return 65535."""
+    def remaining(self) -> int:
+        "Return 65535."
         return 65535
     
-    def read(self, length):
-        """Return up to self.remaining() bytes. Length does nothing."""
+    def read(self, length: int) -> bytes:
+        "Return up to self.remaining() bytes. Length does nothing."
         result = bytearray()
         while len(result) == 0:
             result.extend(self.socket.recvfrom(self.remaining())[0])
         return result
     
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         "Use self.socket to send data to self.addr."
-        if isinstance(data, Connection):
+        if isinstance(data, BaseConnection):
             data = bytearray(data.flush())
         self.socket.sendto(data, self.addr)
 
@@ -363,12 +373,12 @@ class TCPAsyncSocketConnection(AsyncReadConnection):
         self.reader = None
         self.writer = None
     
-    async def connect(self, addr, timeout=3):
+    async def connect(self, addr, timeout=3) -> None:
         "Use asyncio to open a connection to addr (host, port)."
         conn = asyncio.open_connection(addr[0], addr[1])
         self.reader, self.writer = await asyncio.wait_for(conn, timeout=timeout)
     
-    async def read(self, length):
+    async def read(self, length: int) -> bytes:
         "Read up to length bytes from self.reader."
         result = bytearray()
         while len(result) < length:
@@ -378,18 +388,19 @@ class TCPAsyncSocketConnection(AsyncReadConnection):
             result.extend(new)
         return result
     
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         "Write data to self.writer."
         self.writer.write(data)
     
-    def close(self):
+    def close(self) -> None:
         "Close self.writer."
         if hasattr(self.writer, 'close'):
             self.writer.close()
         if hasattr(self.reader, 'close'):
             self.reader.close()
     
-    def __del__(self):
+    def __del__(self) -> None:
+        "Close self."
         self.close()
 
 class UDPAsyncSocketConnection(AsyncReadConnection):
@@ -399,46 +410,39 @@ class UDPAsyncSocketConnection(AsyncReadConnection):
         self.stream = None
         self.timeout = None
     
-    async def connect(self, addr: tuple, timeout: int=3):
+    async def connect(self, addr: tuple, timeout: int=3) -> None:
         "Connect to addr (host, port)"
         self.timeout = timeout
         conn = asyncio_dgram.connect((addr[0], addr[1]))
         self.stream = await asyncio.wait_for(conn, timeout=self.timeout)
     
-    def flush(self):
-        "Raise TypeError, unsupported."
-        raise TypeError(f'{self.__class__.__name__} does not support flush()')
-    
-    def receive(self, data):
-        "Raise TypeError, unsupported."
-        raise TypeError(f'{self.__class__.__name__} does not support receive()')
-    
-    def remaining(self):
+    def remaining(self) -> int:
         "Return 65535."
         #2 ** 16 - 1
         return 65535
     
-    async def read(self, length):
+    async def read(self, length: int) -> bytes:
         "Read from stream. Length does nothing."
         data, remote_addr = await asyncio.wait_for(self.stream.recv(),
                                                    timeout=self.timeout)
         return data
     
-    async def write(self, data):
+    async def write(self, data: bytes) -> None:
         """Send data with self.stream."""
-        if isinstance(data, Connection):
+        if isinstance(data, BaseConnection):
             data = bytearray(data.flush())
         await self.stream.send(data)
     
-    def close(self):
+    def close(self) -> None:
         "Close self.stream"
         self.stream.socket.shutdown(socket.SHUT_RDWR)
         self.stream.socket.close()
         self.stream.close()
     
-    def __del__(self):
+    def __del__(self) -> None:
         """Close self.stream."""
         try:
             self.close()
-        except (asyncio.exceptions.CancelledError, asyncio.exceptions.TimeoutError):
+        except (asyncio.exceptions.CancelledError,
+                asyncio.exceptions.TimeoutError):
             return

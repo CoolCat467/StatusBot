@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 __ver_major__ = 0
 __ver_minor__ = 2
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
