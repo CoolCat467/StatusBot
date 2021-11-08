@@ -8,10 +8,10 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 4
+__ver_patch__ = 5
 
 import os
 from asyncio import gather
@@ -31,7 +31,7 @@ def is_new_ver_higher(current:tuple, newest:tuple) -> bool:
     for old, new in zip(current, newest):
         if old < new:
             return True
-        elif old == new:
+        if old == new:
             continue
         return False
     return False

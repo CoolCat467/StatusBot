@@ -8,10 +8,10 @@
 
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 from typing import Union
 import asyncio
@@ -195,6 +195,8 @@ class BaseBot:
         "Add a new gear to this bot."
         if not isinstance(new_gear, Gear):
             raise TypeError(f'"{type(new_gear).__name__}" is not an instance of Gear!')
+        if new_gear.name in self.gears:
+            raise RuntimeError(f'A gear named "{new_gear.name}" already exists!')
         self.gears[new_gear.name] = new_gear
         self.gears[new_gear.name].gear_init()
     
@@ -227,7 +229,7 @@ class Timer(Gear):
     __slots__ = 'delay', 'task'
     def __init__(self, bot:BaseBot, name:str, delay:int=60) -> None:
         "self.name = name. Delay is secconds."
-        super().__init__(bot, name)#+'Timer')
+        super().__init__(bot, name)
         self.delay = max(0, int(delay))
         self.task = None
     
@@ -244,7 +246,8 @@ class Timer(Gear):
             await self.start()
         except concurrent.futures.CancelledError:
             print(f'{self.__class__.__name__} "{self.name}"\'s task canceled, likely from hault.')
-        self.stopped = True
+        finally:
+            self.stopped = True
     
     async def hault(self) -> None:
         "Set self.running to False, cancel self.task, and wait for it to cancel completely."
@@ -314,7 +317,7 @@ class StateTimer(Timer, AsyncStateMachine):
 ##        await self.set_state('Hault')
         return None
     
-    async def start(self) -> None:
+    async def start(self):
         await self.initialize_state()
         return await super().start()
     
@@ -326,13 +329,12 @@ class StateTimer(Timer, AsyncStateMachine):
         return self.active_state is None
     
     async def hault(self) -> None:
-        self.delay = 0
         self.active_state = None
         async def wait_stop():
             while self.running:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
         try:
-            async with async_timeout.timeout(self.delay*1.1):
+            async with async_timeout.timeout(self.delay*1.5):
                 await wait_stop()
         except asyncio.TimeoutError:
             await super().hault()

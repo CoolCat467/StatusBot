@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 __ver_major__ = 0
 __ver_minor__ = 2
-__ver_patch__ = 3
+__ver_patch__ = 4
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -349,7 +349,7 @@ class WaitRestartState(gears.AsyncState):
     
     async def entry_actions(self) -> None:
         "Reset failed and say connection lost."
-        await self.machine.channel.send('Connection to server has been lost.')
+        await self.machine.channel.send(f'Connection to server has been lost. Last successful ping was `{self.machine.last_delay}ms`')
         self.success = False
         self.ticks = 0
         self.ping = 0
@@ -758,7 +758,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                     self.updating.release()
                     return
                 # Tell user number of files we are updating.
-                await message.channel.send(f'{len(paths)} files will now be updated.'\
+                await message.channel.send(f'{len(paths)} files will now be updated. '\
                                            f'Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
@@ -848,6 +848,8 @@ class StatusBot(discord.Client, gears.BaseBot):
     
     async def refresh(self, message, force_reset:bool=False) -> None:
         "Re-evaluate guild, then tell them it happened."
+        if force_reset:
+            await message.channel.send('Replacing server pinger might take a bit, we have to let the old one realize it should stop.')
         await self.eval_guild(message.channel.guild.id, force_reset)
         await message.channel.send('Guild has been re-evaluated.')
         return
@@ -1014,9 +1016,6 @@ class StatusBot(discord.Client, gears.BaseBot):
     
     async def process_command_message(self, message, mode:str='guild') -> None:
         "Process new command message. Calls self.command[command](message)."
-        if self.stopped.is_set():
-            await message.channel.send(f'{__title__} is in the process of shutting down.')
-            return
         err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # 1 if it's guild, 0 if dm.
         midx = int(mode.lower() == 'guild')
@@ -1032,13 +1031,18 @@ class StatusBot(discord.Client, gears.BaseBot):
             # If it's a guild message
             if midx:
                 # Prefix has to be there in guild message, so send error.
-                await message.channel.send('Command not found.'+err)
+                await message.channel.send('No command given.'+err)
                 return
             # Prefix doesn't have to be there in dm, so add space so args works right.
             content += ' '
         args = parse_args(content)
         # Get command. zeroth if dm, first if guild because of prefix.
         command = args[midx].lower()
+        
+        if self.stopped.is_set() and midx:
+            await message.channel.send(f'{__title__} is in the process of shutting down.')
+            return
+        
         # If command is valid, run it.
         if command in commands:
             await commands[command](message)
@@ -1082,9 +1086,6 @@ class StatusBot(discord.Client, gears.BaseBot):
     # Intents.dm_messages, Intents.guild_messages, Intents.messages
     async def on_message(self, message) -> None:
         "React to any new messages."
-        # Don't process anything if the bot is shutting down.
-        if self.stopped.is_set():
-            return
         # Skip messages from ourselves.
         if message.author == self.user:
             return
@@ -1110,7 +1111,6 @@ class StatusBot(discord.Client, gears.BaseBot):
             # Otherwise, it's a dm, so process it as one.
             async with message.channel.typing():
                 await self.process_command_message(message, 'dm')
-            return
         # can't send messages so skip.
         return
     
@@ -1120,8 +1120,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         if event == 'on_message':
             print(f'Unhandled message: {args[0]}')
         extra = 'Error Event:\n'+str(event)+'\n'
-        extra += 'Error args:\n'+'\n'.join(map(str, args))+'\n'
-        extra += 'Error kwargs:\n'
+        extra += 'Error args:\n'+'\n'.join(map(str, args))+'\nError kwargs:\n'
         extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
         log_active_exception(self.logpath, extra=extra)
         return
@@ -1132,9 +1131,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         self.stopped.set()
         print('\nShutting down gears.')
         await gears.BaseBot.close(self)
-        print('\nGears shut down...\n')
-        
-        print('Telling guilds bot is shutting down.\n')
+        print('\nGears shut down...\nTelling guilds bot is shutting down.\n')
         async def tell_guild_shutdown(guild):
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} is shutting down.')
