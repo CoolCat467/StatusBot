@@ -29,7 +29,8 @@ the old `.env` to the new folder.
 
 At the moment, StatusBot must install in `~/Desktop/Bots/StatusBot`. This will
 probably change in the future because that's a bit of an odd limitation, don't
-you think?
+you think? If you absolutely must change the install directory, run `create_installers.sh`.
+This will likely become a built-in part of installing StatusBot in the future.
 
 In both installation cases, `looprun.sh` will be run, which will start the bot and restart
 it in the event of a critical error.
@@ -44,7 +45,7 @@ folder.
 StatusBot's command prefix is, on default, `!status`. The actual capitalization of
 most commands does not matter. StatusBot should respond to the user in the channel
 they entered the command in, except in the case that the channel does not support
-being writen to.
+being written to.
 
 ## Commands
 As of version 0.2.0, the following describes StatusBot's commands.
