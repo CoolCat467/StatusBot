@@ -1,6 +1,6 @@
-discord.py
-python-dotenv
-aiohttp
-asyncio-dgram
-dnspython
-async-timeout
+discord.py>=1.7.3
+python-dotenv>=0.18.0
+aiohttp>=3.7.4
+asyncio-dgram>=2.0.0
+dnspython>=2.1.0
+async-timeout>=3.0.1
