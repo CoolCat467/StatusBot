@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.2.5'
+__version__ = '0.2.6'
 __ver_major__ = 0
 __ver_minor__ = 2
-__ver_patch__ = 5
+__ver_patch__ = 6
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -25,6 +25,7 @@ import traceback
 import concurrent.futures
 from typing import Union
 from threading import Event, Lock
+import logging
 
 from dotenv import load_dotenv
 import discord
@@ -220,7 +221,8 @@ def log_active_exception(logpath, extra=None) -> None:
                               file=yes_totaly_a_file)
     msg += 'Traceback:\n'+yes_totaly_a_file.getdata()+'\n'
     msg += '#'*16+'\n'
-    print(msg)
+##    print(msg)
+    logging.exception(msg)
     append_file(logpath, msg)
 
 async def send_over_2000(send_func, text:str, wrap_with:str='',
@@ -286,9 +288,11 @@ class PingState(gears.AsyncState):
                 self.exit_ex += ': '+wrap_list_values(combine_and(sargs), '"')
             self.exit_ex += '`'
             self.failed = True
-            print(self.exit_ex)
+##            print(self.exit_ex)
             # No need to record detailed errors for timeouts.
-            ignore = (concurrent.futures.TimeoutError, ConnectionRefusedError)
+            ignore = (concurrent.futures.TimeoutError,
+                      asyncio.exceptions.TimeoutError,
+                      ConnectionRefusedError)
             if not isinstance(ex, ignore):
                 log_active_exception(self.machine.bot.logpath)
             return None
@@ -587,10 +591,10 @@ class StatusBot(discord.Client, gears.BaseBot):
     # Default, not affected by intents.
     async def on_ready(self) -> None:
         "Print information about bot and evaluate all guilds."
-        print(f'{self.user} has connected to Discord!')
-        print(f'Prefix: {self.prefix}')
-        print(f'Intents: {self.intents}')
-        print(f'Root Dir: {self.rootdir}')
+        logging.info(f'{self.user} has connected to Discord!')
+        logging.info(f'Prefix: {self.prefix}')
+        logging.info(f'Intents: {self.intents}')
+        logging.info(f'Root Dir: {self.rootdir}')
         
         configdir = os.path.join(self.rootdir, 'config')
         if not os.path.exists(configdir):
@@ -599,14 +603,14 @@ class StatusBot(discord.Client, gears.BaseBot):
         if not os.path.exists(guilddir):
             os.mkdir(guilddir)
         
-        print(f'\n{self.user} is connected to the following guilds:\n')
+        logging.info(f'\n{self.user} is connected to the following guilds:\n')
         guildnames = []
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
         spaces = max(len(name) for name in guildnames)
-        print('\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
+        logging.info('\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
-        print('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
+        logging.info('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
         return
@@ -641,6 +645,10 @@ class StatusBot(discord.Client, gears.BaseBot):
         "Tell the author of the message the last json from server pinger."
         if message.guild.id in self.gears:
             pinger = self.gears[message.guild.id]
+            if pinger.active_state is None:
+                await message.channel.send('Server pinger is not active for this guild. '+
+                                           'Use command `refresh` to restart.')
+                return
             if pinger.active_state.name == 'ping':
                 lastdict = pinger.last_json
                 msg = json.dumps(lastdict, sort_keys=True, indent=2)
@@ -658,6 +666,10 @@ class StatusBot(discord.Client, gears.BaseBot):
         "Tell the author of the message the bot's latency to the guild's server."
         if message.guild.id in self.gears:
             pinger = self.gears[message.guild.id]
+            if pinger.active_state is None:
+                await message.channel.send('Server pinger is not active for this guild. '+
+                                           'Use command `refresh` to restart.')
+                return
             if pinger.active_state.name == 'ping':
                 msg = f'`{pinger.last_delay}ms`'
                 await message.channel.send(
@@ -674,6 +686,10 @@ class StatusBot(discord.Client, gears.BaseBot):
         "Tell author of the message the usernames of the players connected to the guild's server."
         if message.guild.id in self.gears:
             pinger = self.gears[message.guild.id]
+            if pinger.active_state is None:
+                await message.channel.send('Server pinger is not active for this guild. '+
+                                           'Use command `refresh` to restart.')
+                return
             if pinger.active_state.name == 'ping':
                 players = list(pinger.last_ping)
                 if players:
@@ -1084,7 +1100,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def on_guild_remove(self, guild) -> None:
         "Remove config file for guild we are no longer in."
         msg = f'Guild lost: {guild.id}'
-        print(msg)
+        logging.info(msg)
         append_file(self.logpath, '#'*8+msg+'#'*8)
         os.remove(self.get_guild_config_file(guild.id))
         return None
@@ -1124,7 +1140,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def on_error(self, event, *args, **kwargs) -> None:
         "Log error and continue."
         if event == 'on_message':
-            print(f'Unhandled message: {args[0]}')
+            logging.info(f'Unhandled message: {args[0]}')
         extra = 'Error Event:\n'+str(event)+'\n'
         extra += 'Error args:\n'+'\n'.join(map(str, args))+'\nError kwargs:\n'
         extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
@@ -1135,9 +1151,9 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def close(self) -> None:
         "Tell guilds bot shutting down."
         self.stopped.set()
-        print('\nShutting down gears.')
+        logging.info('\nShutting down gears.')
         await gears.BaseBot.close(self)
-        print('\nGears shut down...\nTelling guilds bot is shutting down.\n')
+        logging.info('\nGears shut down...\nTelling guilds bot is shutting down.\n')
         async def tell_guild_shutdown(guild):
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} is shutting down.')
@@ -1145,9 +1161,9 @@ class StatusBot(discord.Client, gears.BaseBot):
         coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
         
-        print('Waiting to aquire updating lock...\n')
+        logging.info('Waiting to aquire updating lock...\n')
         self.updating.acquire()
-        print('Closing...')
+        logging.info('Closing...')
         await discord.Client.close(self)
         self.updating.release()
         return
@@ -1155,11 +1171,11 @@ class StatusBot(discord.Client, gears.BaseBot):
 def run() -> None:
     "Run bot."
     if TOKEN is None:
-        print('''\nNo token set!
+        logging.critical('''\nNo token set!
 Either add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,
 or set DISCORD_TOKEN environment variable.''')
         return
-    print('\nStarting bot...')
+    logging.info('\nStarting bot...')
     
     loop = asyncio.get_event_loop()
 ##    intents = discord.Intents()
@@ -1181,14 +1197,16 @@ or set DISCORD_TOKEN environment variable.''')
     try:
         loop.run_until_complete(bot.start(TOKEN))
     except KeyboardInterrupt:
-        print('\nClosing bot...')
+        logging.info('\nClosing bot...')
         loop.run_until_complete(bot.close())
     finally:
         # cancel all lingering tasks
         loop.close()
-        print('\nBot has been deactivated.')
+        logging.info('\nBot has been deactivated.')
     return
 
 if __name__ == '__main__':
     print(f'{__title__} v{__version__}\nProgrammed by {__author__}.')
+    logging.basicConfig(level=logging.INFO)
     run()
+    logging.shutdown()
