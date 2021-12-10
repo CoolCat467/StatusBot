@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.2.6'
+__version__ = '0.3.0'
 __ver_major__ = 0
-__ver_minor__ = 2
-__ver_patch__ = 6
+__ver_minor__ = 3
+__ver_patch__ = 0
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -26,6 +26,8 @@ import concurrent.futures
 from typing import Union
 from threading import Event, Lock
 import logging
+import binascii
+import base64
 
 from dotenv import load_dotenv
 import discord
@@ -89,6 +91,7 @@ def read_file(filename:str) -> Union[str, None]:
 
 def read_json(filename:str) -> Union[dict, None]:
     "Return json loads of filename read. Returns None if filename not exists."
+    filename = os.path.abspath(filename)
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as rfile:
             try:
@@ -102,6 +105,7 @@ def read_json(filename:str) -> Union[dict, None]:
 
 def write_json(filename:str, dictionary:dict, indent:int=2) -> None:
     "Write dicitonary as json to filename."
+    filename = os.path.abspath(filename)
     with open(filename, 'w', encoding='utf-8') as wfile:
         try:
             json.dump(dictionary, wfile, indent=indent)
@@ -464,6 +468,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                           'onlineversion': self.getonlinevers,
                           'getmyid': self.getmyid,
                           'getjson': self.getjson,
+                          'getfavicon': self.getfavicon,
                           'getonline': self.getonline,
                           'getping': self.getping,
                           'refresh': self.refresh,
@@ -585,7 +590,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     
     async def eval_guilds(self, force_reset:bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
+        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds if guild.id == 863534282667982859)
         return await asyncio.gather(*coros)
     
     # Default, not affected by intents.
@@ -602,13 +607,16 @@ class StatusBot(discord.Client, gears.BaseBot):
         guilddir = os.path.join(configdir, 'guilds')
         if not os.path.exists(guilddir):
             os.mkdir(guilddir)
+        favicondir = os.path.join(configdir, 'favicon')
+        if not os.path.exists(favicondir):
+            os.mkdir(favicondir)
         
         logging.info(f'\n{self.user} is connected to the following guilds:\n')
         guildnames = []
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
         spaces = max(len(name) for name in guildnames)
-        logging.info('\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
+        logging.info('\n'+'\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
         logging.info('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
@@ -641,6 +649,40 @@ class StatusBot(discord.Client, gears.BaseBot):
         await message.channel.send(f'Your user id is `{message.author.id}`.')
         return
     
+    async def save_favicon(self, guildid:int) -> None:
+        "Save favicon image to favicon folder for this guild's server"
+        if guildid in self.gears:
+            pinger = self.gears[guildid]
+            if pinger.active_state.name != 'ping':
+                return
+            if not 'favicon' in pinger.last_json:
+                return
+            favicon_data = pinger.last_json['favicon']
+            if not favicon_data.startswith('data:image/png;base64,'):
+                return
+            favicon_data = favicon_data.split(',')[1]
+            try:
+                data = base64.b64decode(favicon_data)
+                filename = os.path.join(self.rootdir, 'favicon', f'{guildid}.png')
+                filename = os.path.abspath(filename)
+                with open(filename, mode='wb') as favicon_file:
+                    favicon_file.write(data)
+                    favicon_file.close()
+            except binascii.Error as ex:
+                logging.info('Encountered error decoding base64 string for favicon.')
+    
+    async def getfavicon(self, message) -> None:
+        "Post favicon for server"
+        await self.save_favicon(message.guild.id)
+        filename = os.path.join(self.rootdir, 'favicon', f'{message.guild.id}.png')
+        if not os.path.exists(filename):
+            await message.channel.send('Something went wrong attempting to get favicon.')
+            return
+        with open(filename, 'rb') as file_handle:
+            file = discord.File(file_handle, filename=filename)
+            await message.channel.send(file=file)
+            file_handle.close()
+    
     async def getjson(self, message) -> None:
         "Tell the author of the message the last json from server pinger."
         if message.guild.id in self.gears:
@@ -651,6 +693,9 @@ class StatusBot(discord.Client, gears.BaseBot):
                 return
             if pinger.active_state.name == 'ping':
                 lastdict = pinger.last_json
+                if 'favicon' in lastdict:
+                    favicon = lastdict['favicon']
+                    lastdict['favicon'] = '<base64 image data>'
                 msg = json.dumps(lastdict, sort_keys=True, indent=2)
                 await message.channel.send('Last received json message:')
                 await send_over_2000(message.channel.send, msg, '```', False)
