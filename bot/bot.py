@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -590,7 +590,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     
     async def eval_guilds(self, force_reset:bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
+        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds if guild.id == 863534282667982859)
         return await asyncio.gather(*coros)
     
     # Default, not affected by intents.
@@ -607,7 +607,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         guilddir = os.path.join(configdir, 'guilds')
         if not os.path.exists(guilddir):
             os.mkdir(guilddir)
-        favicondir = os.path.join(configdir, 'favicon')
+        favicondir = os.path.join(self.rootdir, 'favicon')
         if not os.path.exists(favicondir):
             os.mkdir(favicondir)
         
