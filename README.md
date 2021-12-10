@@ -48,7 +48,7 @@ they entered the command in, except in the case that the channel does not suppor
 being written to.
 
 ## Commands
-As of version 0.2.0, the following describes StatusBot's commands.
+As of version 0.3.1, the following describes StatusBot's commands.
 
 ### In Guilds:
 `help` - Display all of StatusBot's valid guild commands.
@@ -84,6 +84,8 @@ As of version 0.2.0, the following describes StatusBot's commands.
 
 `getping` - Tell the user who sent the message the latency of the connection to the server.
 
+`getfavicon` - Post a picture of the server's favicon in the channel the command message was posted in.
+ 
 `currentversion` - Tell the user the current version of StatusBot.
 
 `onlineversion` - Tell the user the current online verison of StatusBot.
