@@ -590,7 +590,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     
     async def eval_guilds(self, force_reset:bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds if guild.id == 863534282667982859)
+        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
         return await asyncio.gather(*coros)
     
     # Default, not affected by intents.
