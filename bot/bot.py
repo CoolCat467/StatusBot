@@ -279,6 +279,7 @@ class PingState(gears.AsyncState):
         self.failed = False
         self.exit_ex = None
         self.machine.last_delay = math.inf
+        self.machine.last_ping = set()
         return None
     
     async def do_actions(self) -> None:
@@ -311,11 +312,12 @@ class PingState(gears.AsyncState):
         current = set(current)
         # If different players,
         if current != self.machine.last_ping:
-            # Update last ping.
-            self.machine.last_ping = current
             # Find difference in players.
             joined = tuple(current.difference(self.machine.last_ping))
             left = tuple(self.machine.last_ping.difference(current))
+            
+            # Update last ping.
+            self.machine.last_ping = current
             
             def users_mesg(action:str, users:list) -> str:
                 "Returns [{action}]: {users}"
@@ -333,6 +335,8 @@ class PingState(gears.AsyncState):
             # Send message to guild channel.
             if message:
                 await send_over_2000(self.machine.channel.send, message)
+##        elif 'players' in json_data and 'online' in json_data['players']:
+##            print(json_data['players']['online'])
         return None
     
     async def check_conditions(self) -> Union[str, None]:
