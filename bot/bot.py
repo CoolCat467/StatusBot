@@ -367,8 +367,8 @@ class PingState(gears.AsyncState):
                 if 'name' in player:
                     players.add(player['name'])
         
-        if len(players) == 0 and online and online.isdigit():
-            await self.handle_count(int(online))
+        if len(players) == 0 and online:
+            await self.handle_count(online)
         else:
             await self.handle_sample(players)
         # Update last ping.
