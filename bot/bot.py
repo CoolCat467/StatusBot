@@ -369,10 +369,11 @@ class PingState(gears.AsyncState):
         
         if len(players) == 0 and online:
             await self.handle_count(online)
+            self.machine.last_ping = set((online),)
         else:
             await self.handle_sample(players)
-        # Update last ping.
-        self.machine.last_ping = players
+            # Update last ping.
+            self.machine.last_ping = players
         return None
     
     async def check_conditions(self) -> Union[str, None]:
