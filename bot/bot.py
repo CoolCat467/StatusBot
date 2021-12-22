@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -335,8 +335,32 @@ class PingState(gears.AsyncState):
             # Send message to guild channel.
             if message:
                 await send_over_2000(self.machine.channel.send, message)
-##        elif 'players' in json_data and 'online' in json_data['players']:
-##            print(json_data['players']['online'])
+        elif 'players' in json_data and 'online' in json_data['players']:
+            if 'sample' in json_data['players']:
+                # Above has handled change. No need.
+                return None
+            # Otherwise, server with player sample disabled
+            # and can only tell number of left/joined
+            current = set((json_data['players']['online'],))
+            if current == self.machine.last_ping:
+                # If same, no need
+                return None
+            cur = tuple(current)[-1]
+            last = 0
+            if self.machine.last_ping:
+                last = tuple(current)[-1]
+                if not last.isdigit():
+                    last = 0
+                else:
+                    last = int(last)
+            diff = cur - last
+            if diff == 0:
+                return None
+            player = 'player' if diff == 1 else 'players'
+            if diff > 0:
+                await self.machine.channel.send(f'[Joined]: {diff} {player}')
+            else:
+                await self.machine.channel.send(f'[Left]: {diff} {player}')
         return None
     
     async def check_conditions(self) -> Union[str, None]:
@@ -700,7 +724,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                 if 'favicon' in lastdict:
                     favicon = lastdict['favicon']
                     lastdict['favicon'] = '<base64 image data>'
-                msg = json.dumps(lastdict, sort_keys=True, indent=2)
+                msg = 'json\n'+json.dumps(lastdict, sort_keys=True, indent=2)
                 await message.channel.send('Last received json message:')
                 await send_over_2000(message.channel.send, msg, '```', False)
                 return
