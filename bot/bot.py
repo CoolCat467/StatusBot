@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -280,7 +280,54 @@ class PingState(gears.AsyncState):
         self.exit_ex = None
         self.machine.last_delay = math.inf
         self.machine.last_ping = set()
-        return None
+    
+    async def handle_sample(self, players) -> None:
+        "Handle change in players by players sample."
+        # If different players,
+        if players == self.machine.last_ping:
+            return None
+        # Find difference in players.
+        joined = tuple(players.difference(self.machine.last_ping))
+        left = tuple(self.machine.last_ping.difference(players))
+        
+        def users_mesg(action:str, users:list) -> str:
+            "Returns [{action}]: {users}"
+            text = f'[{action}]:\n'
+            text += combine_and(wrap_list_values(users, '`'))
+            return text
+        # Collect left and joined messages.
+        message = ''
+        if left:
+            message = users_mesg('Left', left)
+        if joined:
+            if message:
+                message += '\n'
+            message += users_mesg('Joined', joined)
+        # Send message to guild channel.
+        if message:
+            await send_over_2000(self.machine.channel.send, message)
+    
+    async def handle_count(self, online) -> None:
+        "Handle change in players by online count."
+        # Otherwise, server with player sample disabled
+        # and can only tell number of left/joined
+        current = set((online,))
+        if current == self.machine.last_ping:
+            # If same, no need
+            return None
+        last = 0
+        if self.machine.last_ping:
+            last = tuple(self.machine.last_ping)[-1]
+            if last.isdigit():
+                last = int(last)
+        diff = online - last
+        if diff == 0:
+            return None
+        player = 'player' if diff == 1 else 'players'
+        if diff > 0:
+            await self.machine.channel.send(f'[Joined]: {diff} {player}')
+        else:
+            await self.machine.channel.send(f'[Left]: {diff} {player}')
     
     async def do_actions(self) -> None:
         "Ping server. If failure, self.falied = True and if exceptions, save."
@@ -304,63 +351,28 @@ class PingState(gears.AsyncState):
         # If success, get players.
         self.machine.last_json = json_data
         self.machine.last_delay = ping
-        current = []
-        if 'players' in json_data and 'sample' in json_data['players']:
+        
+        players = set()
+        online = 0
+        
+        if not 'players' in json_data:
+            # Update last ping.
+            self.machine.last_ping = players
+            return None
+        
+        if 'online' in json_data['players']:
+            online = json_data['players']['online']
+        if 'sample' in json_data['players']:
             for player in json_data['players']['sample']:
                 if 'name' in player:
-                    current.append(player['name'])
-        current = set(current)
-        # If different players,
-        if current != self.machine.last_ping:
-            # Find difference in players.
-            joined = tuple(current.difference(self.machine.last_ping))
-            left = tuple(self.machine.last_ping.difference(current))
-            
-            # Update last ping.
-            self.machine.last_ping = current
-            
-            def users_mesg(action:str, users:list) -> str:
-                "Returns [{action}]: {users}"
-                text = f'[{action}]:\n'
-                text += combine_and(wrap_list_values(users, '`'))
-                return text
-            # Collect left and joined messages.
-            message = ''
-            if left:
-                message = users_mesg('Left', left)
-            if joined:
-                if message:
-                    message += '\n'
-                message += users_mesg('Joined', joined)
-            # Send message to guild channel.
-            if message:
-                await send_over_2000(self.machine.channel.send, message)
-        elif 'players' in json_data and 'online' in json_data['players']:
-            if 'sample' in json_data['players']:
-                # Above has handled change. No need.
-                return None
-            # Otherwise, server with player sample disabled
-            # and can only tell number of left/joined
-            current = set((json_data['players']['online'],))
-            if current == self.machine.last_ping:
-                # If same, no need
-                return None
-            cur = tuple(current)[-1]
-            last = 0
-            if self.machine.last_ping:
-                last = tuple(current)[-1]
-                if not last.isdigit():
-                    last = 0
-                else:
-                    last = int(last)
-            diff = cur - last
-            if diff == 0:
-                return None
-            player = 'player' if diff == 1 else 'players'
-            if diff > 0:
-                await self.machine.channel.send(f'[Joined]: {diff} {player}')
-            else:
-                await self.machine.channel.send(f'[Left]: {diff} {player}')
+                    players.add(player['name'])
+        
+        if len(players) == 0 and online and online.isdigit():
+            await self.handle_count(int(online))
+        else:
+            await self.handle_sample(players)
+        # Update last ping.
+        self.machine.last_ping = players
         return None
     
     async def check_conditions(self) -> Union[str, None]:
