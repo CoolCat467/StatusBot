@@ -217,7 +217,7 @@ class Connection(BaseConnection):
         self.received = bytearray()
     
     def read(self, length: int) -> bytes:
-        """Return self.recieved up to length bytes, then cut recieved up to that point."""
+        "Return self.recieved up to length bytes, then cut recieved up to that point."
         result = self.received[:length]
         self.received = self.received[length:]
         return result
@@ -316,14 +316,14 @@ class SocketConnection(BaseConnection):
         self.close()
 
 class TCPSocketConnection(SocketConnection):
-    """TCP Connection to addr. Timeout defaults to 3 secconds."""
+    "TCP Connection to addr. Timeout defaults to 3 secconds."
     def __init__(self, addr, timeout=3):
-        """Create a connection to addr with self.socket, set TCP NODELAY to True."""
+        "Create a connection to addr with self.socket, set TCP NODELAY to True."
         self.socket = socket.create_connection(addr, timeout=timeout)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     
     def read(self, length: int) -> bytes:
-        """Return length bytes read from self.socket. Raises IOError when server doesn't respond."""
+        "Return length bytes read from self.socket. Raises IOError when server doesn't respond."
         result = bytearray()
         while len(result) < length:
             new = self.socket.recv(length - len(result))
@@ -333,11 +333,11 @@ class TCPSocketConnection(SocketConnection):
         return result
     
     def write(self, data: bytes) -> None:
-        """Send data on self.socket."""
+        "Send data on self.socket."
         self.socket.send(data)
 
 class UDPSocketConnection(SocketConnection):
-    """UDP Connection to addr. Default timout is 3 secconds."""
+    "UDP Connection to addr. Default timout is 3 secconds."
     __slots__ = ('addr',)
     def __init__(self, addr, timeout=3):
         """Set self.addr to addr, set self.socket to new socket,
@@ -404,7 +404,7 @@ class TCPAsyncSocketConnection(AsyncReadConnection):
         self.close()
 
 class UDPAsyncSocketConnection(AsyncReadConnection):
-    """Asyncronous UDP connection to addr. Default timeout is 3 secconds."""
+    "Asyncronous UDP connection to addr. Default timeout is 3 secconds."
     __slots__ = 'stream', 'timeout'
     def __init__(self):
         self.stream = None
@@ -428,7 +428,7 @@ class UDPAsyncSocketConnection(AsyncReadConnection):
         return data
     
     async def write(self, data: bytes) -> None:
-        """Send data with self.stream."""
+        "Send data with self.stream."
         if isinstance(data, BaseConnection):
             data = bytearray(data.flush())
         await self.stream.send(data)
@@ -440,7 +440,7 @@ class UDPAsyncSocketConnection(AsyncReadConnection):
         self.stream.close()
     
     def __del__(self) -> None:
-        """Close self.stream."""
+        "Close self.stream."
         try:
             self.close()
         except (asyncio.exceptions.CancelledError,

@@ -8,11 +8,12 @@
 
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 3
+__ver_patch__ = 4
 
+import math
 from typing import Union
 import asyncio
 import concurrent.futures
@@ -226,12 +227,14 @@ class BaseBot:
 
 class Timer(Gear):
     "Class that will run coroutine self.run every delay seconds."
-    __slots__ = 'delay', 'task'
+    __slots__ = 'delay', 'task', 'ticks'
+    min_delay = 1
     def __init__(self, bot:BaseBot, name:str, delay:int=60) -> None:
         "self.name = name. Delay is secconds."
         super().__init__(bot, name)
         self.delay = max(0, int(delay))
         self.task = None
+        self.ticks = math.inf
     
     def gear_init(self) -> None:
         "Create task in bot's event loop."
@@ -282,14 +285,21 @@ class Timer(Gear):
     async def start(self) -> None:
         "Keep running self.tick every self.delay second or until self.bot.gear_close is True."
         while self.running:
-            stop = await self.tick()
+            waited = self.min_delay * self.ticks
+            stop = False
+            if waited >= self.delay:
+                stop = await self.tick()
+                self.ticks = 0
+                waited = 0
             if stop or self.bot.gear_close:
                 self.running = False
             else:
+                to_wait = min(self.min_delay, self.delay-waited)
                 try:
-                    await asyncio.sleep(self.delay)
+                    await asyncio.sleep(to_wait)
                 except concurrent.futures.CancelledError:
                     self.running = False
+                self.ticks += math.ceil(to_wait / self.min_delay)
 
 class _StateTimerExitState(AsyncState):
     "State Timer Exit State. Cause StateTimer to finally finish."
@@ -317,7 +327,7 @@ class StateTimer(Timer, AsyncStateMachine):
 ##        await self.set_state('Hault')
         return None
     
-    async def start(self):
+    async def start(self) -> None:
         await self.initialize_state()
         return await super().start()
     
@@ -329,15 +339,19 @@ class StateTimer(Timer, AsyncStateMachine):
         return self.active_state is None
     
     async def hault(self) -> None:
-        self.active_state = None
+        await self.set_state('Hault')
+        self.ticks = math.inf
         async def wait_stop():
             while self.running:
+                await asyncio.sleep(self.min_delay)
+            while not self.stopped:
                 await asyncio.sleep(1)
         try:
             async with async_timeout.timeout(self.delay*1.5):
                 await wait_stop()
         except asyncio.TimeoutError:
-            await super().hault()
+            pass
+        await super().hault()
 
 def run():
     "Run an example of this module."

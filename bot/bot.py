@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 3
+__ver_patch__ = 4
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -229,16 +229,16 @@ def log_active_exception(logpath, extra=None) -> None:
     logging.exception(msg)
     append_file(logpath, msg)
 
-async def send_over_2000(send_func, text:str, wrap_with:str='',
+async def send_over_2000(send_func, text:str, header='', wrap_with:str='',
                          replace_existing_wrap:bool=True) -> None:
     "Use send_func to send text in segments over 2000 characters by"\
     "splitting it into multiple messages."
     send = str(text)
-    add_aloc = 0
+    add_aloc = len(header)
     if wrap_with:
         if replace_existing_wrap:
             send = send.replace(wrap_with, '')
-        add_aloc = int(len(wrap_with) * 2)
+        add_aloc += int(len(wrap_with) * 2)
     parts = []
     count = len(send)+add_aloc
     if count > 2000:
@@ -251,6 +251,7 @@ async def send_over_2000(send_func, text:str, wrap_with:str='',
             parts.append(send[last:])
     else:
         parts.append(send)
+    parts = (header+part for part in parts)
     if wrap_with:
         parts = wrap_list_values(parts, wrap_with)
     # This would be great for asyncio.gather, but
@@ -273,14 +274,14 @@ class PingState(gears.AsyncState):
         super().__init__('ping')
         self.failed = False
         self.exit_ex = None
-    
+
     async def entry_actions(self) -> None:
         "Reset failed to false and exception to None."
         self.failed = False
         self.exit_ex = None
         self.machine.last_delay = math.inf
         self.machine.last_ping = set()
-    
+
     async def handle_sample(self, players) -> None:
         "Handle change in players by players sample."
         # If different players,
@@ -289,7 +290,7 @@ class PingState(gears.AsyncState):
         # Find difference in players.
         joined = tuple(players.difference(self.machine.last_ping))
         left = tuple(self.machine.last_ping.difference(players))
-        
+
         def users_mesg(action:str, users:list) -> str:
             "Returns [{action}]: {users}"
             text = f'[{action}]:\n'
@@ -306,7 +307,7 @@ class PingState(gears.AsyncState):
         # Send message to guild channel.
         if message:
             await send_over_2000(self.machine.channel.send, message)
-    
+
     async def handle_count(self, online) -> None:
         "Handle change in players by online count."
         # Otherwise, server with player sample disabled
@@ -318,7 +319,7 @@ class PingState(gears.AsyncState):
         last = 0
         if self.machine.last_ping:
             last = tuple(self.machine.last_ping)[-1]
-            if last.isdigit():
+            if isinstance(last, str) and last.isdigit():
                 last = int(last)
         diff = online - last
         if diff == 0:
@@ -327,8 +328,8 @@ class PingState(gears.AsyncState):
         if diff > 0:
             await self.machine.channel.send(f'[Joined]: {diff} {player}')
         else:
-            await self.machine.channel.send(f'[Left]: {diff} {player}')
-    
+            await self.machine.channel.send(f'[Left]: {-diff} {player}')
+
     async def do_actions(self) -> None:
         "Ping server. If failure, self.falied = True and if exceptions, save."
         try:
@@ -351,37 +352,37 @@ class PingState(gears.AsyncState):
         # If success, get players.
         self.machine.last_json = json_data
         self.machine.last_delay = ping
-        
+
         players = set()
         online = 0
-        
+
         if not 'players' in json_data:
             # Update last ping.
             self.machine.last_ping = players
             return None
-        
+
         if 'online' in json_data['players']:
             online = json_data['players']['online']
         if 'sample' in json_data['players']:
             for player in json_data['players']['sample']:
                 if 'name' in player:
                     players.add(player['name'])
-        
+
         if len(players) == 0 and online:
             await self.handle_count(online)
-            self.machine.last_ping = set((online),)
+            self.machine.last_ping = set((online,))
         else:
             await self.handle_sample(players)
             # Update last ping.
             self.machine.last_ping = players
         return None
-    
+
     async def check_conditions(self) -> Union[str, None]:
         "If there was failure to connect to server, await restart."
         if self.failed:
             return 'await_restart'
         return None
-    
+
     async def exit_actions(self) -> None:
         "When exiting, if we collected an exception, send it to channel."
         if not self.exit_ex is None:
@@ -397,7 +398,7 @@ class WaitRestartState(gears.AsyncState):
         self.success = None
         self.ticks = 0
         self.ping = None
-    
+
     async def entry_actions(self) -> None:
         "Reset failed and say connection lost."
         extra = ''
@@ -408,7 +409,7 @@ class WaitRestartState(gears.AsyncState):
         self.ticks = 0
         self.ping = 0
         return None
-    
+
     async def attempt_contact(self) -> bool:
         "Attempt to talk to server."
         try:
@@ -418,20 +419,20 @@ class WaitRestartState(gears.AsyncState):
         else:
             return True
         return False
-    
+
     async def do_actions(self) -> None:
         "Every once and a while try to talk to server again."
         self.ticks = (self.ticks + 1) % self.ignore_ticks
-        
+
         if self.ticks == 0:
             self.success = await self.attempt_contact()
-    
+
     async def check_conditions(self) -> None:
         "If contact attempt was sucessfull, switch back to ping."
         if self.success:
             return 'ping'
         return None
-    
+
     async def exit_actions(self) -> None:
         "Tell guild connection re-established."
         await self.machine.channel.send(
@@ -452,20 +453,20 @@ class GuildServerPinger(gears.StateTimer):
         self.last_json = {}
         self.last_delay = 0
         self.channel = None
-        
+
         self.add_state(PingState())
         self.add_state(WaitRestartState(self.waitticks))
-    
+
     @property
     def wait_time(self):
         "Total wait time when in await_restart state."
         return self.tickspeed * self.waitticks
-    
+
     async def initialize_state(self) -> None:
         "Set state to ping."
         await self.set_state('ping')
         return None
-    
+
     async def start(self) -> None:
         "If config is good, run pinger."
         config = self.bot.get_guild_config(self.guildid)
@@ -525,24 +526,24 @@ class StatusBot(discord.Client, gears.BaseBot):
                           'getoption': self.getoption_dm,
                           'help': self.help_dm}
         gears.BaseBot.__init__(self, self.loop)
-    
+
     def __repr__(self):
 ##        up = self.__class__.__weakref__.__qualname__.split('.')[0]
         return f'<{self.__class__.__name__} Object>'# ({up} subclass)>'
-    
+
     @property
     def gear_close(self):
         "Return True if gears should close."
         return self.stopped.is_set() or self.is_closed()
-    
+
     def get_guild_config_file(self, guildid:int) -> str:
         "Return the path to the config json file for a ceartain guild id."
         return os.path.join(self.rootdir, 'config', 'guilds', str(guildid)+'.json')
-    
+
     def get_dm_config_file(self) -> str:
         "Return the path to the config json file for all DMs."
         return os.path.join(self.rootdir, 'config', 'dms.json')
-    
+
     def get_guild_config(self, guildid:int) -> dict:
         "Return a dictionary from the json read from guild config file."
         guildfile = self.get_guild_config_file(guildid)
@@ -553,7 +554,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             write_file(guildfile, '{}')
             guildconfig = {}
         return guildconfig
-    
+
     def get_dm_config(self) -> dict:
         "Return a dictionary from the json read from the DMs config file."
         dmfile = self.get_dm_config_file()
@@ -562,17 +563,17 @@ class StatusBot(discord.Client, gears.BaseBot):
             write_file(dmfile, '{}')
             dmconfig = {}
         return dmconfig
-    
+
     def write_guild_config(self, guildid:int, config:dict) -> None:
         "Write guild config file from config dictionary."
         guildfile = self.get_guild_config_file(guildid)
         write_file(guildfile, json.dumps(config, indent=2))
-    
+
     def write_dm_config(self, config:dict) -> None:
         "Write DMs config file from config dictionary."
         dmfile = self.get_dm_config_file()
         write_file(dmfile, json.dumps(config, indent=2))
-    
+
     def guess_guild_channel(self, gid:int):
         "Guess guild channel and return channel."
         guild = self.get_guild(gid)
@@ -589,7 +590,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             if channel.name in expect:
                 return channel
         return random.choice(guild.text_channels)
-    
+
     async def search_for_member_in_guilds(self, username):
         "Search for member in all guilds we connected to. Return None on failure."
         members = (guild.get_member_named(username) for guild in self.guilds)
@@ -597,7 +598,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             if not member is None:
                 return member
         return
-    
+
     async def add_guild_pinger(self, gid:int, force_reset:bool=False) -> str:
         "Create server pinger for guild if not exists. Return 'started', 'restarted', or 'none'."
         if not gid in self.gears:
@@ -610,7 +611,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             self.add_gear(GuildServerPinger(self, gid))
             return 'restarted'
         return 'none'
-    
+
     async def eval_guild(self, guildid:int, force_reset:bool=False) -> int:
         "(Re)Start guild pinger if able. Otherwise tell them to change settings."
         guildconfig = self.get_guild_config(guildid)
@@ -628,12 +629,12 @@ class StatusBot(discord.Client, gears.BaseBot):
             await channel.send('Server address not set, pinger not started.'\
                                f'Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
-    
+
     async def eval_guilds(self, force_reset:bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
         coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
         return await asyncio.gather(*coros)
-    
+
     # Default, not affected by intents.
     async def on_ready(self) -> None:
         "Print information about bot and evaluate all guilds."
@@ -641,7 +642,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         logging.info(f'Prefix: {self.prefix}')
         logging.info(f'Intents: {self.intents}')
         logging.info(f'Root Dir: {self.rootdir}')
-        
+
         configdir = os.path.join(self.rootdir, 'config')
         if not os.path.exists(configdir):
             os.mkdir(configdir)
@@ -651,7 +652,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         favicondir = os.path.join(self.rootdir, 'favicon')
         if not os.path.exists(favicondir):
             os.mkdir(favicondir)
-        
+
         logging.info(f'\n{self.user} is connected to the following guilds:\n')
         guildnames = []
         for guild in self.guilds:
@@ -663,7 +664,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
         return
-    
+
     async def get_user_name(self, uid:int, getmember=None) -> Union[str, None]:
         "Return the name of user with id <uid>."
         if getmember is None:
@@ -672,7 +673,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         if member is None:
             return member
         return member.name+'#'+member.discriminator
-    
+
     async def replace_ids_w_names(self, names:tuple) -> list:
         "Replace user ids (intigers) with usernames in lists. Returns list of strings."
         replaced = []
@@ -684,12 +685,12 @@ class StatusBot(discord.Client, gears.BaseBot):
                     continue
             replaced.append(str(item))
         return replaced
-    
+
     async def getmyid(self, message) -> None:
         "Tell the author of the message their user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
         return
-    
+
     async def save_favicon(self, guildid:int) -> None:
         "Save favicon image to favicon folder for this guild's server"
         if guildid in self.gears:
@@ -711,7 +712,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                     favicon_file.close()
             except binascii.Error as ex:
                 logging.info('Encountered error decoding base64 string for favicon.')
-    
+
     async def getfavicon(self, message) -> None:
         "Post favicon for server"
         await self.save_favicon(message.guild.id)
@@ -723,7 +724,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             file = discord.File(file_handle, filename=filename)
             await message.channel.send(file=file)
             file_handle.close()
-    
+
     async def getjson(self, message) -> None:
         "Tell the author of the message the last json from server pinger."
         if message.guild.id in self.gears:
@@ -737,9 +738,9 @@ class StatusBot(discord.Client, gears.BaseBot):
                 if 'favicon' in lastdict:
                     favicon = lastdict['favicon']
                     lastdict['favicon'] = '<base64 image data>'
-                msg = 'json\n'+json.dumps(lastdict, sort_keys=True, indent=2)
+                msg = json.dumps(lastdict, sort_keys=True, indent=2)
                 await message.channel.send('Last received json message:')
-                await send_over_2000(message.channel.send, msg, '```', False)
+                await send_over_2000(message.channel.send, msg, 'json\n', '```', False)
                 return
             delay = format_time(pinger.wait_time)
             await message.channel.send(
@@ -747,7 +748,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
-    
+
     async def getping(self, message) -> None:
         "Tell the author of the message the bot's latency to the guild's server."
         if message.guild.id in self.gears:
@@ -767,7 +768,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
-    
+
     async def getonline(self, message) -> None:
         "Tell author of the message the usernames of the players connected to the guild's server."
         if message.guild.id in self.gears:
@@ -791,14 +792,14 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('Server pinger is not running for this guild.')
         return
-    
+
     async def stop(self, message) -> None:
         "Stop this bot. Sends stop message."
         config = self.get_dm_config()
         if not 'stopusers' in config:
             await message.channel.send('No one has permission to run this command.')
             return
-        
+
         if message.author.id in config['stopusers']:
             await message.channel.send('Stopping...')
             # Set stopped event
@@ -809,7 +810,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('You do not have permission to run this command.')
         return
-    
+
     async def getcurrentvers(self, message) -> tuple:
         "Get current version, tell user in message.channel, and return that version as tuple."
         proj_root = os.path.split(self.rootdir)[0]
@@ -817,7 +818,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         await message.channel.send(f'Current version: {version}')
 ##        return (__ver_major__, __ver_minor__, __ver_patch__)
         return tuple(map(int, version.strip().split('.')))
-    
+
     async def getonlinevers(self, message) -> tuple:
         "Get online version, tell user in message.channel, and return said version as tuple."
         # Get github version string
@@ -826,7 +827,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         await message.channel.send(f'Online version: {version}')
         # Make it tuple and return it
         return tuple(map(int, version.strip().split('.')))
-    
+
     async def update(self, message, timeout:int=20) -> None:
         "Preform update from github."
         if self.stopped.is_set():
@@ -878,18 +879,18 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('You do not have permission to run this command.')
         return
-    
+
     async def getoption_guild(self, message) -> None:
         "Send message with value of option given in this guild's config."
         args = parse_args(message.content, 2)
         config = self.get_guild_config(message.guild.id)
         valid = tuple(config.keys())
-        
+
         if not valid:
             await message.channel.send('No options are set at this time.')
             return
-        validops = get_valid_options(valid)            
-        
+        validops = get_valid_options(valid)
+
         if not args:
             await message.channel.send('Invalid option.'+validops)
             return
@@ -906,7 +907,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('Invalid option.'+validops)
         return
-    
+
     async def getoption_dm(self, message) -> None:
         "Send message with value of option given in the dm config."
         args = parse_args(message.content, 1)
@@ -917,12 +918,12 @@ class StatusBot(discord.Client, gears.BaseBot):
         elif 'setoptionusers' in config:
             if message.author.id in config['setoptionusers']:
                 valid += ['setoptionusers', 'updateusers', 'stopusers']
-        
+
         if not valid:
             await message.channel.send('No options are set at this time.')
             return
-        validops = get_valid_options(valid) 
-        
+        validops = get_valid_options(valid)
+
         if len(args) == 0:
             await message.channel.send('No option given.'+validops)
             return
@@ -942,17 +943,17 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         await message.channel.send('You do not have permission to view the values of any options.')
         return
-    
+
     async def help_guild(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
         await send_command_list(self.gcommands, 'Guild', message.channel)
         return
-    
+
     async def help_dm(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
         await send_command_list(self.dcommands, 'DM', message.channel)
         return
-    
+
     async def refresh(self, message, force_reset:bool=False) -> None:
         "Re-evaluate guild, then tell them it happened."
         if force_reset:
@@ -961,13 +962,13 @@ class StatusBot(discord.Client, gears.BaseBot):
         await self.eval_guild(message.channel.guild.id, force_reset)
         await message.channel.send('Guild has been re-evaluated.')
         return
-    
+
     # @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
     async def setoption_guild(self, message) -> None:
         "Set a config option. Send message in message.channel on falure."
         config = self.get_guild_config(message.guild.id)
         valid = []
-        
+
         auid = message.author.id
         # If message author is either bot owner or guild owner,
         if auid in {OWNER_ID, message.guild.owner}:
@@ -979,7 +980,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             if auid in config['setoptionusers']:
                 # give them access to almost everything.
                 valid += ['address', 'channel']
-        
+
         if not valid:
             await message.channel.send(
                 'You do not have permission to set any options. If you feel this is a mistake,'\
@@ -987,16 +988,16 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         args = parse_args(message.content, 2)
         validops = get_valid_options(valid)
-        
+
         if not args:
             await message.channel.send('No arguments.'+validops)
             return
-        
+
         option = args[0].lower()
         if not option in valid:
             await message.channel.send('Invalid option.'+validops)
             return
-        
+
         if len(args) < 2:
             msg = f'Insufficiant arguments for {option}.'
             base = '`clear`, a discord id, or the username of a new user to add to the '
@@ -1006,7 +1007,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             msg += '\nArgument required: '+arghelp[option]
             await message.channel.send(msg)
             return
-        
+
         value = except_chars(args[1], AZUP+AZLOW+NUMS+'.:-#')
         if option == 'channel':
             channelnames = [chan.name for chan in message.guild.text_channels]
@@ -1050,7 +1051,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         force_reset = option in ('address', 'channel')
         await self.refresh(message, force_reset)
         return
-    
+
     async def setoption_dm(self, message) -> None:
         "Set a config option. Send message in message.channel on falure."
         config = self.get_dm_config()
@@ -1060,22 +1061,22 @@ class StatusBot(discord.Client, gears.BaseBot):
         elif 'setoptionusers' in config:
             if message.author.id in config['setoptionusers']:
                 valid += ['updateusers', 'stopusers']
-        
+
         if not valid:
             await message.channel.send('You do not have permission to set any options.')
             return
         args = parse_args(message.clean_content, 1)
         validops = get_valid_options(valid)
-        
+
         if not args:
             if valid:
                 await message.channel.send('Invalid option.'+validops)
                 return
             await message.channel.send('You do not have permission to set any options.')
             return
-        
+
         option = args[0].lower()
-        
+
         if option in valid:
             if len(args) < 2:
                 msg = f'Insufficiant arguments for {option}.'
@@ -1121,7 +1122,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             self.write_dm_config(config)
             await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
         return
-    
+
     async def process_command_message(self, message, mode:str='guild') -> None:
         "Process new command message. Calls self.command[command](message)."
         err = ' Please enter a valid command. Use `{}help` to see valid commands.'
@@ -1133,7 +1134,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         commands = (self.dcommands, self.gcommands)[midx]
         # Get content of message.
         content = message.content
-        
+
         # If no space in message
         if not ' ' in content:
             # If it's a guild message
@@ -1146,11 +1147,11 @@ class StatusBot(discord.Client, gears.BaseBot):
         args = parse_args(content)
         # Get command. zeroth if dm, first if guild because of prefix.
         command = args[midx].lower()
-        
+
         if self.stopped.is_set() and midx:
             await message.channel.send(f'{__title__} is in the process of shutting down.')
             return
-        
+
         # If command is valid, run it.
         if command in commands:
             await commands[command](message)
@@ -1165,23 +1166,23 @@ class StatusBot(discord.Client, gears.BaseBot):
         # Otherwse, send error of no command.
         await message.channel.send('No valid command given.'+err)
         return
-    
+
     # Intents.guilds
     async def on_guild_join(self, guild) -> None:
         "Evaluate guild."
         await self.eval_guild(guild.id, True)
         return
-    
+
 ##    # Intents.members
 ##    async def on_member_join(self, member) -> None:
 ##        "Member joined a guild we are in."
 ##        pass
-##    
+##
 ##    # Intents.members
 ##    async def on_member_remove(self, member) -> None:
 ##        "Member left a guild we are in."
 ##        return None
-    
+
     # Intents.guilds
     async def on_guild_remove(self, guild) -> None:
         "Remove config file for guild we are no longer in."
@@ -1190,14 +1191,14 @@ class StatusBot(discord.Client, gears.BaseBot):
         append_file(self.logpath, '#'*8+msg+'#'*8)
         os.remove(self.get_guild_config_file(guild.id))
         return None
-    
+
     # Intents.dm_messages, Intents.guild_messages, Intents.messages
     async def on_message(self, message) -> None:
         "React to any new messages."
         # Skip messages from ourselves.
         if message.author == self.user:
             return
-        
+
         # If we can send message to person,
         if hasattr(message.channel, 'send'):
             # If message is from a guild,
@@ -1221,7 +1222,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                 await self.process_command_message(message, 'dm')
         # can't send messages so skip.
         return
-    
+
     # Default, not affected by intents
     async def on_error(self, event, *args, **kwargs) -> None:
         "Log error and continue."
@@ -1232,7 +1233,7 @@ class StatusBot(discord.Client, gears.BaseBot):
         extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
         log_active_exception(self.logpath, extra=extra)
         return
-    
+
     # Default, not affected by intents
     async def close(self) -> None:
         "Tell guilds bot shutting down."
@@ -1246,7 +1247,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             return
         coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
-        
+
         logging.info('Waiting to aquire updating lock...\n')
         self.updating.acquire()
         logging.info('Closing...')
@@ -1262,14 +1263,8 @@ Either add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,
 or set DISCORD_TOKEN environment variable.''')
         return
     logging.info('\nStarting bot...')
-    
+
     loop = asyncio.get_event_loop()
-##    intents = discord.Intents()
-##    intents.dm_messages = True
-##    intents.guild_messages = True
-##    intents.messages = True
-##    intents.guilds = True
-##    intents.members = True
     intents = discord.Intents(
         dm_messages = True,
         guild_messages = True,
@@ -1277,9 +1272,9 @@ or set DISCORD_TOKEN environment variable.''')
         guilds = True,
         members = True)
     # 4867
-    
+
     bot = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
-    
+
     try:
         loop.run_until_complete(bot.start(TOKEN))
     except KeyboardInterrupt:

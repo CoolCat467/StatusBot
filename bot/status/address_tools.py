@@ -17,7 +17,7 @@ import dns.resolver
 # with modifications
 
 def ip_type(address):
-    """Returns what version of ip a given address is."""
+    "Returns what version of ip a given address is."
     try:
         return ip_address(address).version
     except ValueError:
@@ -59,7 +59,7 @@ def lookup(address, default_port=80, format_host='{}', qname='A'):
 # reached from the outside. Quite nasty problem actually.
 
 def find_ip():
-    """Utility function to guess the IP where the server can be found from the network."""
+    "Utility function to guess the IP where the server can be found from the network."
     # we get a UDP-socket for the TEST-networks reserved by IANA.
     # It is highly unlikely, that there is special routing used
     # for these networks, hence the socket later should give us

@@ -8,10 +8,10 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 5
+__ver_patch__ = 6
 
 import os
 from asyncio import gather
@@ -27,14 +27,16 @@ def get_address(user:str, repo:str, branch:str, path:str) -> str:
 
 def is_new_ver_higher(current:tuple, newest:tuple) -> bool:
     "Return True if current version older than new version."
-    assert len(current) == len(newest), 'Version lengths do not match!'
-    for old, new in zip(current, newest):
-        if old < new:
-            return True
-        if old == new:
-            continue
-        return False
-    return False
+    # Turns out, tuples have built in comparison support.
+    # Exactly what we need lol. And it's better.
+    return tuple(current) < tuple(newest)
+##    for old, new in zip(current, newest):
+##        if old < new:
+##            return True
+##        if old == new:
+##            continue
+##        return False
+##    return False
 
 def get_paths(jdict:dict) -> list:
     "Read dictionary and figure out paths of files we want to update."
@@ -49,7 +51,7 @@ def get_paths(jdict:dict) -> list:
                 add = read_dict(nxt)
                 for file in add:
                     paths.append(os.path.join(path, file))
-            elif isinstance(nxt, (list, tuple)):
+            else:
                 # If it's a list or tuple, add all to our own paths joined.
                 for file in nxt:
                     if isinstance(file, str):
@@ -66,7 +68,7 @@ def make_dirpath_exist(filepath:str) -> None:
         # Ensure above folder exists
         make_dirpath_exist(folder)
         # Make folder
-        os.path.mkdir(folder)
+        os.path.mkdir(folder) # pylint: disable=E1101
 
 async def download_coroutine(url:str, timeout:int=TIMEOUT, **sessionkwargs) -> bytes:
     "Return content bytes found at url."
@@ -91,7 +93,7 @@ async def get_file(repo:str, path:str, user:str, branch:str='HEAD',
     url = get_address(user, repo, branch, path)
     return await download_coroutine(url, timeout, **sessionkwargs)
 
-async def update_file(basepath:str, repo:str, path:str, user:str,
+async def update_file(basepath:str, repo:str, path:str, user:str,# pylint: disable=R0913
                       branch:str='HEAD', timeout:int=TIMEOUT,
                       **sessionkwargs) -> bool:
     "Update file. Return False on exception, otherwise True."
@@ -101,11 +103,13 @@ async def update_file(basepath:str, repo:str, path:str, user:str,
         with open(savepath, 'wb') as sfile:
             sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
             sfile.close()
-    except Exception:
+    except Exception: # pylint: disable=W0703
+        # We have to be able to catch all exceptions so we can return and
+        # never have an exception in handling.
         return False
     return True
 
-async def update_files(basepath:str, paths:tuple,
+async def update_files(basepath:str, paths:tuple,# pylint: disable=R0913
                        repo:str, user:str, branch:str='HEAD',
                        timeout:int=TIMEOUT, **sessionkwargs) -> list:
     "Update multiple files all from the same github repository. Return list of paths."
