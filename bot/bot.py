@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.4'
+__version__ = '0.3.5'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 4
+__ver_patch__ = 5
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -25,7 +25,7 @@ import traceback
 import concurrent.futures
 from typing import Union
 from threading import Event, Lock
-import logging
+##import logging
 import binascii
 import base64
 
@@ -55,6 +55,8 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 BOT_PREFIX = '!status'
 OWNER_ID = 344282497103691777
+# Branch is branch of github repo to update from
+BRANCH = 'master'
 
 # Text globals
 AZUP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -173,20 +175,6 @@ def format_time(seconds:int, single_title_allowed:bool=False) -> str:
         data.append(str(value)+' '+title)
     return combine_and(data)
 
-def get_time_of_day(hour:int) -> str:
-    "Figure out and return what time of day it is."
-    if hour > 4 and hour < 12:
-        return 'Morning'
-    if hour > 11 and hour < 19:
-        # "It is usually from 12 PM to 6 PM,
-        # but during winter it may be from 12 PM to 4 PM
-        # and during summer it may be from 12 PM to 8 PM."
-        return 'Afternoon'
-    if hour > 18 and hour < 22:
-        return 'Evening'
-    ##if hour > 21 or hour < 4:
-    return 'Night'
-
 def except_chars(text:str, valid:str=AZUP+AZLOW+NUMS+'.:-') -> str:
     "Return every character in text that is also in valid string."
     return ''.join(i for i in text if i in valid)
@@ -225,8 +213,7 @@ def log_active_exception(logpath, extra=None) -> None:
                               file=yes_totaly_a_file)
     msg += 'Traceback:\n'+yes_totaly_a_file.getdata()+'\n'
     msg += '#'*16+'\n'
-##    print(msg)
-    logging.exception(msg)
+    print(msg)
     append_file(logpath, msg)
 
 async def send_over_2000(send_func, text:str, header='', wrap_with:str='',
@@ -264,7 +251,7 @@ async def send_over_2000(send_func, text:str, header='', wrap_with:str='',
 
 async def get_github_file(path:str, timeout:int=10) -> str:
     "Return text from github file in this project decoded as utf-8"
-    file = await update.get_file(__title__, path, __author__, 'master', timeout)
+    file = await update.get_file(__title__, path, __author__, BRANCH, timeout)
     return file.decode('utf-8')
 
 class PingState(gears.AsyncState):
@@ -338,7 +325,7 @@ class PingState(gears.AsyncState):
             self.exit_ex = f'`A {type(ex).__name__} Exception Has Occored'
             if ex.args:
                 sargs = list(map(str, ex.args))
-                self.exit_ex += ': '+wrap_list_values(combine_and(sargs), '"')
+                self.exit_ex += ': '+combine_and(wrap_list_values(sargs, '"'))
             self.exit_ex += '`'
             self.failed = True
 ##            print(self.exit_ex)
@@ -638,10 +625,10 @@ class StatusBot(discord.Client, gears.BaseBot):
     # Default, not affected by intents.
     async def on_ready(self) -> None:
         "Print information about bot and evaluate all guilds."
-        logging.info(f'{self.user} has connected to Discord!')
-        logging.info(f'Prefix: {self.prefix}')
-        logging.info(f'Intents: {self.intents}')
-        logging.info(f'Root Dir: {self.rootdir}')
+        print(f'{self.user} has connected to Discord!')
+        print(f'Prefix: {self.prefix}')
+        print(f'Intents: {self.intents}')
+        print(f'Root Dir: {self.rootdir}')
 
         configdir = os.path.join(self.rootdir, 'config')
         if not os.path.exists(configdir):
@@ -653,14 +640,14 @@ class StatusBot(discord.Client, gears.BaseBot):
         if not os.path.exists(favicondir):
             os.mkdir(favicondir)
 
-        logging.info(f'\n{self.user} is connected to the following guilds:\n')
+        print(f'\n{self.user} is connected to the following guilds:\n')
         guildnames = []
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
         spaces = max(len(name) for name in guildnames)
-        logging.info('\n'+'\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
+        print('\n'+'\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
-        logging.info('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
+        print('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
         return
@@ -711,7 +698,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                     favicon_file.write(data)
                     favicon_file.close()
             except binascii.Error as ex:
-                logging.info('Encountered error decoding base64 string for favicon.')
+                print('Encountered error decoding base64 string for favicon.')
 
     async def getfavicon(self, message) -> None:
         "Post favicon for server"
@@ -870,7 +857,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                                            f'Please wait. This may take up to {maxtime} at most.')
                 # Update said files.
                 rootdir = os.path.split(self.rootdir)[0]
-                await update.update_files(rootdir, paths, __title__, __author__, 'master', timeout)
+                await update.update_files(rootdir, paths, __title__, __author__, BRANCH, timeout)
                 await message.channel.send('Done. Bot will need to be restarted to apply changes.')
                 self.updating.release()
                 return
@@ -1187,7 +1174,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def on_guild_remove(self, guild) -> None:
         "Remove config file for guild we are no longer in."
         msg = f'Guild lost: {guild.id}'
-        logging.info(msg)
+        print(msg)
         append_file(self.logpath, '#'*8+msg+'#'*8)
         os.remove(self.get_guild_config_file(guild.id))
         return None
@@ -1227,7 +1214,7 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def on_error(self, event, *args, **kwargs) -> None:
         "Log error and continue."
         if event == 'on_message':
-            logging.info(f'Unhandled message: {args[0]}')
+            print(f'Unhandled message: {args[0]}')
         extra = 'Error Event:\n'+str(event)+'\n'
         extra += 'Error args:\n'+'\n'.join(map(str, args))+'\nError kwargs:\n'
         extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
@@ -1238,19 +1225,19 @@ class StatusBot(discord.Client, gears.BaseBot):
     async def close(self) -> None:
         "Tell guilds bot shutting down."
         self.stopped.set()
-        logging.info('\nShutting down gears.')
+        print('\nShutting down gears.')
         await gears.BaseBot.close(self)
-        logging.info('\nGears shut down...\nTelling guilds bot is shutting down.\n')
+        print('\nGears shut down...\nTelling guilds bot is shutting down.\n')
         async def tell_guild_shutdown(guild):
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} is shutting down.')
             return
         coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
-
-        logging.info('Waiting to aquire updating lock...\n')
+        
+        print('Waiting to aquire updating lock...\n')
         self.updating.acquire()
-        logging.info('Closing...')
+        print('Closing...')
         await discord.Client.close(self)
         self.updating.release()
         return
@@ -1258,11 +1245,11 @@ class StatusBot(discord.Client, gears.BaseBot):
 def run() -> None:
     "Run bot."
     if TOKEN is None:
-        logging.critical('''\nNo token set!
+        print('''\nNo token set!
 Either add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,
 or set DISCORD_TOKEN environment variable.''')
         return
-    logging.info('\nStarting bot...')
+    print('\nStarting bot...')
 
     loop = asyncio.get_event_loop()
     intents = discord.Intents(
@@ -1278,16 +1265,16 @@ or set DISCORD_TOKEN environment variable.''')
     try:
         loop.run_until_complete(bot.start(TOKEN))
     except KeyboardInterrupt:
-        logging.info('\nClosing bot...')
+        print('\nClosing bot...')
         loop.run_until_complete(bot.close())
     finally:
         # cancel all lingering tasks
         loop.close()
-        logging.info('\nBot has been deactivated.')
+        print('\nBot has been deactivated.')
     return
 
 if __name__ == '__main__':
     print(f'{__title__} v{__version__}\nProgrammed by {__author__}.')
-    logging.basicConfig(level=logging.INFO)
+##    logging.basicConfig(level=logging.INFO)
     run()
-    logging.shutdown()
+##    logging.shutdown()

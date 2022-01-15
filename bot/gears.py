@@ -8,10 +8,10 @@
 
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 4
+__ver_patch__ = 5
 
 import math
 from typing import Union
@@ -156,7 +156,7 @@ class AsyncStateMachine(StateMachine):
 
 class Gear:
     "Class that get's run by bots."
-    __slots__ = 'bot', 'name', 'running', 'stopped'
+##    __slots__ = 'bot', 'name', 'running', 'stopped'
     def __init__(self, bot, name:str):
         "Store self.bot, and set self.running and self.stopped to False."
         self.bot = bot
@@ -167,6 +167,10 @@ class Gear:
     def gear_init(self) -> None:
         "Do whatever instance requires to start running. Must not stop bot."
         return None
+    
+    def submit_coro(self, coro):
+        "Submit a coro as task for bot event loop so complete"
+        return self.bot.loop.create_task(coro)
     
     async def hault(self) -> None:
         "Set self.running to False and self.stopped to True."
@@ -227,7 +231,7 @@ class BaseBot:
 
 class Timer(Gear):
     "Class that will run coroutine self.run every delay seconds."
-    __slots__ = 'delay', 'task', 'ticks'
+##    __slots__ = 'delay', 'task', 'ticks'
     min_delay = 1
     def __init__(self, bot:BaseBot, name:str, delay:int=60) -> None:
         "self.name = name. Delay is secconds."
@@ -238,7 +242,7 @@ class Timer(Gear):
     
     def gear_init(self) -> None:
         "Create task in bot's event loop."
-        self.task = self.bot.loop.create_task(self.wait_for_ready_start())
+        self.task = self.submit_coro(self.wait_for_ready_start())
     
     async def wait_for_ready_start(self) -> None:
         "Await self.bot.wait_until_ready(), then await self.start()."
@@ -284,22 +288,28 @@ class Timer(Gear):
     
     async def start(self) -> None:
         "Keep running self.tick every self.delay second or until self.bot.gear_close is True."
-        while self.running:
-            waited = self.min_delay * self.ticks
-            stop = False
-            if waited >= self.delay:
-                stop = await self.tick()
-                self.ticks = 0
-                waited = 0
-            if stop or self.bot.gear_close:
-                self.running = False
-            else:
-                to_wait = min(self.min_delay, self.delay-waited)
-                try:
-                    await asyncio.sleep(to_wait)
-                except concurrent.futures.CancelledError:
+        if self.min_delay > 0:
+            while self.running:
+                waited = self.min_delay * self.ticks
+                stop = False
+                if waited >= self.delay:
+                    stop = await self.tick()
+                    self.ticks = 0
+                    waited = 0
+                if stop or self.bot.gear_close:
                     self.running = False
-                self.ticks += math.ceil(to_wait / self.min_delay)
+                else:
+                    to_wait = min(self.min_delay, self.delay-waited)
+                    try:
+                        await asyncio.sleep(to_wait)
+                    except concurrent.futures.CancelledError:
+                        self.running = False
+                    self.ticks += math.ceil(to_wait / self.min_delay)
+        else:
+            self.ticks = 0
+            while self.running:
+                if (await self.tick()) or self.bot.gear_close:
+                    self.running = False
 
 class _StateTimerExitState(AsyncState):
     "State Timer Exit State. Cause StateTimer to finally finish."
@@ -368,7 +378,7 @@ def run():
     class _StateTimerWithClose(StateTimer):
         async def wait_for_ready_start(self):
             await super().wait_for_ready_start()
-            self.bot.loop.create_task(self.bot.close())
+            self.submit_coro(self.bot.close())
             print('Close created.')
     multi_speed_clock = _StateTimerWithClose(mr_bot, 'MultiSpeedClock', 0.5)
     # Define async state to just wait and then change state.
