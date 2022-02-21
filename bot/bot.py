@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.5'
+__version__ = '0.3.6'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 5
+__ver_patch__ = 6
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -321,7 +321,7 @@ class PingState(gears.AsyncState):
         "Ping server. If failure, self.falied = True and if exceptions, save."
         try:
             json_data, ping = await self.machine.server.async_status()
-        except Exception as ex:
+        except Exception as ex:# pylint: disable=broad-except
             self.exit_ex = f'`A {type(ex).__name__} Exception Has Occored'
             if ex.args:
                 sargs = list(map(str, ex.args))
@@ -401,7 +401,7 @@ class WaitRestartState(gears.AsyncState):
         "Attempt to talk to server."
         try:
             self.ping = await self.machine.server.async_ping()
-        except Exception:
+        except Exception:# pylint: disable=broad-except
             pass
         else:
             return True
@@ -462,7 +462,7 @@ class GuildServerPinger(gears.StateTimer):
             self.server = mc.Server.lookup(config['address'])
             try:
                 await super().start()
-            except Exception:
+            except Exception:# pylint: disable=broad-except
                 log_active_exception(self.bot.logpath)
             finally:
                 await self.channel.send('Server pinger stopped.')
@@ -483,10 +483,12 @@ async def send_command_list(commands:dict, name:str, channel) -> str:
     await channel.send(text)
     await send_over_2000(channel.send, commands)
 
-class StatusBot(discord.Client, gears.BaseBot):
+class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public-methods,too-many-instance-attributes
     "StatusBot needs prefix, eventloop, and any arguments to pass to discord.Client."
-    def __init__(self, prefix:str, *args, loop=asyncio.get_event_loop(), **kwargs):
+    def __init__(self, prefix:str, loop, *args, **kwargs):
         self.loop = loop
+        if 'loop' in kwargs:
+            del kwargs['loop']
         discord.Client.__init__(self, *args, loop=self.loop, **kwargs)
         self.stopped = Event()
         self.updating = Lock()
@@ -522,6 +524,9 @@ class StatusBot(discord.Client, gears.BaseBot):
     def gear_close(self):
         "Return True if gears should close."
         return self.stopped.is_set() or self.is_closed()
+
+    async def wait_ready(self) -> None:
+        await self.wait_until_ready()
 
     def get_guild_config_file(self, guildid:int) -> str:
         "Return the path to the config json file for a ceartain guild id."
@@ -673,7 +678,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             replaced.append(str(item))
         return replaced
 
-    async def getmyid(self, message) -> None:
+    async def getmyid(self, message) -> None:# pylint: disable=no-self-use
         "Tell the author of the message their user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
         return
@@ -697,7 +702,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                 with open(filename, mode='wb') as favicon_file:
                     favicon_file.write(data)
                     favicon_file.close()
-            except binascii.Error as ex:
+            except binascii.Error:
                 print('Encountered error decoding base64 string for favicon.')
 
     async def getfavicon(self, message) -> None:
@@ -723,7 +728,7 @@ class StatusBot(discord.Client, gears.BaseBot):
             if pinger.active_state.name == 'ping':
                 lastdict = pinger.last_json
                 if 'favicon' in lastdict:
-                    favicon = lastdict['favicon']
+##                    favicon = lastdict['favicon']
                     lastdict['favicon'] = '<base64 image data>'
                 msg = json.dumps(lastdict, sort_keys=True, indent=2)
                 await message.channel.send('Last received json message:')
@@ -806,7 +811,7 @@ class StatusBot(discord.Client, gears.BaseBot):
 ##        return (__ver_major__, __ver_minor__, __ver_patch__)
         return tuple(map(int, version.strip().split('.')))
 
-    async def getonlinevers(self, message) -> tuple:
+    async def getonlinevers(self, message) -> tuple:# pylint: disable=no-self-use
         "Get online version, tell user in message.channel, and return said version as tuple."
         # Get github version string
         version = await get_github_file('version.txt')
@@ -839,7 +844,7 @@ class StatusBot(discord.Client, gears.BaseBot):
                 try:
                     response = await get_github_file('files.json')
                     paths = tuple(update.get_paths(json.loads(response)))
-                except Exception:
+                except Exception:# pylint: disable=broad-except
                     # On failure, tell them we can't read file.
                     await message.channel.send('Could not read file list. Aborting update.')
                     self.updating.release()
@@ -865,7 +870,6 @@ class StatusBot(discord.Client, gears.BaseBot):
             self.updating.release()
             return
         await message.channel.send('You do not have permission to run this command.')
-        return
 
     async def getoption_guild(self, message) -> None:
         "Send message with value of option given in this guild's config."
@@ -1251,7 +1255,7 @@ or set DISCORD_TOKEN environment variable.''')
         return
     print('\nStarting bot...')
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     intents = discord.Intents(
         dm_messages = True,
         guild_messages = True,

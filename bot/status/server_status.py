@@ -42,6 +42,7 @@ def try_x_times(times: int=3):
 
 class Server:
     'Server class talks to minecraft servers.'
+    __slots__ = ('host', 'port')
     def __init__(self, host:str, port:int=25565):
         'Requires a host and a port.'
         self.host = host
