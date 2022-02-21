@@ -477,8 +477,9 @@ class SocketConnection(BaseSyncConnection):
     
     def close(self) -> None:
         "Close self."
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+        if self.socket is not None:# If initialized
+            self.socket.shutdown(socket.SHUT_RDWR)
+            self.socket.close()
     
     def __del__(self) -> None:
         "Shutdown and Close self.socket."
@@ -600,9 +601,9 @@ class UDPAsyncSocketConnection(BaseAsyncConnection):
     
     def close(self) -> None:
         "Close self.stream"
-##        self.stream.socket.shutdown(socket.SHUT_RDWR)
-##        self.stream.socket.close()
         if self.stream is not None:# If initialized
+##            self.stream.socket.shutdown(socket.SHUT_RDWR)
+##            self.stream.socket.close()
             self.stream.close()
     
     def __del__(self) -> None:
