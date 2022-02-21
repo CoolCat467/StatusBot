@@ -563,7 +563,8 @@ class TCPAsyncSocketConnection(BaseAsyncReadSyncWriteConnection):
     
     def close(self) -> None:
         "Close self.writer."
-        self.writer.close()
+        if self.writer is not None:# If initialized
+            self.writer.close()
     
     def __del__(self) -> None:
         "Close self."
