@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.6'
+__version__ = '0.3.7'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 6
+__ver_patch__ = 7
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -64,14 +64,14 @@ AZLOW = AZUP.lower()
 NUMS = '0123456789'
 
 
-def write_file(filename:str, data:str) -> None:
+def write_file(filename: str, data: str) -> None:
     "Write data to file <filename>."
     filename = os.path.abspath(filename)
     with open(filename, 'w', encoding='utf-8') as wfile:
         wfile.write(data)
         wfile.close()
 
-def append_file(filename:str, data:str) -> None:
+def append_file(filename: str, data: str) -> None:
     "Add data to file <filename>."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
@@ -81,7 +81,7 @@ def append_file(filename:str, data:str) -> None:
     else:
         write_file(filename, data)
 
-def read_file(filename:str) -> Union[str, None]:
+def read_file(filename: str) -> Union[str, None]:
     "Read data from file <filename>. Return None if file does not exist."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
@@ -91,7 +91,7 @@ def read_file(filename:str) -> Union[str, None]:
         return data
     return None
 
-def read_json(filename:str) -> Union[dict, None]:
+def read_json(filename: str) -> Union[dict, None]:
     "Return json loads of filename read. Returns None if filename not exists."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
@@ -105,7 +105,7 @@ def read_json(filename:str) -> Union[dict, None]:
         return data
     return None
 
-def write_json(filename:str, dictionary:dict, indent:int=2) -> None:
+def write_json(filename: str, dictionary: dict, indent: int=2) -> None:
     "Write dicitonary as json to filename."
     filename = os.path.abspath(filename)
     with open(filename, 'w', encoding='utf-8') as wfile:
@@ -114,10 +114,10 @@ def write_json(filename:str, dictionary:dict, indent:int=2) -> None:
         finally:
             wfile.close()
 
-def split_time(seconds:int) -> list:
+def split_time(seconds: int) -> list:
     "Split time into decades, years, months, weeks, days, hours, minutes, and seconds."
     seconds = int(seconds)
-    def mod_time(sec:int, num:int) -> tuple:
+    def mod_time(sec: int, num: int) -> tuple:
         "Return number of times sec divides equally by number, then remainder."
         smod = sec % num
         return int((sec - smod) // num), smod
@@ -146,7 +146,7 @@ def split_time(seconds:int) -> list:
         ret.append(edivs)
     return ret
 
-def combine_and(data:list) -> str:
+def combine_and(data: list) -> str:
     "Join values of text, and have 'and' with the last one properly."
     data = list(data)
     if len(data) >= 2:
@@ -155,7 +155,7 @@ def combine_and(data:list) -> str:
         return ', '.join(data)
     return ' '.join(data)
 
-def format_time(seconds:int, single_title_allowed:bool=False) -> str:
+def format_time(seconds: int, single_title_allowed: bool=False) -> str:
     "Returns time using the output of split_time."
     times = ('eons', 'eras', 'epochs', 'ages', 'millenniums',
              'centuries', 'decades', 'years', 'months', 'weeks',
@@ -175,15 +175,15 @@ def format_time(seconds:int, single_title_allowed:bool=False) -> str:
         data.append(str(value)+' '+title)
     return combine_and(data)
 
-def except_chars(text:str, valid:str=AZUP+AZLOW+NUMS+'.:-') -> str:
+def except_chars(text: str, valid: str=AZUP+AZLOW+NUMS+'.:-') -> str:
     "Return every character in text that is also in valid string."
     return ''.join(i for i in text if i in valid)
 
-def parse_args(string:str, ignore:int=0, sep:str=' ') -> list:
+def parse_args(string: str, ignore: int=0, sep: str=' ') -> list:
     "Return a list of arguments by splitting string by sep, ommiting first ignore args."
     return string.split(sep)[ignore:]
 
-def wrap_list_values(items:tuple, wrap:str='`') -> list:
+def wrap_list_values(items:tuple, wrap: str='`') -> list:
     "Wrap all items in list of strings with wrap. Ex. ['cat'] -> ['`cat`']"
     return [wrap+str(i)+wrap for i in iter(items)]
 
@@ -201,7 +201,7 @@ def log_active_exception(logpath, extra=None) -> None:
         "Fake file class implementing write attribute."
         def __init__(self):
             self.data = []
-        def write(self, value:str) -> None:
+        def write(self, value: str) -> None:
             "Append value to data."
             self.data.append(value)
         def getdata(self) -> str:
@@ -216,8 +216,8 @@ def log_active_exception(logpath, extra=None) -> None:
     print(msg)
     append_file(logpath, msg)
 
-async def send_over_2000(send_func, text:str, header='', wrap_with:str='',
-                         replace_existing_wrap:bool=True) -> None:
+async def send_over_2000(send_func, text: str, header='', wrap_with: str='',
+                         replace_existing_wrap: bool=True) -> None:
     "Use send_func to send text in segments over 2000 characters by"\
     "splitting it into multiple messages."
     send = str(text)
@@ -249,7 +249,7 @@ async def send_over_2000(send_func, text:str, header='', wrap_with:str='',
         await send_func(part)
     return None
 
-async def get_github_file(path:str, timeout:int=10) -> str:
+async def get_github_file(path: str, timeout: int=10) -> str:
     "Return text from github file in this project decoded as utf-8"
     file = await update.get_file(__title__, path, __author__, BRANCH, timeout)
     return file.decode('utf-8')
@@ -278,7 +278,7 @@ class PingState(gears.AsyncState):
         joined = tuple(players.difference(self.machine.last_ping))
         left = tuple(self.machine.last_ping.difference(players))
 
-        def users_mesg(action:str, users:list) -> str:
+        def users_mesg(action: str, users: list) -> str:
             "Returns [{action}]: {users}"
             text = f'[{action}]:\n'
             text += combine_and(wrap_list_values(users, '`'))
@@ -379,7 +379,7 @@ class PingState(gears.AsyncState):
 class WaitRestartState(gears.AsyncState):
     "State where we wait for server to restart."
     __slots__ = 'ignore_ticks', 'success', 'ticks', 'ping'
-    def __init__(self, ignore_ticks:int):
+    def __init__(self, ignore_ticks: int):
         super().__init__('await_restart')
         self.ignore_ticks = ignore_ticks
         self.success = None
@@ -431,7 +431,7 @@ class GuildServerPinger(gears.StateTimer):
     __slots__ = 'guildid', 'server', 'last_ping', 'last_json', 'last_delay', 'channel'
     tickspeed = 60
     waitticks = 5
-    def __init__(self, bot:discord.Client, guildid:int) -> None:
+    def __init__(self, bot:discord.Client, guildid: int) -> None:
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guildid = guildid
         super().__init__(bot, self.guildid, self.tickspeed)
@@ -470,12 +470,12 @@ class GuildServerPinger(gears.StateTimer):
             await self.channel.send('No address for this guild defined, pinger not started.')
         return None
 
-def get_valid_options(valid:list, wrap:str='`') -> str:
+def get_valid_options(valid: list, wrap: str='`') -> str:
     "Return string of ' Valid options are: {valid}' but with pretty formatting."
     validops = combine_and(wrap_list_values(valid, wrap))
     return f' Valid options are: {validops}.'
 
-async def send_command_list(commands:dict, name:str, channel) -> str:
+async def send_command_list(commands: dict, name: str, channel) -> str:
     "Send message on channel telling user about all valid name commands."
     sort = sorted(commands.keys(), reverse=True)
     commands = '\n'.join(wrap_list_values(sort, '`'))
@@ -485,7 +485,7 @@ async def send_command_list(commands:dict, name:str, channel) -> str:
 
 class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public-methods,too-many-instance-attributes
     "StatusBot needs prefix, eventloop, and any arguments to pass to discord.Client."
-    def __init__(self, prefix:str, loop, *args, **kwargs):
+    def __init__(self, prefix: str, loop, *args, **kwargs):
         self.loop = loop
         if 'loop' in kwargs:
             del kwargs['loop']
@@ -528,7 +528,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def wait_ready(self) -> None:
         await self.wait_until_ready()
 
-    def get_guild_config_file(self, guildid:int) -> str:
+    def get_guild_config_file(self, guildid: int) -> str:
         "Return the path to the config json file for a ceartain guild id."
         return os.path.join(self.rootdir, 'config', 'guilds', str(guildid)+'.json')
 
@@ -536,7 +536,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         "Return the path to the config json file for all DMs."
         return os.path.join(self.rootdir, 'config', 'dms.json')
 
-    def get_guild_config(self, guildid:int) -> dict:
+    def get_guild_config(self, guildid: int) -> dict:
         "Return a dictionary from the json read from guild config file."
         guildfile = self.get_guild_config_file(guildid)
         guildconfig = read_json(guildfile)
@@ -556,17 +556,17 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             dmconfig = {}
         return dmconfig
 
-    def write_guild_config(self, guildid:int, config:dict) -> None:
+    def write_guild_config(self, guildid: int, config: dict) -> None:
         "Write guild config file from config dictionary."
         guildfile = self.get_guild_config_file(guildid)
         write_file(guildfile, json.dumps(config, indent=2))
 
-    def write_dm_config(self, config:dict) -> None:
+    def write_dm_config(self, config: dict) -> None:
         "Write DMs config file from config dictionary."
         dmfile = self.get_dm_config_file()
         write_file(dmfile, json.dumps(config, indent=2))
 
-    def guess_guild_channel(self, gid:int):
+    def guess_guild_channel(self, gid: int):
         "Guess guild channel and return channel."
         guild = self.get_guild(gid)
         config = self.get_guild_config(gid)
@@ -591,7 +591,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 return member
         return
 
-    async def add_guild_pinger(self, gid:int, force_reset:bool=False) -> str:
+    async def add_guild_pinger(self, gid: int, force_reset: bool=False) -> str:
         "Create server pinger for guild if not exists. Return 'started', 'restarted', or 'none'."
         if not gid in self.gears:
             self.add_gear(GuildServerPinger(self, gid))
@@ -604,7 +604,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             return 'restarted'
         return 'none'
 
-    async def eval_guild(self, guildid:int, force_reset:bool=False) -> int:
+    async def eval_guild(self, guildid: int, force_reset: bool=False) -> int:
         "(Re)Start guild pinger if able. Otherwise tell them to change settings."
         guildconfig = self.get_guild_config(guildid)
         channel = self.guess_guild_channel(guildid)
@@ -622,7 +622,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                                f'Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
 
-    async def eval_guilds(self, force_reset:bool=False) -> list:
+    async def eval_guilds(self, force_reset: bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
         coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
         return await asyncio.gather(*coros)
@@ -657,7 +657,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         await self.change_presence(status=discord.Status.online, activity=act)
         return
 
-    async def get_user_name(self, uid:int, getmember=None) -> Union[str, None]:
+    async def get_user_name(self, uid: int, getmember=None) -> Union[str, None]:
         "Return the name of user with id <uid>."
         if getmember is None:
             getmember = self.get_user
@@ -683,7 +683,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         await message.channel.send(f'Your user id is `{message.author.id}`.')
         return
 
-    async def save_favicon(self, guildid:int) -> None:
+    async def save_favicon(self, guildid: int) -> None:
         "Save favicon image to favicon folder for this guild's server"
         if guildid in self.gears:
             pinger = self.gears[guildid]
@@ -820,7 +820,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         # Make it tuple and return it
         return tuple(map(int, version.strip().split('.')))
 
-    async def update(self, message, timeout:int=20) -> None:
+    async def update(self, message, timeout: int=20) -> None:
         "Preform update from github."
         if self.stopped.is_set():
             await message.channel.send(
@@ -938,21 +938,18 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def help_guild(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
         await send_command_list(self.gcommands, 'Guild', message.channel)
-        return
 
     async def help_dm(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
         await send_command_list(self.dcommands, 'DM', message.channel)
-        return
 
-    async def refresh(self, message, force_reset:bool=False) -> None:
+    async def refresh(self, message, force_reset: bool=False) -> None:
         "Re-evaluate guild, then tell them it happened."
         if force_reset:
             await message.channel.send('Replacing server pinger might take a bit, '\
                                        'we have to let the old one realize it should stop.')
         await self.eval_guild(message.channel.guild.id, force_reset)
         await message.channel.send('Guild has been re-evaluated.')
-        return
 
     # @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
     async def setoption_guild(self, message) -> None:
@@ -1114,7 +1111,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
         return
 
-    async def process_command_message(self, message, mode:str='guild') -> None:
+    async def process_command_message(self, message, mode: str='guild') -> None:
         "Process new command message. Calls self.command[command](message)."
         err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # 1 if it's guild, 0 if dm.
@@ -1161,8 +1158,10 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     # Intents.guilds
     async def on_guild_join(self, guild) -> None:
         "Evaluate guild."
+        msg = f'Guild gained: {guild.name} (id: {guild.id})'
+        print(msg)
+        append_file(self.logpath, '#'*8+msg+'#'*8)
         await self.eval_guild(guild.id, True)
-        return
 
 ##    # Intents.members
 ##    async def on_member_join(self, member) -> None:
@@ -1177,12 +1176,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     # Intents.guilds
     async def on_guild_remove(self, guild) -> None:
         "Remove config file for guild we are no longer in."
-        msg = f'Guild lost: {guild.id}'
+        msg = f'Guild lost: {guild.name} (id: {guild.id})\nDeleting guild settings'
         print(msg)
         append_file(self.logpath, '#'*8+msg+'#'*8)
         os.remove(self.get_guild_config_file(guild.id))
-        return None
-
+    
     # Intents.dm_messages, Intents.guild_messages, Intents.messages
     async def on_message(self, message) -> None:
         "React to any new messages."
