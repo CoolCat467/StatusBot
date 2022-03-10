@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.7'
+__version__ = '0.3.8'
 __ver_major__ = 0
 __ver_minor__ = 3
-__ver_patch__ = 7
+__ver_patch__ = 8
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -421,9 +421,12 @@ class WaitRestartState(gears.AsyncState):
         return None
 
     async def exit_actions(self) -> None:
-        "Tell guild connection re-established."
-        await self.machine.channel.send(
+        if self.success:
+            await self.machine.channel.send(
             f'Connection to server re-established with a ping of `{self.ping}ms`.')
+        else:
+            await self.machine.channel.send(
+            'Could not re-establish connection to server.')
         return None
 
 class GuildServerPinger(gears.StateTimer):
@@ -431,7 +434,7 @@ class GuildServerPinger(gears.StateTimer):
     __slots__ = 'guildid', 'server', 'last_ping', 'last_json', 'last_delay', 'channel'
     tickspeed = 60
     waitticks = 5
-    def __init__(self, bot:discord.Client, guildid: int) -> None:
+    def __init__(self, bot: discord.Client, guildid: int) -> None:
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guildid = guildid
         super().__init__(bot, self.guildid, self.tickspeed)
@@ -526,6 +529,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         return self.stopped.is_set() or self.is_closed()
 
     async def wait_ready(self) -> None:
+        "Define wait for gears.BaseBot"
         await self.wait_until_ready()
 
     def get_guild_config_file(self, guildid: int) -> str:
@@ -589,7 +593,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         for member in members:
             if not member is None:
                 return member
-        return
 
     async def add_guild_pinger(self, gid: int, force_reset: bool=False) -> str:
         "Create server pinger for guild if not exists. Return 'started', 'restarted', or 'none'."
@@ -681,29 +684,28 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def getmyid(self, message) -> None:# pylint: disable=no-self-use
         "Tell the author of the message their user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
-        return
 
     async def save_favicon(self, guildid: int) -> None:
         "Save favicon image to favicon folder for this guild's server"
-        if guildid in self.gears:
-            pinger = self.gears[guildid]
-            if pinger.active_state.name != 'ping':
-                return
-            if not 'favicon' in pinger.last_json:
-                return
-            favicon_data = pinger.last_json['favicon']
-            if not favicon_data.startswith('data:image/png;base64,'):
-                return
-            favicon_data = favicon_data.split(',')[1]
-            try:
-                data = base64.b64decode(favicon_data)
-                filename = os.path.join(self.rootdir, 'favicon', f'{guildid}.png')
-                filename = os.path.abspath(filename)
-                with open(filename, mode='wb') as favicon_file:
-                    favicon_file.write(data)
-                    favicon_file.close()
-            except binascii.Error:
-                print('Encountered error decoding base64 string for favicon.')
+        if guildid not in self.gears:
+            return
+        pinger = self.gears[guildid]
+        if pinger.active_state.name != 'ping' or not 'favicon' in pinger.last_json:
+            return
+        favicon_data = pinger.last_json['favicon']
+        if not favicon_data.startswith('data:image/png;base64,'):
+            return
+        favicon_data = favicon_data.split(',')[1]
+        try:
+            data = base64.b64decode(favicon_data)
+            filename = os.path.abspath(
+                os.path.join(self.rootdir, 'favicon', f'{guildid}.png')
+            )
+            with open(filename, mode='wb') as favicon_file:
+                favicon_file.write(data)
+                favicon_file.close()
+        except binascii.Error:
+            print('Encountered error decoding base64 string for favicon.')
 
     async def getfavicon(self, message) -> None:
         "Post favicon for server"
@@ -728,7 +730,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             if pinger.active_state.name == 'ping':
                 lastdict = pinger.last_json
                 if 'favicon' in lastdict:
-##                    favicon = lastdict['favicon']
                     lastdict['favicon'] = '<base64 image data>'
                 msg = json.dumps(lastdict, sort_keys=True, indent=2)
                 await message.channel.send('Last received json message:')
@@ -739,7 +740,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
-        return
 
     async def getping(self, message) -> None:
         "Tell the author of the message the bot's latency to the guild's server."
@@ -759,7 +759,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 f'Cannot connect to server at this time, try again in {delay}.')
             return
         await message.channel.send('Server pinger is not running for this guild.')
-        return
 
     async def getonline(self, message) -> None:
         "Tell author of the message the usernames of the players connected to the guild's server."
