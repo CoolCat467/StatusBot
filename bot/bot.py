@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.4.0'
+__version__ = '0.4.1'
 __ver_major__ = 0
 __ver_minor__ = 4
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -948,7 +948,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             args = parse_args(message.clean_content)
             if len(args) > 2:
                 config = self.get_guild_config(message.guild.id)
-                if args and args[2].force() == 'force':
+                if args and args[2].lower() == 'force':
                     if auid in {OWNER_ID, message.guild.owner}:
                         force_reset = True
                     elif 'forcerefreshusers' in config:
