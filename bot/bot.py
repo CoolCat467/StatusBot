@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.3.8'
+__version__ = '0.4.0'
 __ver_major__ = 0
-__ver_minor__ = 3
-__ver_patch__ = 8
+__ver_minor__ = 4
+__ver_patch__ = 0
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -932,7 +932,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send('Invalid option.'+validops)
             return
         await message.channel.send('You do not have permission to view the values of any options.')
-        return
 
     async def help_guild(self, message) -> None:
         "Send a message on message.channel telling user about all valid options."
@@ -944,8 +943,22 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def refresh(self, message, force_reset: bool=False) -> None:
         "Re-evaluate guild, then tell them it happened."
+        if not force_reset:
+            auid = message.author.id
+            args = parse_args(message.clean_content)
+            if len(args) > 2:
+                config = self.get_guild_config(message.guild.id)
+                if args and args[2].force() == 'force':
+                    if auid in {OWNER_ID, message.guild.owner}:
+                        force_reset = True
+                    elif 'forcerefreshusers' in config:
+                        if auid in config['forcerefreshusers']:
+                            force_reset = True
+                    else:
+                        await message.channel.send('No one except guild owner is allowed to force refreshes')
+        
         if force_reset:
-            await message.channel.send('Replacing server pinger might take a bit, '\
+            await message.channel.send('Replacing the guild server pinger could take a bit, '\
                                        'we have to let the old one realize it should stop.')
         await self.eval_guild(message.channel.guild.id, force_reset)
         await message.channel.send('Guild has been re-evaluated.')
@@ -960,13 +973,13 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         # If message author is either bot owner or guild owner,
         if auid in {OWNER_ID, message.guild.owner}:
             # give them access to everything
-            valid += ['setoptionusers', 'address', 'channel']
+            valid += ['setoptionusers', 'address', 'channel', 'forcerefreshusers']
         # If not, if setoptionusers is defined in config,
         elif 'setoptionusers' in config:
             # If message author is allowed to set options,
             if auid in config['setoptionusers']:
                 # give them access to almost everything.
-                valid += ['address', 'channel']
+                valid += ['address', 'channel', 'forcerefreshusers']
 
         if not valid:
             await message.channel.send(
@@ -986,23 +999,28 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             return
 
         if len(args) < 2:
-            msg = f'Insufficiant arguments for {option}.'
+            msg = f'Insufficiant arguments for `{option}`.'
             base = '`clear`, a discord id, or the username of a new user to add to the '
             arghelp = {'address': 'Server address of a java edition minecraft server.',
                        'channel': 'Name of the discord channel to send join-leave messages to.',
-                       'setoptionusers': base+'permission list.'}
+                       'setoptionusers': base+'set option permission list.',
+                       'forcerefreshusers': base+'force reset permission list.'}
             msg += '\nArgument required: '+arghelp[option]
             await message.channel.send(msg)
             return
 
         value = except_chars(args[1], AZUP+AZLOW+NUMS+'.:-#')
+        if not value:
+            await message.channel.send('Value to set must not be blank!')
+            return
+        
         if option == 'channel':
             channelnames = [chan.name for chan in message.guild.text_channels]
             if not args[1] in channelnames:
                 await message.channel.send('Channel not found in this guild.')
                 return
             value = args[1]
-        elif option == 'setoptionusers':
+        elif option in {'setoptionusers', 'forcerefreshusers'}:
             if value.lower() == 'clear':
                 value = []
             else:
@@ -1037,7 +1055,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
         force_reset = option in ('address', 'channel')
         await self.refresh(message, force_reset)
-        return
 
     async def setoption_dm(self, message) -> None:
         "Set a config option. Send message in message.channel on falure."
@@ -1056,59 +1073,61 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         validops = get_valid_options(valid)
 
         if not args:
-            if valid:
-                await message.channel.send('Invalid option.'+validops)
-                return
-            await message.channel.send('You do not have permission to set any options.')
+            await message.channel.send('Invalid option.'+validops)
             return
 
         option = args[0].lower()
 
-        if option in valid:
-            if len(args) < 2:
-                msg = f'Insufficiant arguments for {option}.'
-                base = '`clear`, a discord user id, or the username of a new user to add'\
-                       'to the permission list of users who can '
-                arghelp = {'stopusers': base+'stop the bot.',
-                           'updateusers': base+'update the bot.',
-                           'setoptionusers': base+'change stop and update permissions.'}
-                msg += '\nArgument required: '+arghelp[option]
-                await message.channel.send(msg)
-                return
-            value = args[1]
-            if value.lower() == 'clear':
-                value = []
-            else:
-                try:
-                    value = int(value)
-                except ValueError:
-                    # DANGER
-                    if not '#' in args[1]:
-                        await message.channel.send(
-                            'Username does not have discriminator (ex. #1234).')
-                        return
-                    member = await self.search_for_member_in_guilds(value)
-                    if member is None:
-                        await message.channel.send('User not found.')
-                        return
-                    value = member.id
-##                name = self.get_user(value)
-                name = await self.get_user_name(value)
-                if name is None:
+        if option not in valid:
+            await message.channel.send('Invalid option.'+validops)
+            return
+        
+        if len(args) < 2:
+            msg = f'Insufficiant arguments for {option}.'
+            base = '`clear`, a discord user id, or the username of a new user to add'\
+                   'to the permission list of users who can '
+            arghelp = {'stopusers': base+'stop the bot.',
+                       'updateusers': base+'update the bot.',
+                       'setoptionusers': base+'change stop and update permissions.'}
+            msg += '\nArgument required: '+arghelp[option]
+            await message.channel.send(msg)
+            return
+        value = args[1]
+        if not value:
+            await message.channel.send('Value to set must not be blank!')
+            return
+        if value.lower() == 'clear':
+            value = []
+        else:
+            try:
+                value = int(value)
+            except ValueError:
+                # DANGER
+                if not '#' in args[1]:
+                    await message.channel.send(
+                        'Username does not have discriminator (ex. #1234).')
+                    return
+                member = await self.search_for_member_in_guilds(value)
+                if member is None:
                     await message.channel.send('User not found.')
                     return
-                value = [value]
-                if option in config:
-                    if value[0] in config[option]:
-                        await message.channel.send(
-                            f'User `{name}` (id `{value[-1]}`) already in this list!')
-                        return
-                    value = config[option]+value
-                await message.channel.send(f'Adding user `{name}` (id `{value[-1]}`)')
-            config[option] = value
-            self.write_dm_config(config)
-            await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
-        return
+                value = member.id
+##                name = self.get_user(value)
+            name = await self.get_user_name(value)
+            if name is None:
+                await message.channel.send('User not found.')
+                return
+            value = [value]
+            if option in config:
+                if value[0] in config[option]:
+                    await message.channel.send(
+                        f'User `{name}` (id `{value[-1]}`) already in this list!')
+                    return
+                value = config[option]+value
+            await message.channel.send(f'Adding user `{name}` (id `{value[-1]}`)')
+        config[option] = value
+        self.write_dm_config(config)
+        await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
 
     async def process_command_message(self, message, mode: str='guild') -> None:
         "Process new command message. Calls self.command[command](message)."
