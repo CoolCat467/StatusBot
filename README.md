@@ -48,13 +48,18 @@ they entered the command in, except in the case that the channel does not suppor
 being written to.
 
 ## Commands
-As of version 0.3.1, the following describes StatusBot's commands.
+As of version 0.4.0, the following describes StatusBot's commands.
 
 ### In Guilds:
 `help` - Display all of StatusBot's valid guild commands.
 
-`refresh` - Refresh, or re-evaluate, the guild that the command message is sent in.
+`refresh [force]` - Refresh, or re-evaluate, the guild that the command message is sent in.
  Restarts server pinger if guild `address` value is set.
+ 
+ If 'force' is given as an additional argument and user is either
+ the guild owner, StatusBot's owner, or a user in the `forcerefreshusers` list,
+ then you can force the guild server pinger to restart. Otherwise it only restarts if
+ it needs too.
 
 `setoption <name> <value>` - Set option <name> to <value> for the guild you are currently
   talking to StatusBot in.
@@ -65,6 +70,8 @@ As of version 0.3.1, the following describes StatusBot's commands.
    `address` - Address of the java editon minecraft server StatusBot should monitor
    
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
+   
+   `forcerefreshusers` - List of user IDs able to preform a force refresh.
   
   If you are either StatusBot's owner or you are the guild owner, you modify the
   `setoptionusers` list.
