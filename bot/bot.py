@@ -56,9 +56,7 @@ import gears
 load_dotenv()
 TOKEN: Final = os.getenv('DISCORD_TOKEN')
 
-###########
-BOT_PREFIX = '!status2'
-###########
+BOT_PREFIX = '!status'
 OWNER_ID = 344282497103691777
 # Branch is branch of GitHub repository to update from
 BRANCH = 'master'
@@ -643,9 +641,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def eval_guilds(self, force_reset: bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        #################
-        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds if __author__ in guild.name)
-        #################
+        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
         return await asyncio.gather(*coros)
 
     # Default, not affected by intents.
@@ -670,9 +666,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         guildnames = []
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
-        #################
-        guildnames = [x for x in guildnames if __author__ in x]
-        #################
         spaces = max(len(name) for name in guildnames)
         print('\n'+'\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
@@ -1275,10 +1268,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} is shutting down.')
             return
-##        coros = (tell_guild_shutdown(guild) for guild in self.guilds)
-        ################
-        coros = (tell_guild_shutdown(guild) for guild in self.guilds if __author__ in guild.name)
-        ################
+        coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
         
         print('Waiting to aquire updating lock...\n')
