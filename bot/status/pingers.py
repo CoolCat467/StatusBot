@@ -25,7 +25,7 @@ class ServerPinger:
         port: int = 0,
         version: int = 47,
         ping_token: int = None,
-    ):
+    ) -> None:
         "Requires connection object. Other values optional, but makes better."
         if ping_token is None:
             ping_token = randint(0, (1 << 63) - 1)
@@ -35,7 +35,7 @@ class ServerPinger:
         self.port = port
         self.ping_token = ping_token
     
-    def handshake(self):
+    def handshake(self) -> None:
         "Preform handshake by writing buffer on self.connection."
         packet = Connection()
         packet.write_varint(0)
@@ -46,14 +46,14 @@ class ServerPinger:
         
         self.connection.write_buffer(packet)
     
-    def _read_status_request(self):
+    def _read_status_request(self) -> None:
         "Send request status packet to server."
         request = Connection()
         request.write_varint(0)  # Request status
         self.connection.write_buffer(request)
     
     @staticmethod
-    def _read_status_process_response(response) -> dict:
+    def _read_status_process_response(response: Connection) -> dict:
         "Read response and return read value."
         if response.read_varint() != 0:
             raise IOError('Received invalid status response packet.')
@@ -63,15 +63,15 @@ class ServerPinger:
             raise IOError('Received invalid JSON') from ex
         return {}
     
-    def read_status(self) -> str:
-        """Read status and return json response. Raises IOError."""
+    def read_status(self) -> dict:
+        "Read status and return json response. Raises IOError."
         self._read_status_request()
         
         response = self.connection.read_buffer()
         return self._read_status_process_response(response)
     
     def _test_ping_request(self) -> datetime.datetime:
-        """Send test ping request. Return time sent at."""
+        "Send test ping request. Return time sent at."
         request = Connection()
         request.write_varint(1)  # Test ping
         request.write_long(self.ping_token)
@@ -79,7 +79,11 @@ class ServerPinger:
         self.connection.write_buffer(request)
         return sent
     
-    def _test_ping_process_response(self, response, sent, received) -> float:
+    def _test_ping_process_response(self,
+                                    response: Connection,
+                                    sent: datetime.datetime,
+                                    received: datetime.datetime
+                                    ) -> float:
         "Read response, make sure token is good, return delta in ms. IOError on failure."
         if response.read_varint() != 1:
             raise IOError('Received invalid ping response packet.')
@@ -87,7 +91,7 @@ class ServerPinger:
         if received_token != self.ping_token:
             msg = 'Received mangled ping response packet (expected token '
             raise IOError(
-                mgs+f'{self.ping_token}, received {received_token})'
+                msg+f'{self.ping_token}, received {received_token})'
             )
         
         delta = received - sent
@@ -104,13 +108,13 @@ class ServerPinger:
 
 class AsyncServerPinger(ServerPinger):
     "Asynchronous Server Pinger class."
-    async def read_status(self) -> str:
+    async def read_status(self) -> dict:# type: ignore
         self._read_status_request()
         
         response = await self.connection.read_buffer()
         return self._read_status_process_response(response)
     
-    async def test_ping(self) -> float:
+    async def test_ping(self) -> float:# type: ignore
         sent = self._test_ping_request()
         
         response = await self.connection.read_buffer()

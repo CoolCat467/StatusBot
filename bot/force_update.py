@@ -8,10 +8,10 @@
 
 __title__ = 'Force update'
 __author__ = 'CoolCat467'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 from os.path import split, abspath
 import asyncio
@@ -21,14 +21,14 @@ import update
 
 ROOTDIR = split(abspath(__file__))[0]
 
-async def get_github_file(path:str, timeout:int=10) -> str:
-    "Return text from github file in this project decoded as utf-8"
+async def get_github_file(path: str, timeout: int=10) -> str:
+    "Return text from GitHub file in this project decoded as utf-8"
     file = await update.get_file('StatusBot', path, __author__, 'master', timeout)
     return file.decode('utf-8')
 
 async def getonlinevers() -> tuple:
     "Return online version as tuple."
-    # Get github version string
+    # Get GitHub version string
     version = await get_github_file('version.txt')
     # Send message about it.
     print(f'Online version: {version}')
@@ -36,7 +36,7 @@ async def getonlinevers() -> tuple:
     return tuple(map(int, version.strip().split('.')))
 
 async def update_files(timeout: int=20) -> None:
-    "Preform update from github."
+    "Preform update from GitHub."
     # If we need update, get file list.
     print('Retrieving file list...')
     try:
@@ -47,7 +47,6 @@ async def update_files(timeout: int=20) -> None:
         print('Could not read file list. Aborting update.')
         return
     # Get max amount of time this could take.
-    maxtime = timeout*len(paths)
     # Tell user number of files we are updating.
     print(f'{len(paths)} files will now be updated.\n')
     # Update said files.
@@ -64,9 +63,6 @@ def run() -> None:
     finally:
         # cancel all lingering tasks
         loop.close()
-
-
-
 
 if __name__ == '__main__':
     print(f'{__title__} v{__version__}\nProgrammed by {__author__}.\n')

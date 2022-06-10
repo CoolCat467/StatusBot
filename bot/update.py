@@ -22,13 +22,13 @@ import async_timeout
 TIMEOUT = 10
 
 def get_address(user: str, repo: str, branch: str, path: str) -> str:
-    "Get raw github user content url of a specific file."
+    "Get raw GitHub user content URL of a specific file."
     return f'https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}'
 
 def is_new_ver_higher(current: tuple, newest: tuple) -> bool:
     "Return True if current version older than new version."
     # Turns out, tuples have built in comparison support.
-    # Exactly what we need lol. And it's better.
+    # Exactly what we need ha ha. And it's better.
     return tuple(current) < tuple(newest)
 ##    for old, new in zip(current, newest):
 ##        if old < new:
@@ -41,7 +41,7 @@ def is_new_ver_higher(current: tuple, newest: tuple) -> bool:
 def get_paths(jdict: dict) -> list:
     "Read dictionary and figure out paths of files we want to update."
     def read_dict(cdict: dict) -> list:
-        "Read a dictonary and return paths."
+        "Read a dictionary and return paths."
         paths = []
         for path in cdict:
             nxt = cdict[path]
@@ -60,7 +60,7 @@ def get_paths(jdict: dict) -> list:
     return read_dict(jdict)
 
 def make_dirpath_exist(filepath: str) -> None:
-    "Ensure full folder structure to filepath given exists. If not exists, creates it."
+    "Ensure full folder structure to file path given exists. If not exists, creates it."
     # Folder we want to ensure exists.
     folder = os.path.dirname(filepath)
     # If folder not exist
@@ -71,13 +71,13 @@ def make_dirpath_exist(filepath: str) -> None:
         os.mkdir(folder)
 
 async def download_coroutine(url: str, timeout: int=TIMEOUT, **sessionkwargs) -> bytes:
-    "Return content bytes found at url."
+    "Return content bytes found at URL."
     # Make a session with our event loop
     async with aiohttp.ClientSession(**sessionkwargs) as session:
         # Make sure we have a timeout, so that in the event of
         # network failures or something code doesn't get stuck
         async with async_timeout.timeout(timeout):
-            # Go to the url and get response
+            # Go to the URL and get response
             async with session.get(url) as response:
                 # Wait for our response
                 request_result = await response.content.read()
@@ -89,7 +89,7 @@ async def download_coroutine(url: str, timeout: int=TIMEOUT, **sessionkwargs) ->
 
 async def get_file(repo: str, path: str, user: str, branch: str='HEAD',
                    timeout: int=TIMEOUT, **sessionkwargs) -> bytes:
-    "Get a file from a github repository. Return data as bytes."
+    "Get a file from a GitHub repository. Return data as bytes."
     url = get_address(user, repo, branch, path)
     return await download_coroutine(url, timeout, **sessionkwargs)
 
@@ -112,7 +112,7 @@ async def update_file(basepath: str, repo: str, path: str, user: str,# pylint: d
 async def update_files(basepath: str, paths: tuple,# pylint: disable=R0913
                        repo: str, user: str, branch: str='HEAD',
                        timeout: int=TIMEOUT, **sessionkwargs) -> list:
-    "Update multiple files all from the same github repository. Return list of paths."
+    "Update multiple files all from the same GitHub repository. Return list of paths."
     urlbase = get_address(user, repo, branch, '')
     async def update_single(path):
         "Update a single file."

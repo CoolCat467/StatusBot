@@ -8,13 +8,13 @@
 
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 6
+__ver_patch__ = 7
 
 import math
-from typing import Union, Iterable
+from typing import Union, Iterable, Dict, Coroutine
 import asyncio
 import concurrent.futures
 
@@ -28,20 +28,19 @@ __all__ = ['State', 'AsyncState',
 class State:
     "Base class for states."
     __slots__ = ('name', 'machine')
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         "Initialize state with a name."
         self.name = name
         self.machine: 'StateMachine'
     
     def __str__(self) -> str:
-        "Return <{self.name} {classname}>."
+        "Return <{self.name} {class-name}>."
         return f'<{self.name} {self.__class__.__name__}>'
     
     def __repr__(self) -> str:
-        "Return str(self)."
+        "Return self as string."
         return str(self)
     
-    # pylint: disable=no-self-use
     def entry_actions(self) -> None:
         "Preform entry actions for this State."
         return None
@@ -59,22 +58,21 @@ class State:
         return None
 
 class AsyncState:
-    "Base class for asyncronous states."
+    "Base class for asynchronous states."
     __slots__ = ('name', 'machine')
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         "Initialize state with a name."
         self.name = name
         self.machine: 'AsyncStateMachine'
     
     def __str__(self) -> str:
-        "Return <{self.name} {classname}>."
+        "Return <{self.name} {class-name}>."
         return f'<{self.name} {self.__class__.__name__}>'
     
     def __repr__(self) -> str:
-        "Return str(self)."
+        "Return self as string."
         return str(self)
     
-    # pylint: disable=no-self-use
     async def entry_actions(self) -> None:
         "Preform entry actions for this State."
         return None
@@ -95,13 +93,13 @@ class StateMachine:
     "StateMachine class."
 ##    TypeError: multiple bases have instance lay-out conflict
 ##    __slots__ = 'states', 'active_state'
-    def __init__(self):
+    def __init__(self) -> None:
         "Initialize StateMachine."
-        self.states = {} # Stores the states
+        self.states: Dict[str, State] = {} # Stores the states
         self.active_state: Union[State, None] = None# The currently active state
     
     def __repr__(self) -> str:
-        "Return <{classname} {self.states}>"
+        "Return <{class-name} {self.states}>"
         text = f'<{self.__class__.__name__}'
         if hasattr(self, 'states'):
             text += f' {self.states}'
@@ -125,7 +123,7 @@ class StateMachine:
             raise ValueError(f'{state_name} is not a registered State.')
         del self.states[state_name]
     
-    def set_state(self, new_state_name:str) -> None:
+    def set_state(self, new_state_name: str) -> None:
         "Change states and preform any exit / entry actions."
         if not new_state_name in self.states:
             raise KeyError(f'"{new_state_name}" not found in internal states dictionary!')
@@ -151,16 +149,16 @@ class StateMachine:
         return None
 
 class AsyncStateMachine:
-    "Asyncronous State Machine class."
+    "Asynchronous State Machine class."
 ##    TypeError: multiple bases have instance lay-out conflict
 ##    __slots__ = 'states', 'active_state'
-    def __init__(self):
+    def __init__(self) -> None:
         "Initialize AsyncStateMachine."
-        self.states = {} # Stores the states
+        self.states: Dict[str, AsyncState] = {} # Stores the states
         self.active_state: Union[AsyncState, None] = None# The currently active state
     
     def __repr__(self) -> str:
-        "Return <{classname} {self.states}>"
+        "Return <{class-name} {self.states}>"
         text = f'<{self.__class__.__name__}'
         if hasattr(self, 'states'):
             text += f' {self.states}'
@@ -210,21 +208,21 @@ class AsyncStateMachine:
             await self.set_state(new_state_name)
 
 class Gear:
-    "Class that get's run by bots."
+    "Class that gets run by bots."
 ##    __slots__ = 'bot', 'name', 'running', 'stopped'
-    def __init__(self, bot: 'BaseBot', name: str):
+    def __init__(self, bot: 'BaseBot', name: str) -> None:
         "Store self.bot, and set self.running and self.stopped to False."
         self.bot = bot
         self.name = name
         self.running = False
         self.stopped = False
     
-    def gear_init(self) -> None:# pylint: disable=no-self-use
+    def gear_init(self) -> None:
         "Do whatever instance requires to start running. Must not stop bot."
         return None
     
-    def submit_coro(self, coro):
-        "Submit a coro as task for bot event loop to complete"
+    def submit_coro(self, coro: Coroutine) -> asyncio.Task:
+        "Submit a coroutine as task for bot event loop to complete"
         return self.bot.loop.create_task(coro)
     
     async def hault(self) -> None:
@@ -232,23 +230,23 @@ class Gear:
         self.running = False
         self.stopped = True
     
-    def gear_shutdown(self) -> None:# pylint: disable=no-self-use
-        "Deinitialize gear. Only called after it's been stopped. Must not stop bot."
+    def gear_shutdown(self) -> None:
+        "Shutdown gear. Only called after it's been stopped. Must not stop bot."
         return None
     
     def __repr__(self) -> str:
-        "Return <{classname}>"
+        "Return <{class-name}>"
         return f'<{self.__class__.__name__}>'
 
 class BaseBot:
     "Bot base class. Must initialize AFTER discord bot class."
     __slots__ = ('loop', 'gears')
-    def __init__(self, eventloop):
+    def __init__(self, eventloop: asyncio.AbstractEventLoop) -> None:
         self.loop = eventloop
-        self.gears = {}
+        self.gears: Dict[str, Gear] = {}
     
     def __repr__(self) -> str:
-        "Return <{classname}>"
+        "Return <{class-name}>"
         return f'<{self.__class__.__name__}>'
     
     def add_gear(self, new_gear: Gear) -> None:
@@ -260,7 +258,7 @@ class BaseBot:
         self.gears[new_gear.name] = new_gear
         self.gears[new_gear.name].gear_init()
     
-    def remove_gear(self, gear_name: Union[str, int]) -> None:
+    def remove_gear(self, gear_name: str) -> None:
         "Remove a gear from this bot."
         if gear_name in self.gears:
             if not self.gears[gear_name].stopped:
@@ -296,16 +294,16 @@ class BaseBot:
 class Timer(Gear):
     "Class that will run coroutine self.run every delay seconds."
 ##    __slots__ = 'delay', 'task', 'ticks'
-    min_delay: int = 1
-    def __init__(self, bot: BaseBot, name: str, delay: int=60) -> None:
-        "self.name = name. Delay is secconds."
+    min_delay: Union[int, float] = 1
+    def __init__(self, bot: BaseBot, name: str, delay: Union[int, float]=60) -> None:
+        "self.name = name. Delay is seconds."
         super().__init__(bot, name)
-        self.delay = max(0, int(delay))
+        self.delay = max(0, delay)
         self.task: asyncio.Task
         self.ticks = math.inf
     
     def gear_init(self) -> None:
-        "Create task in bot's event loop."
+        "Create task in the bot event loop."
         self.task = self.submit_coro(self.wait_for_ready_start())
     
     def on_stop(self) -> None:
@@ -337,7 +335,7 @@ class Timer(Gear):
             except Exception:# pylint: disable=broad-except
                 pass
         if not self.stopped:
-            async def wait_for_cancelled():
+            async def wait_for_cancelled() -> bool:
                 try:
                     if self.task is None:
                         return True
@@ -349,7 +347,7 @@ class Timer(Gear):
                 return True
             self.stopped = await wait_for_cancelled()
     
-    async def tick(self) -> bool:# pylint: disable=no-self-use
+    async def tick(self) -> bool:
         "Return False if Timer should continue running. Called every self.delay seconds."
         return True
     
@@ -381,7 +379,7 @@ class Timer(Gear):
 class StateTimerExitState(AsyncState):
     "State Timer Exit State. Cause StateTimer to finally finish."
     __slots__: tuple = tuple()
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__('Hault')
     
     async def check_conditions(self) -> None:
@@ -392,7 +390,7 @@ class StateTimer(Timer, AsyncStateMachine):
     """StateTimer is a StateMachine Timer, or a timer with different
        states it can switch in and out of."""
 ##    __slots__: tuple = tuple()
-    def __init__(self, bot: BaseBot, name: str, delay: int=1):
+    def __init__(self, bot: BaseBot, name: str, delay: Union[int, float]=1) -> None:
         AsyncStateMachine.__init__(self)
         Timer.__init__(self, bot, name, delay)
         
@@ -402,8 +400,8 @@ class StateTimer(Timer, AsyncStateMachine):
         "Return representation of self."
         return AsyncStateMachine.__repr__(self)
     
-    async def initialize_state(self) -> None:# pylint: disable=no-self-use
-        "In subclass, set initial asyncronous state."
+    async def initialize_state(self) -> None:
+        "In subclass, set initial asynchronous state."
 ##        await self.set_state('Hault')
         return None
     
@@ -421,7 +419,7 @@ class StateTimer(Timer, AsyncStateMachine):
     async def hault(self) -> None:
         await self.set_state('Hault')
         self.ticks = math.inf
-        async def wait_stop():
+        async def wait_stop() -> None:
             while self.running:
                 await asyncio.sleep(self.min_delay)
             while not self.stopped:
@@ -433,7 +431,7 @@ class StateTimer(Timer, AsyncStateMachine):
             pass
         await super().hault()
 
-def run():
+def run() -> None:
     "Run an example of this module."
     print('This is hacked example of StateTimer.')
     loop = asyncio.new_event_loop()
@@ -453,11 +451,11 @@ def run():
             self.submit_coro(self.bot.close())
             print('Close created.')
     multi_speed_clock = _StateTimerWithClose(mr_bot, 'MultiSpeedClock', 0.5)
-    # Define async state to just wait and then change state.
+    # Define asynchronous state to just wait and then change state.
     class WaitState(AsyncState):
         "Wait state example class"
         __slots__ = ('delay', 'next')
-        def __init__(self, delay: int, next_: str):
+        def __init__(self, delay: int, next_: str) -> None:
             super().__init__(f'wait_{delay}->{next_}')
             self.delay = delay
             self.next = next_
@@ -472,11 +470,11 @@ def run():
     # Register states with state timer instance
     multi_speed_clock.add_state(WaitState(3, 'Hault'))
     multi_speed_clock.add_state(WaitState(5, 'wait_3->Hault'))
-    # Tell mr. bot's loop to set the state of the state timer instance's state to the start one
+    # Tell Mr. bots loop to set the state of the state timer instance's state to the start one
     mr_bot.loop.run_until_complete(multi_speed_clock.set_state('wait_5->wait_3->Hault'))
-    # Add state timer insance as gear to mr bot
+    # Add state timer instance as gear to Mr bot
     mr_bot.add_gear(multi_speed_clock)
-    # Now run mr bot and their gears.
+    # Now run Mr bot and their gears.
     try:
         mr_bot.loop.run_forever()
     except KeyboardInterrupt:

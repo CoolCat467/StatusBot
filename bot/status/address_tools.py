@@ -6,7 +6,7 @@
 
 __all__ = ['ip_type', 'parse_address', 'lookup', 'find_ip']
 
-from typing import Union
+from typing import Union, Tuple, Optional
 import socket
 from urllib.parse import urlparse
 from ipaddress import ip_address
@@ -24,7 +24,7 @@ def ip_type(address: str) -> Union[int, None]:
     except ValueError:
         return None
 
-def parse_address(address: str) -> tuple:
+def parse_address(address: str) -> Tuple[str, Optional[int]]:
     "Return tuple (address, port) from address string."
     tmp = urlparse('//'+address)
     if not tmp.hostname:
@@ -32,7 +32,7 @@ def parse_address(address: str) -> tuple:
     return tmp.hostname, tmp.port
 
 def lookup(address: str, default_port: int=80, format_host: str='{}',
-           qname: str='A') -> tuple:
+           qname: str='A') -> Tuple[str, int]:
     "Look up address and return ip after sucessful lookup."
     host, port = parse_address(address)
     if port is None:
