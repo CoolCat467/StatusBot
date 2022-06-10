@@ -8,10 +8,10 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 __ver_major__ = 0
 __ver_minor__ = 4
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 from typing import Final, Union, Awaitable, Iterable, Any, Callable, Set, Dict, Optional
 
@@ -56,7 +56,9 @@ import gears
 load_dotenv()
 TOKEN: Final = os.getenv('DISCORD_TOKEN')
 
-BOT_PREFIX = '!status'
+###########
+BOT_PREFIX = '!status2'
+###########
 OWNER_ID = 344282497103691777
 # Branch is branch of GitHub repository to update from
 BRANCH = 'master'
@@ -446,7 +448,7 @@ class GuildServerPinger(gears.StateTimer):
         self.last_json: Dict[str, Any] = {}
         self.last_delay: Union[int, float] = 0
         self.last_online: Set[str] = set()
-        self.last_online_count: int
+        self.last_online_count: int = 0
         self.channel: discord.abc.Messageable
 
         self.add_state(PingState())
@@ -641,7 +643,9 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def eval_guilds(self, force_reset: bool=False) -> list:
         "Evaluate all guilds. Return list of guild ids evaluated."
-        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds)
+        #################
+        coros = (self.eval_guild(guild.id, force_reset) for guild in self.guilds if __author__ in guild.name)
+        #################
         return await asyncio.gather(*coros)
 
     # Default, not affected by intents.
@@ -666,6 +670,9 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         guildnames = []
         for guild in self.guilds:
             guildnames.append(f'{guild.name} (id: {guild.id})')
+        #################
+        guildnames = [x for x in guildnames if __author__ in x]
+        #################
         spaces = max(len(name) for name in guildnames)
         print('\n'+'\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
         ids = await self.eval_guilds(True)
@@ -738,8 +745,8 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def getjson(self, message: discord.message.Message) -> None:
         "Tell the author of the message the last json from server machine."
-        if message.guild.id in self.gears:
-            pinger: GuildServerPinger = self.gears[message.guild.id]
+        if str(message.guild.id) in self.gears:
+            pinger: GuildServerPinger = self.get_gear(str(message.guild.id))
             if pinger.active_state is None:
                 await message.channel.send('Server pinger is not active for this guild. '+
                                            'Use command `refresh` to restart.')
@@ -756,12 +763,13 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send(
                 f'Cannot connect to server at this time, try again in {delay}.')
             return
-        await message.channel.send('Server pinger is not running for this guild.')
+        await message.channel.send('Server pinger is not running for this guild. '\
+                                   'Use command `refresh` to restart.')
 
     async def getping(self, message: discord.message.Message) -> None:
         "Tell the author of the message the connection latency to the guild's server."
-        if message.guild.id in self.gears:
-            pinger: GuildServerPinger = self.gears[message.guild.id]
+        if str(message.guild.id) in self.gears:
+            pinger: GuildServerPinger = self.get_gear(str(message.guild.id))
             if pinger.active_state is None:
                 await message.channel.send('Server pinger is not active for this guild. '+
                                            'Use command `refresh` to restart.')
@@ -775,14 +783,15 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send(
                 f'Cannot connect to server at this time, try again in {delay}.')
             return
-        await message.channel.send('Server pinger is not running for this guild.')
+        await message.channel.send('Server pinger is not running for this guild. '\
+                                   'Use command `refresh` to restart.')
 
     async def getonline(self, message: discord.message.Message) -> None:
         "Tell author of the message the usernames of the players connected to the guild's server."
-        if message.guild.id in self.gears:
-            pinger: GuildServerPinger = self.gears[message.guild.id]
+        if str(message.guild.id) in self.gears:
+            pinger: GuildServerPinger = self.get_gear(str(message.guild.id))
             if pinger.active_state is None:
-                await message.channel.send('Server pinger is not active for this guild. '+
+                await message.channel.send('Server pinger is not active for this guild. '\
                                            'Use command `refresh` to restart.')
                 return
             if pinger.active_state.name == 'ping':
@@ -791,15 +800,18 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                     player_text = combine_and(wrap_list_values(players, '`'))
                     await message.channel.send('Players online in last received sample:')
                     await send_over_2000(message.channel.send, player_text)
-                    return
-                await message.channel.send('No players were online in the last received sample.')
+                elif pinger.last_online_count:
+                    await message.channel.send(f'There were `{pinger.last_online_count}` '\
+                                               'players online in last received message.')
+                else:
+                    await message.channel.send('No players were online in the last received sample.')
                 return
             delay = format_time(pinger.wait_time)
             await message.channel.send(
                 f'Cannot connect to server at this time, try again in {delay}.')
             return
-        await message.channel.send('Server pinger is not running for this guild.')
-        return
+        await message.channel.send('Server pinger is not running for this guild. '\
+                                   'Use command `refresh` to restart.')
 
     async def stop(self, message: discord.message.Message) -> None:
         "Stop this bot. Sends stop message."
@@ -1162,12 +1174,17 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if not ' ' in content:
             # If it's a guild message
             if midx:
-                # Prefix has to be there in guild message, so send error.
-                await message.channel.send('No command given.'+err)
+                if content == self.prefix:
+                    await message.channel.send('No command given.'+err)
                 return
             # Prefix doesn't have to be there in direct, so add space so arguments work right.
             content += ' '
         args = parse_args(content)
+        
+        # Make sure prefix is same, not just startswith.
+        if midx and args[0] != self.prefix:
+            return
+        
         # Get command. zeroth if direct, first if guild because of prefix.
         command = args[midx].lower()
 
@@ -1235,7 +1252,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             async with message.channel.typing():
                 await self.process_command_message(message, 'dm')
         # can't send messages so skip.
-        return
 
     # Default, not affected by intents
     async def on_error(self, event: str, *args, **kwargs) -> None:# pylint: disable=arguments-differ
@@ -1259,7 +1275,10 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} is shutting down.')
             return
-        coros = (tell_guild_shutdown(guild) for guild in self.guilds)
+##        coros = (tell_guild_shutdown(guild) for guild in self.guilds)
+        ################
+        coros = (tell_guild_shutdown(guild) for guild in self.guilds if __author__ in guild.name)
+        ################
         await asyncio.gather(*coros)
         
         print('Waiting to aquire updating lock...\n')
