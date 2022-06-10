@@ -548,7 +548,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     def get_guild_configuration_file(self, guildid: int) -> str:
         "Return the path to the configuration json file for a certain guild id."
-        return os.path.join(self.rootdir, 'configuration', 'guilds', str(guildid)+'.json')
+        return os.path.join(self.rootdir, 'config', 'guilds', str(guildid)+'.json')
 
     def get_dm_configuration_file(self) -> str:
         "Return the path to the configuration json file for all direct messages."
@@ -652,7 +652,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         print(f'Intents: {self.intents}')
         print(f'Root Dir: {self.rootdir}')
 
-        configurationdir = os.path.join(self.rootdir, 'configuration')
+        configurationdir = os.path.join(self.rootdir, 'config')
         if not os.path.exists(configurationdir):
             os.mkdir(configurationdir)
         guilddir = os.path.join(configurationdir, 'guilds')
