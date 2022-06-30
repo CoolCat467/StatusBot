@@ -8,12 +8,12 @@
 
 __title__ = 'StatusBot'
 __author__ = 'CoolCat467'
-__version__ = '0.4.3'
+__version__ = '0.4.4'
 __ver_major__ = 0
 __ver_minor__ = 4
-__ver_patch__ = 3
+__ver_patch__ = 4
 
-from typing import Final, Union, Awaitable, Iterable, Any, Callable, Set, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Final, Iterable, Optional, Set, Union
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -117,10 +117,10 @@ def write_json(filename: str, dictionary: dict, indent: int=2) -> None:
         finally:
             wfile.close()
 
-def split_time(seconds: int) -> list:
+def split_time(seconds: int) -> list[int]:
     "Split time into decades, years, months, weeks, days, hours, minutes, and seconds."
     seconds = int(seconds)
-    def mod_time(sec: int, num: int) -> tuple:
+    def mod_time(sec: int, num: int) -> tuple[int, int]:
         "Return number of times sec divides equally by number, then remainder."
         smod = sec % num
         return int((sec - smod) // num), smod
@@ -154,7 +154,7 @@ def combine_and(data: list) -> str:
     "Join values of text, and have 'and' with the last one properly."
     data = list(data)
     if len(data) >= 2:
-        data[-1] = 'and ' + data[-1]
+        data[-1] = f'and {data[-1]}'
     if len(data) > 2:
         return ', '.join(data)
     return ' '.join(data)
@@ -166,28 +166,27 @@ def format_time(seconds: int, single_title_allowed: bool=False) -> str:
              'days', 'hours', 'minutes', 'seconds')
     single = [i[:-1] for i in times]
     single[5] = 'century'
-    split = split_time(seconds)
-    zip_idx_values = [(i, v) for i, v in enumerate(split) if v]
+    zip_idx_values = [(i, v) for i, v in enumerate(split_time(seconds)) if v]
     if single_title_allowed:
         if len(zip_idx_values) == 1:
             index, value = zip_idx_values[0]
             if value == 1:
-                return 'a '+single[index]
+                return f'a {single[index]}'
     data = []
     for index, value in zip_idx_values:
         title = single[index] if abs(value) < 2 else times[index]
-        data.append(str(value)+' '+title)
+        data.append(f'{value} {title}')
     return combine_and(data)
 
 def except_chars(text: str, valid: str=AZUP+AZLOW+NUMS+'.:-') -> str:
     "Return every character in text that is also in valid string."
     return ''.join(i for i in text if i in valid)
 
-def parse_args(string: str, ignore: int=0, sep: str=' ') -> list:
+def parse_args(string: str, ignore: int=0, sep: str=' ') -> list[str]:
     "Return a list of arguments by splitting string by separation, omitting first ignore arguments."
     return string.split(sep)[ignore:]
 
-def wrap_list_values(items: Iterable[str], wrap: str='`') -> list:
+def wrap_list_values(items: Iterable[str], wrap: str='`') -> list[str]:
     "Wrap all items in list of strings with wrap. Ex. ['cat'] -> ['`cat`']"
     return [f'{wrap}{item}{wrap}' for item in items]
 
@@ -201,7 +200,7 @@ def log_active_exception(logpath: str, extra: str=None) -> None:
         msg += f'{extra}\n'
     msg += 'Exception class:\n'+str(values[0])+'\n'
     msg += 'Exception text:\n'+str(values[1])+'\n'
-    
+
     with io.StringIO() as yes_totaly_a_file:
         traceback.print_exception(None,
                                   value=values[1],
@@ -215,7 +214,7 @@ def log_active_exception(logpath: str, extra: str=None) -> None:
 
 async def send_over_2000(send_func: Callable[[str], Awaitable[None]],
                          text: str,
-                         header='',
+                         header: str='',
                          wrap_with: str='',
                          replace_existing_wrap: bool=True) -> None:
     "Use send_func to send text in segments over 2000 characters by "\
@@ -241,7 +240,7 @@ async def send_over_2000(send_func: Callable[[str], Awaitable[None]],
     parts = [header+part for part in parts]
     if wrap_with:
         parts = wrap_list_values(parts, wrap_with)
-    # pylint: disable=wrong-spelling-in-comment 
+    # pylint: disable=wrong-spelling-in-comment
     # This would be great for asyncio.gather, but
     # I'm pretty sure that will throw off call order,
     # and it's quite important that everything stays in order.
@@ -249,7 +248,6 @@ async def send_over_2000(send_func: Callable[[str], Awaitable[None]],
 ##    await asyncio.gather(*coros)
     for part in parts:
         await send_func(part)
-    return None
 
 async def get_github_file(path: str, timeout: int=10) -> str:
     "Return text from GitHub file in this project decoded as utf-8"
@@ -260,10 +258,10 @@ class PingState(gears.AsyncState):
     "State where we ping server."
     __slots__ = 'failed', 'exit_ex'
     machine: 'GuildServerPinger'
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__('ping')
         self.failed = False
-        self.exit_ex = None
+        self.exit_ex: Optional[str] = None
 
     async def entry_actions(self) -> None:
         "Reset failed to false and exception to None."
@@ -276,7 +274,7 @@ class PingState(gears.AsyncState):
         "Handle change in players by players sample."
         # If different players,
         if players == self.machine.last_online:
-            return None
+            return
         # Find difference in players.
         joined = tuple(players.difference(self.machine.last_online))
         left = tuple(self.machine.last_online.difference(players))
@@ -304,10 +302,10 @@ class PingState(gears.AsyncState):
         # and can only tell number of left/joined
         if online == self.machine.last_online_count:
             # If same, no need
-            return None
+            return
         diff = online - self.machine.last_online_count
         if diff == 0:
-            return None
+            return
         player = 'player' if diff == 1 else 'players'
         if diff > 0:
             await self.machine.channel.send(f'[Joined]: {diff} {player}')
@@ -333,7 +331,7 @@ class PingState(gears.AsyncState):
                       IOError)
             if not isinstance(ex, ignore):
                 log_active_exception(self.machine.bot.logpath)
-            return None
+            return
         # If success, get players.
         self.machine.last_json = json_data
         self.machine.last_delay = ping
@@ -344,7 +342,7 @@ class PingState(gears.AsyncState):
         if not 'players' in json_data:
             # Update last ping.
             self.machine.last_online = players
-            return None
+            return
 
         if 'online' in json_data['players']:
             online = json_data['players']['online']
@@ -361,19 +359,16 @@ class PingState(gears.AsyncState):
             # Update last ping.
             self.machine.last_online = players
         self.machine.last_online_count = max(online, len(players))
-        return None
 
     async def check_conditions(self) -> Optional[str]:
         "If there was failure to connect to server, await restart."
         if self.failed:
             return 'await_restart'
-        return None
 
     async def exit_actions(self) -> None:
         "When exiting, if we collected an exception, send it to channel."
         if not self.exit_ex is None:
             await self.machine.channel.send(self.exit_ex)
-        return None
 
 class WaitRestartState(gears.AsyncState):
     "State where we wait for server to restart."
@@ -395,7 +390,6 @@ class WaitRestartState(gears.AsyncState):
         self.success = False
         self.ticks = 0
         self.ping = 0
-        return None
 
     async def attempt_contact(self) -> bool:
         "Attempt to talk to server."
@@ -418,7 +412,6 @@ class WaitRestartState(gears.AsyncState):
         "If contact attempt was successfully, switch back to ping."
         if self.success:
             return 'ping'
-        return None
 
     async def exit_actions(self) -> None:
         if self.success:
@@ -427,7 +420,6 @@ class WaitRestartState(gears.AsyncState):
         else:
             await self.machine.channel.send(
             'Could not re-establish connection to server.')
-        return None
 
 class GuildServerPinger(gears.StateTimer):
     "Server ping machine for guild."
@@ -460,7 +452,6 @@ class GuildServerPinger(gears.StateTimer):
     async def initialize_state(self) -> None:
         "Set state to ping."
         await self.set_state('ping')
-        return None
 
     async def start(self) -> None:
         "If configuration is good, run."
@@ -476,7 +467,6 @@ class GuildServerPinger(gears.StateTimer):
                 await self.channel.send('Server pinger stopped.')
         else:
             await self.channel.send('No address for this guild defined, pinger not started.')
-        return None
 
 def get_valid_options(valid: Iterable[str], wrap: str='`') -> str:
     "Return string of ' Valid options are: {valid}' but with pretty formatting."
@@ -626,7 +616,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         guildconfiguration = self.get_guild_configuration(guildid)
         channel = self.guess_guild_channel(guildid)
         if not 'channel' in guildconfiguration:
-            await channel.send('This is where I will post leave-join messages'\
+            await channel.send('This is where I will post leave-join messages '\
                                'until an admin sets my `channel` option.')
         if 'address' in guildconfiguration:
             action = await self.add_guild_pinger(guildid, force_reset)
@@ -635,7 +625,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             else:
                 await channel.send('No action taken.')
         else:
-            await channel.send('Server address not set, pinger not started.'\
+            await channel.send('Server address not set, pinger not started. '\
                                f'Please set it with `{self.prefix} setoption address <address>`.')
         return guildid
 
@@ -684,7 +674,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         member = getmember(uid)
         if member is None:
             return member
-        return member.name+'#'+member.discriminator
+        return f'{member.name}#{member.discriminator}'
 
     async def replace_ids_w_names(self, names: Iterable[Union[str, int]]) -> list[str]:
         "Replace user ids (integers) with usernames in lists. Returns list of strings."
@@ -817,12 +807,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send('Stopping...')
             # Set stopped event
             self.stopped.set()
-            def close_bot():
+            def close_bot() -> None:
                 self.loop.create_task(self.close())
             self.loop.call_later(3, close_bot)
             return
         await message.channel.send('You do not have permission to run this command.')
-        return
 
     async def getcurrentvers(self, message: discord.message.Message) -> tuple[int, ...]:
         "Get current version, tell user in message.channel, and return that version as tuple."
@@ -915,7 +904,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send(f'Value of option `{option}`: `{value}`.')
             return
         await message.channel.send('Invalid option.'+validops)
-        return
 
     async def getoption_dm(self, message: discord.message.Message) -> None:
         "Send message with value of option given in the direct message configuration."
@@ -977,7 +965,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                         await message.channel.send(
                             'No one except for the guild owner is allowed to force refreshes'
                         )
-        
+
         if force_reset:
             await message.channel.send('Replacing the guild server pinger could take a bit, '\
                                        'we have to let the old one realize it should stop.')
@@ -1004,7 +992,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
         if not valid:
             await message.channel.send(
-                'You do not have permission to set any options. If you feel this is a mistake,'\
+                'You do not have permission to set any options. If you feel this is a mistake, '\
                 'please contact server admin(s) and have them give you permission.')
             return
         args = parse_args(message.content, 2)
@@ -1034,7 +1022,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if not set_value:
             await message.channel.send('Value to set must not be blank!')
             return
-        
+
         value: Any = set_value
         if option == 'channel':
             channelnames = [chan.name for chan in message.guild.text_channels]
@@ -1103,11 +1091,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if option not in valid:
             await message.channel.send('Invalid option.'+validops)
             return
-        
+
         if len(args) < 2:
             msg = f'Insufficiant arguments for {option}.'
             base = '`clear`, a discord user id, or the username of a new user to add'\
-                   'to the permission list of users who can '
+                   ' to the permission list of users who can '
             arghelp = {'stopusers': base+'stop the bot.',
                        'updateusers': base+'update the bot.',
                        'setoptionusers': base+'change stop and update permissions.'}
@@ -1173,11 +1161,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             # Prefix doesn't have to be there in direct, so add space so arguments work right.
             content += ' '
         args = parse_args(content)
-        
-        # Make sure prefix is same, not just startswith.
-        if midx and args[0] != self.prefix:
-            return
-        
+
         # Get command. zeroth if direct, first if guild because of prefix.
         command = args[midx].lower()
 
@@ -1198,7 +1182,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             return
         # Otherwise, send error of no command.
         await message.channel.send('No valid command given.'+err)
-        return
 
     # Intents.guilds
     async def on_guild_join(self, guild: discord.guild.Guild) -> None:
@@ -1215,7 +1198,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         print(msg)
         append_file(self.logpath, '#'*8+msg+'#'*8)
         os.remove(self.get_guild_configuration_file(guild.id))
-    
+
     # Intents.dm_messages, Intents.guild_messages, Intents.messages
     async def on_message(self, message: discord.message.Message) -> None:
         "React to any new messages."
@@ -1228,7 +1211,9 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             # If message is from a guild,
             if isinstance(message.guild, discord.guild.Guild):
                 # If message starts with our prefix,
-                pfx = message.clean_content.lower().startswith(self.prefix)
+                args = parse_args(message.clean_content.lower())
+                pfx = args[0] == self.prefix if len(args) >= 1 else False
+##                pfx = message.clean_content.lower().startswith(self.prefix)
                 # of it starts with us being mentioned,
                 ment = False
                 if message.content.startswith('<@'):
@@ -1255,7 +1240,6 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         extra += 'Error args:\n'+'\n'.join(map(str, args))+'\nError kwargs:\n'
         extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
         log_active_exception(self.logpath, extra=extra)
-        return
 
     # Default, not affected by intents
     async def close(self) -> None:
@@ -1264,18 +1248,16 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         print('\nShutting down gears.')
         await gears.BaseBot.close(self)
         print('\nGears shut down...\nTelling guilds bot is shutting down.\n')
-        async def tell_guild_shutdown(guild):
+        async def tell_guild_shutdown(guild: discord.guild.Guild) -> None:
             channel = self.guess_guild_channel(guild.id)
             await channel.send(f'{__title__} is shutting down.')
-            return
         coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
-        
+
         print('Waiting to aquire updating lock...\n')
         with self.updating:
             print('Closing...')
             await discord.Client.close(self)
-        return
 
 def run() -> None:
     "Run bot."
@@ -1286,7 +1268,6 @@ or set DISCORD_TOKEN environment variable.''')
         return
     print('\nStarting bot...')
 
-    loop = asyncio.new_event_loop()
     intents = discord.Intents(
         dm_messages = True,
         guild_messages = True,
@@ -1294,6 +1275,8 @@ or set DISCORD_TOKEN environment variable.''')
         guilds = True,
         members = True)
     # 4867
+
+    loop = asyncio.new_event_loop()
 
     bot = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
 
