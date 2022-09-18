@@ -36,11 +36,7 @@ from ctypes import c_int32 as signed_int32
 from ctypes import c_uint64 as unsigned_int64
 from ctypes import c_int64 as signed_int64
 
-from typing_extensions import SupportsIndex
-
 import asyncio_dgram
-
-BytesConvertable = Union[SupportsIndex, Iterable[SupportsIndex]]
 
 def ip_type(address: Union[int, str]) -> Optional[int]:
     "Returns what version of ip a given address is."
@@ -404,7 +400,7 @@ class BaseConnection:
         "Raise TypeError, unsupported."
         raise TypeError(f'{self.__class__.__name__} does not support flush()')
     
-    def receive(self, data: Union[BytesConvertable, bytearray]) -> None:
+    def receive(self, data: Union[bytes, bytearray]) -> None:
         "Raise TypeError, unsupported."
         raise TypeError(f'{self.__class__.__name__} does not support receive()')
     
@@ -446,7 +442,7 @@ class Connection(BaseSyncConnection):
             data = bytearray(data, 'utf-8')
         self.sent.extend(data)
     
-    def receive(self, data: Union[BytesConvertable, bytearray]) -> None:
+    def receive(self, data: Union[bytes, bytearray]) -> None:
         "Extend self.received with data."
         if not isinstance(data, bytearray):
             data = bytearray(data)
