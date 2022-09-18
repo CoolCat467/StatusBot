@@ -9,10 +9,10 @@
 
 __title__ = 'MC Server Status'
 __author__ = 'CoolCat467'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 __all__ = ['try_x_times', 'Server']
 
@@ -22,7 +22,7 @@ from functools import wraps as _wraps
 
 from status.address_tools import lookup
 from status.connection import TCPAsyncSocketConnection, TCPSocketConnection
-from status.pingers import ServerPinger, AsyncServerPinger
+from status.pingers import AsyncServerPinger
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -32,7 +32,7 @@ def try_x_times(times: int=3) -> Callable[[F], F]:
     def try_wraper(function: F) -> F:
         'Wrapper for given function to try times before exit.'
         @_wraps(function)
-        def try_function_wraper(*args, **kwargs):
+        def try_function_wraper(*args: Any, **kwargs: Any) -> Any:
             'Call func with given args, reraise exception if fails > x times.'
             for time in range(times):
                 try:
@@ -58,13 +58,13 @@ class Server:
         host, port = lookup(address, 25565, '_minecraft._tcp.{}', 'SRV')
         return cls(host, port)
     
-    def ping(self, tries: int=3, **kwargs) -> float:
+    def ping(self, tries: int=3, **kwargs: Dict) -> float:
         'Return the latancy of the connection to the server in milisecconds.'
         connection = TCPSocketConnection((self.host, self.port))
         
         @try_x_times(tries)
         def ping_server() -> float:
-            pinger = ServerPinger(connection, host=self.host, port=self.port, **kwargs)
+            pinger = ServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
             pinger.handshake()
             
             return pinger.test_ping()
@@ -73,14 +73,14 @@ class Server:
         finally:
             connection.close()
     
-    async def async_ping(self, tries: int=3, **kwargs) -> float:
+    async def async_ping(self, tries: int=3, **kwargs: Dict) -> float:
         'Return the latancy of the connection to the server in milisecconds.'
         connection = TCPAsyncSocketConnection()
         await connection.connect((self.host, self.port))
         
         @try_x_times(tries)
         async def ping_server() -> float:
-            pinger = AsyncServerPinger(connection, host=self.host, port=self.port, **kwargs)
+            pinger = AsyncServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
             pinger.handshake()
             
             return await pinger.test_ping()
@@ -89,13 +89,13 @@ class Server:
         finally:
             connection.close()
     
-    def status(self, tries: int=3, **kwargs) -> Tuple[Dict, float]:
+    def status(self, tries: int=3, **kwargs: Dict) -> Tuple[Dict, float]:
         "Request the server's status and return the json from the response."
         connection = TCPSocketConnection((self.host, self.port))
         
         @try_x_times(tries)
         def get_status() -> Tuple[Dict, float]:
-            pinger = ServerPinger(connection, host=self.host, port=self.port, **kwargs)
+            pinger = ServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
             pinger.handshake()
             
             result = pinger.read_status()
@@ -106,14 +106,14 @@ class Server:
         finally:
             connection.close()
     
-    async def async_status(self, tries: int=3, **kwargs) -> Tuple[dict, float]:
+    async def async_status(self, tries: int=3, **kwargs: Dict) -> Tuple[dict, float]:
         "Request the server's status and return the json from the response."
         connection = TCPAsyncSocketConnection()
         await connection.connect((self.host, self.port))
         
         @try_x_times(tries)
-        async def get_status():
-            pinger = AsyncServerPinger(connection, host=self.host, port=self.port, **kwargs)
+        async def get_status() -> Tuple[dict, float]:
+            pinger = AsyncServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
             pinger.handshake()
             
             result = await pinger.read_status()

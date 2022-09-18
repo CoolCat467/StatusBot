@@ -7,20 +7,20 @@
 # This version of mcstatus's pingers module
 # has async and regular functions use the same parts with subfunctions
 
-__all__ = ['ServerPinger', 'AsyncServerPinger']
+__all__ = ['AsyncServerPinger']
 
 import datetime
 import json
 from random import randint
 
-from status.connection import Connection
+from status.connection import Connection, TCPAsyncSocketConnection
 
-class ServerPinger:
-    "Server Pinger class, pings server with connection given."
+class AsyncServerPinger:
+    "Async Server Pinger class, pings server with connection given."
     __slots__ = 'version', 'connection', 'host', 'port', 'ping_token'
     def __init__(
         self,
-        connection,
+        connection: TCPAsyncSocketConnection,
         host: str = '',
         port: int = 0,
         version: int = 47,
@@ -63,11 +63,11 @@ class ServerPinger:
             raise IOError('Received invalid JSON') from ex
         return {}
     
-    def read_status(self) -> dict:
+    async def read_status(self) -> dict:
         "Read status and return json response. Raises IOError."
         self._read_status_request()
         
-        response = self.connection.read_buffer()
+        response = await self.connection.read_buffer()
         return self._read_status_process_response(response)
     
     def _test_ping_request(self) -> datetime.datetime:
@@ -98,23 +98,8 @@ class ServerPinger:
         # We have no trivial way of getting a time delta :(
         return (delta.days * 24 * 60 * 60 + delta.seconds) * 1000 + delta.microseconds / 1000
     
-    def test_ping(self) -> float:
-        "Send test ping, return delay (in miliseconds) delta from response."
-        sent = self._test_ping_request()
-        
-        response = self.connection.read_buffer()
-        received = datetime.datetime.now()
-        return self._test_ping_process_response(response, sent, received)
-
-class AsyncServerPinger(ServerPinger):
-    "Asynchronous Server Pinger class."
-    async def read_status(self) -> dict:# type: ignore
-        self._read_status_request()
-        
-        response = await self.connection.read_buffer()
-        return self._read_status_process_response(response)
-    
     async def test_ping(self) -> float:# type: ignore
+        "Send test ping, return delay (in miliseconds) delta from response."
         sent = self._test_ping_request()
         
         response = await self.connection.read_buffer()

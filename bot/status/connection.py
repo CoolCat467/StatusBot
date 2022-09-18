@@ -427,7 +427,7 @@ class BaseAsyncConnection(BaseConnection, BaseReadAsync, BaseWriteAsync):
 class Connection(BaseSyncConnection):
     "Base connection class."
     __slots__: tuple = ('sent', 'received')
-    def __init__(self):
+    def __init__(self) -> None:
         "Initialize self.send and self.received to an empty bytearray."
         self.sent = bytearray()
         self.received = bytearray()
@@ -471,9 +471,9 @@ class Connection(BaseSyncConnection):
 class SocketConnection(BaseSyncConnection):
     "Socket connection."
     __slots__ = ('socket',)
-    def __init__(self):
+    def __init__(self) -> None:
         "Set socket to none"
-        self.socket: socket.socket = None
+        self.socket: socket.socket
     
     def close(self) -> None:
         "Close self."
@@ -539,9 +539,9 @@ class UDPSocketConnection(SocketConnection):
 class TCPAsyncSocketConnection(BaseAsyncReadSyncWriteConnection):
     "Asyncronous TCP connection to addr. Default timeout is 3 secconds."
     __slots__ = ('reader', 'writer')
-    def __init__(self):
-        self.reader: asyncio.StreamReader = None
-        self.writer: asyncio.StreamWriter = None
+    def __init__(self) -> None:
+        self.reader: asyncio.StreamReader
+        self.writer: asyncio.StreamWriter
     
     async def connect(self, addr: tuple[str, int], timeout: int=3) -> None:
         "Use asyncio to open a connection to addr (host, port)."
@@ -574,9 +574,9 @@ class TCPAsyncSocketConnection(BaseAsyncReadSyncWriteConnection):
 class UDPAsyncSocketConnection(BaseAsyncConnection):
     "Asyncronous UDP connection to addr. Default timeout is 3 secconds."
     __slots__ = ('stream', 'timeout')
-    def __init__(self):
-        self.stream: asyncio_dgram.aio.DatagramClient = None
-        self.timeout: int = None
+    def __init__(self) -> None:
+        self.stream: asyncio_dgram.aio.DatagramClient
+        self.timeout: int = 3
     
     async def connect(self, addr: tuple, timeout: int=3) -> None:
         "Connect to addr (host, port)"

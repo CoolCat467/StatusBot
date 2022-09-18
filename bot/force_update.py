@@ -13,13 +13,15 @@ __ver_major__ = 0
 __ver_minor__ = 0
 __ver_patch__ = 2
 
+from typing import Final
+
 from os.path import split, abspath
 import asyncio
 import json
 
 import update
 
-ROOTDIR = split(abspath(__file__))[0]
+ROOTDIR: Final = split(abspath(__file__))[0]
 
 async def get_github_file(path: str, timeout: int=10) -> str:
     "Return text from GitHub file in this project decoded as utf-8"

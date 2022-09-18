@@ -8,10 +8,12 @@
 
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 6
+__ver_patch__ = 7
+
+from typing import Any
 
 import os
 from asyncio import gather
@@ -27,16 +29,7 @@ def get_address(user: str, repo: str, branch: str, path: str) -> str:
 
 def is_new_ver_higher(current: tuple, newest: tuple) -> bool:
     "Return True if current version older than new version."
-    # Turns out, tuples have built in comparison support.
-    # Exactly what we need ha ha. And it's better.
     return tuple(current) < tuple(newest)
-##    for old, new in zip(current, newest):
-##        if old < new:
-##            return True
-##        if old == new:
-##            continue
-##        return False
-##    return False
 
 def get_paths(jdict: dict) -> list:
     "Read dictionary and figure out paths of files we want to update."
@@ -70,7 +63,9 @@ def make_dirpath_exist(filepath: str) -> None:
         # Make folder
         os.mkdir(folder)
 
-async def download_coroutine(url: str, timeout: int=TIMEOUT, **sessionkwargs) -> bytes:
+async def download_coroutine(url: str,
+                             timeout: int = TIMEOUT,
+                             **sessionkwargs: Any) -> bytes:
     "Return content bytes found at URL."
     # Make a session with our event loop
     async with aiohttp.ClientSession(**sessionkwargs) as session:
@@ -87,15 +82,23 @@ async def download_coroutine(url: str, timeout: int=TIMEOUT, **sessionkwargs) ->
         await session.close()
     return request_result
 
-async def get_file(repo: str, path: str, user: str, branch: str='HEAD',
-                   timeout: int=TIMEOUT, **sessionkwargs) -> bytes:
+async def get_file(repo: str,
+                   path: str,
+                   user: str,
+                   branch: str='HEAD',
+                   timeout: int=TIMEOUT,
+                   **sessionkwargs: Any) -> bytes:
     "Get a file from a GitHub repository. Return data as bytes."
     url = get_address(user, repo, branch, path)
     return await download_coroutine(url, timeout, **sessionkwargs)
 
-async def update_file(basepath: str, repo: str, path: str, user: str,# pylint: disable=R0913
-                      branch: str='HEAD', timeout: int=TIMEOUT,
-                      **sessionkwargs) -> bool:
+async def update_file(basepath: str,# pylint: disable=too-many-arguments
+                      repo: str,
+                      path: str,
+                      user: str,
+                      branch: str='HEAD',
+                      timeout: int=TIMEOUT,
+                      **sessionkwargs: Any) -> bool:
     "Update file. Return False on exception, otherwise True."
     url = get_address(user, repo, branch, path)
     savepath = os.path.abspath(os.path.join(basepath, path))
@@ -109,12 +112,16 @@ async def update_file(basepath: str, repo: str, path: str, user: str,# pylint: d
         return False
     return True
 
-async def update_files(basepath: str, paths: tuple,# pylint: disable=R0913
-                       repo: str, user: str, branch: str='HEAD',
-                       timeout: int=TIMEOUT, **sessionkwargs) -> list:
+async def update_files(basepath: str,# pylint: disable=too-many-arguments
+                       paths: tuple,
+                       repo: str,
+                       user: str,
+                       branch: str='HEAD',
+                       timeout: int=TIMEOUT,
+                       **sessionkwargs: Any) -> list:
     "Update multiple files all from the same GitHub repository. Return list of paths."
     urlbase = get_address(user, repo, branch, '')
-    async def update_single(path):
+    async def update_single(path: str) -> str:
         "Update a single file."
         savepath = os.path.abspath(os.path.join(basepath, path))
         # Ensure folder for it exists too.

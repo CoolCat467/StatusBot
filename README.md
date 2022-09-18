@@ -48,7 +48,7 @@ they entered the command in, except in the case that the channel does not suppor
 being written to.
 
 ## Commands
-As of version 0.4.0, the following describes StatusBot's commands.
+As of version 0.5.0, the following describes StatusBot's commands.
 
 ### In Guilds:
 `help` - Display all of StatusBot's valid guild commands.
@@ -57,87 +57,87 @@ As of version 0.4.0, the following describes StatusBot's commands.
  Restarts server pinger if guild `address` value is set.
  
  If 'force' is given as an additional argument and user is either
- the guild owner, StatusBot's owner, or a user in the `forcerefreshusers` list,
+ the guild owner, StatusBot's owner, or a user in the `force-refresh-users` list,
  then you can force the guild server pinger to restart. Otherwise it only restarts if
  it needs too.
 
-`setoption <name> <value>` - Set option <name> to <value> for the guild you are currently
+`set-option <name> <value>` - Set option <name> to <value> for the guild you are currently
   talking to StatusBot in.
    
   If you are StatusBot's owner, you are the guild owner, or you are in the
-  `setoptionusers` list, the following settings can be modified:
+  `set-option-users` list, the following settings can be modified:
   
    `address` - Address of the java editon minecraft server StatusBot should monitor
    
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
    
-   `forcerefreshusers` - List of user IDs able to preform a force refresh.
+   `force-refresh-users` - List of user IDs able to preform a force refresh.
   
   If you are either StatusBot's owner or you are the guild owner, you modify the
-  `setoptionusers` list.
+  `set-option-users` list.
   
   All of the following options take 'clear', a user id, or a username (including discriminator),
   to add to list as an argument.
   
-   `setoptionusers` - List of user IDs able to modify `address` and `channel` values.
+   `set-option-users` - List of user IDs able to modify `address` and `channel` values.
 
-`getoption <name>` - Tell you the value of option <name>. Anyone can retrieve any option.
+`get-option <name>` - Tell you the value of option <name>. Anyone can retrieve any option.
 
-`getmyid` - Tell the user who sent the message what their unique discord id is.
+`my-id` - Tell the user who sent the message what their unique discord id is.
 
-`getjson` - Tell the user who sent the message the last json received from pinging the server.
+`json` - Tell the user who sent the message the last json received from pinging the server.
 
-`getonline` - Tell the user who sent the message the last received list of known online players.
+`online` - Tell the user who sent the message the last received list of known online players.
 
-`getping` - Tell the user who sent the message the latency of the connection to the server.
+`ping` - Tell the user who sent the message the latency of the connection to the server.
 
-`getfavicon` - Post a picture of the server's favicon in the channel the command message was posted in.
+`favicon` - Post a picture of the server's favicon in the channel the command message was posted in.
  
-`currentversion` - Tell the user the current version of StatusBot.
+`current-version` - Tell the user the current version of StatusBot.
 
-`onlineversion` - Tell the user the current online verison of StatusBot.
+`online-version` - Tell the user the current online verison of StatusBot.
 This value is controlled by `version.txt` in this repository.
 
 
 ### In a DM:
 `help` - Display all of StatusBot's valid DM commands.
 
-`setoption <name> <value>` - Set global dm option <name> to <value>
+`set-option <name> <value>` - Set global dm option <name> to <value>
 
  All of the following options take 'clear', a user id, or a username (including discriminator),
  to add to list as an argument.
  
-   `setoptionusers` - List of users who can modify the `updateusers` and `stopusers` lists.
+   `set-option-users` - List of users who can modify the `update-users` and `stop-users` lists.
 
   NOTE: This option can only be set by the bot owner.
 
-   The following two options can only be set by users in the `setoptionusers` list.
+   The following two options can only be set by users in the `set-option-users` list.
 
-   `updateusers` - List of users who can run the `update` dm command
+   `update-users` - List of users who can run the `update` dm command
 
-   `stopusers` - List of users who can run the `stop` dm command
+   `stop-users` - List of users who can run the `stop` dm command
 
-`getoption <name>` - Get global dm option <name>
+`get-option <name>` - Get global dm option <name>
 
- getoption in a dm is a bit different than it's counterpart in guild commands.
+ get-option in a dm is a bit different than it's counterpart in guild commands.
  This version of getoption will only tell the user the values of the given option
- if they are either the bot owner or in the `setoptionusers` list.
+ if they are either the bot owner or in the `set-option-users` list.
 
 `stop` - Stop the bot. If `looprun.sh` was used, this has the effect of restarting the bot.
   
-  NOTE: This command will only work if you are in the `stopusers` list in the
+  NOTE: This command will only work if you are in the `stop-users` list in the
   global dms config file.
 
 `update` - Attempt to update the bot to the newest version using this github repository.
   
   NOTE: This command is nearly identically to the `stop` dm command, but uses the
-  `updateusers` global dm config value instead.
+  `update-users` global dm config value instead.
 
-`getmyid` - Tell the user who sent the message what their unique discord id is.
+`my-id` - Tell the user who sent the message what their unique discord id is.
 
-`currentversion` - Tell the user the current version of StatusBot.
+`current-version` - Tell the user the current version of StatusBot.
 
-`onlineversion` - Tell the user the current online verison of StatusBot.
+`online-version` - Tell the user the current online verison of StatusBot.
 This value is controlled by `version.txt` in this repository.
 
 
