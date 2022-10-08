@@ -9,31 +9,31 @@
 
 __title__ = 'MC Server Status'
 __author__ = 'CoolCat467'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __ver_major__ = 0
 __ver_minor__ = 0
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 __all__ = ['try_x_times', 'Server']
 
-from typing import Callable, Any, TypeVar, cast, Tuple, Dict
+from typing import Callable, Any, TypeVar, cast, Tuple
 
 from functools import wraps as _wraps
 
 from status.address_tools import lookup
-from status.connection import TCPAsyncSocketConnection, TCPSocketConnection
-from status.pingers import AsyncServerPinger
+from status.connection    import TCPAsyncSocketConnection
+from status.pingers       import AsyncServerPinger
 
 F = TypeVar('F', bound=Callable[..., Any])
 
 def try_x_times(times: int=3) -> Callable[[F], F]:
-    '''Return a wraper that will attempt to run the function it wraps x times.
-    If it fails the x th time, exception is allowed to go uncaught.'''
-    def try_wraper(function: F) -> F:
+    '''Return a wrapper that will attempt to run the function it wraps x times.
+    If it fails the final time, exception is allowed to go uncaught.'''
+    def try_wrapper(function: F) -> F:
         'Wrapper for given function to try times before exit.'
         @_wraps(function)
-        def try_function_wraper(*args: Any, **kwargs: Any) -> Any:
-            'Call func with given args, reraise exception if fails > x times.'
+        def try_function_wrapper(*args: Any, **kwargs: Any) -> Any:
+            'Call function with given arguments, re-raise exception if fails > x times.'
             for time in range(times):
                 try:
                     return function(*args, **kwargs)
@@ -41,8 +41,8 @@ def try_x_times(times: int=3) -> Callable[[F], F]:
                     if time == times-1:
                         raise
             return None
-        return cast(F, try_function_wraper)
-    return try_wraper
+        return cast(F, try_function_wrapper)
+    return try_wrapper
 
 class Server:
     'Server class talks to minecraft servers.'
@@ -58,29 +58,19 @@ class Server:
         host, port = lookup(address, 25565, '_minecraft._tcp.{}', 'SRV')
         return cls(host, port)
     
-    def ping(self, tries: int=3, **kwargs: Dict) -> float:
-        'Return the latancy of the connection to the server in milisecconds.'
-        connection = TCPSocketConnection((self.host, self.port))
-        
-        @try_x_times(tries)
-        def ping_server() -> float:
-            pinger = ServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
-            pinger.handshake()
-            
-            return pinger.test_ping()
-        try:
-            return ping_server()
-        finally:
-            connection.close()
-    
-    async def async_ping(self, tries: int=3, **kwargs: Dict) -> float:
-        'Return the latancy of the connection to the server in milisecconds.'
+    async def async_ping(self, tries: int=3) -> float:
+        'Return the latency of the connection to the server in milliseconds.'
         connection = TCPAsyncSocketConnection()
         await connection.connect((self.host, self.port))
         
         @try_x_times(tries)
         async def ping_server() -> float:
-            pinger = AsyncServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
+            pinger = AsyncServerPinger(
+                connection,
+                host=self.host,
+                port=self.port,
+
+            )
             pinger.handshake()
             
             return await pinger.test_ping()
@@ -89,31 +79,18 @@ class Server:
         finally:
             connection.close()
     
-    def status(self, tries: int=3, **kwargs: Dict) -> Tuple[Dict, float]:
-        "Request the server's status and return the json from the response."
-        connection = TCPSocketConnection((self.host, self.port))
-        
-        @try_x_times(tries)
-        def get_status() -> Tuple[Dict, float]:
-            pinger = ServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
-            pinger.handshake()
-            
-            result = pinger.read_status()
-            latency = pinger.test_ping()
-            return result, latency
-        try:
-            return get_status()
-        finally:
-            connection.close()
-    
-    async def async_status(self, tries: int=3, **kwargs: Dict) -> Tuple[dict, float]:
+    async def async_status(self, tries: int=3) -> Tuple[dict, float]:
         "Request the server's status and return the json from the response."
         connection = TCPAsyncSocketConnection()
         await connection.connect((self.host, self.port))
         
         @try_x_times(tries)
         async def get_status() -> Tuple[dict, float]:
-            pinger = AsyncServerPinger(connection, host=self.host, port=self.port, **kwargs)# type: ignore
+            pinger = AsyncServerPinger(
+                connection,
+                host=self.host,
+                port=self.port,
+            )
             pinger.handshake()
             
             result = await pinger.read_status()

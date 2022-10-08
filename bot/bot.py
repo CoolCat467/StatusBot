@@ -6,12 +6,12 @@
 
 # Programmed by CoolCat467
 
-__title__ = 'StatusBot'
-__author__ = 'CoolCat467'
-__version__ = '0.5.0'
+__title__     = 'StatusBot'
+__author__    = 'CoolCat467'
+__version__   = '0.5.1'
 __ver_major__ = 0
 __ver_minor__ = 5
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 from typing import Any, Awaitable, Callable, Dict, List, Final, Iterable, Optional, Set, Union, get_type_hints, get_args
 
@@ -59,15 +59,15 @@ load_dotenv()
 TOKEN: Final = os.getenv('DISCORD_TOKEN')
 
 BOT_PREFIX: Final = '!status'
-OWNER_ID: Final = 344282497103691777
+OWNER_ID:   Final = 344282497103691777
 GITHUB_URL: Final = f'https://github.com/{__author__}/{__title__}'
 # Branch is branch of GitHub repository to update from
-BRANCH: Final = 'master'
+BRANCH:     Final = 'master'
 
 # Text globals
-AZUP: Final = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+AZUP : Final = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 AZLOW: Final = AZUP.lower()
-NUMS: Final = '0123456789'
+NUMS : Final = '0123456789'
 
 def write_file(filename: str, data: str) -> None:
     "Write data to file <filename>."
@@ -236,7 +236,7 @@ async def send_over_2000(send_func: Callable[[str], Awaitable[None]],
             parts[-1] += add + wrap_with
         else:
             parts.append(wrap_with+header)
-    
+
     # pylint: disable=wrong-spelling-in-comment
     # This would be great for asyncio.gather, but
     # I'm pretty sure that will throw off call order,
@@ -274,7 +274,7 @@ class PingState(gears.AsyncState):
             return
         # Find difference in players.
         joined = tuple(players.difference(self.machine.last_online))
-        left = tuple(self.machine.last_online.difference(players))
+        left   = tuple(self.machine.last_online.difference(players))
 
         def users_mesg(action: str, users: Iterable[str]) -> str:
             "Returns [{action}]: {users}"
@@ -388,8 +388,8 @@ class WaitRestartState(gears.AsyncState):
             extra = f' Last successful ping latency was `{self.machine.last_delay}ms`'
         await self.machine.channel.send('Connection to server has been lost.'+extra)
         self.success = False
-        self.ticks = 0
-        self.ping = 0
+        self.ticks   = 0
+        self.ping    = 0
 
     async def attempt_contact(self) -> bool:
         "Attempt to talk to server."
@@ -434,13 +434,13 @@ class GuildServerPinger(gears.StateTimer):
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guild_id = guild_id
         super().__init__(bot, str(self.guild_id), self.tick_speed)
-        self.bot: 'StatusBot'
         self.server = mc.Server('')
-        self.last_json: Dict[str, Any] = {}
-        self.last_delay: Union[int, float] = 0
-        self.last_online: Set[str] = set()
-        self.last_online_count: int = 0
-        self.channel: discord.abc.Messageable
+        self.bot              : 'StatusBot'
+        self.last_json        : Dict[str, Any]    = {}
+        self.last_delay       : Union[int, float] = 0
+        self.last_online      : Set[str]          = set()
+        self.last_online_count: int               = 0
+        self.channel          : discord.abc.Messageable
 
         self.add_state(PingState())
         self.add_state(WaitRestartState(self.wait_ticks))
@@ -457,7 +457,7 @@ class GuildServerPinger(gears.StateTimer):
     async def start(self) -> None:
         "If configuration is good, run."
         configuration = self.bot.get_guild_configuration(self.guild_id)
-        self.channel = self.bot.guess_guild_channel(self.guild_id)
+        self.channel  = self.bot.guess_guild_channel(self.guild_id)
         if 'address' in configuration:
             self.server = mc.Server.lookup(configuration['address'])
             try:
@@ -518,57 +518,57 @@ def override_methods(obj: Any, attrs: Dict[str, Any]) -> Any:
 def interaction_to_message(interaction: discord.Interaction) -> discord.Message:
     "Convert slash command interaction to message that Status bot handles."
     data: Dict[str, Any] = {
-        'id': interaction.id,
-        'webhook_id': None,
-        'reactions': [],
-        'attachments': [],
-        'activity': None,
-        'embeds': [],
+        'id'              : interaction.id,
+        'webhook_id'      : None,
+        'reactions'       : [],
+        'attachments'     : [],
+        'activity'        : None,
+        'embeds'          : [],
         'edited_timestamp': None,
-        'type': 0,#discord.MessageType.default,
-        'pinned': False,
-        'flags': 0,
+        'type'            : 0,#discord.MessageType.default,
+        'pinned'          : False,
+        'flags'           : 0,
         'mention_everyone': False,
-        'tts': False,
-        'content': '',
-        'nonce': None,#Optional[Union[int, str]]
-        'sticker_items': [],
-        'guild_id': interaction.guild_id,
-        'interaction': {
-            'id': interaction.id,
-            'type': 2,
-            'name': 'Interaction name',
+        'tts'             : False,
+        'content'         : '',
+        'nonce'           : None,#Optional[Union[int, str]]
+        'sticker_items'   : [],
+        'guild_id'        : interaction.guild_id,
+        'interaction'     : {
+            'id'    : interaction.id,
+            'type'  : 2,
+            'name'  : 'Interaction name',
             'member': {
                 'roles': [] if isinstance(interaction.user, discord.User) else [role.id for role in interaction.user.roles],
             },
-            'user': {
-                'id': interaction.user.id,
+            'user'  : {
+                'id'   : interaction.user.id,
                 'roles': [] if isinstance(interaction.user, discord.User) else [role.id for role in interaction.user.roles],
             },
         },
 ##        'message_reference': None,
         'application': {
-            'id': interaction.application_id,
+            'id'         : interaction.application_id,
             'description': 'Application description',
-            'name': 'Application name',
-            'icon': None,
+            'name'       : 'Application name',
+            'icon'       : None,
             'cover_image': None
         },
-##        'author': ,
-##        'member': ,
-##        'mentions': ,
+##        'author'       : ,
+##        'member'       : ,
+##        'mentions'     : ,
 ##        'mention_roles': ,
-##        'components': 
+##        'components'   :
     }
-    
+
     message = discord.message.Message(
-        state = interaction._state,
+        state   = interaction._state,
         channel = interaction.channel,# type: ignore
-        data = data# type: ignore
+        data    = data# type: ignore
     )
-    
+
     message.author = interaction.user
-    
+
     channel_send = message.channel.send
     times = -1
     async def send_message(*args: Any, **kwargs: Any) -> Any:
@@ -578,11 +578,11 @@ def interaction_to_message(interaction: discord.Interaction) -> discord.Message:
         if times == 0:
             return await interaction.response.send_message(*args, **kwargs)
         return await channel_send(*args, **kwargs)
-    
+
     message.channel = override_methods(message.channel, {
         'send': send_message,
     })
-    
+
     return message
 
 def extract_parameters_from_callback(func: Callable[..., Any],
@@ -605,12 +605,12 @@ def extract_parameters_from_callback(func: Callable[..., Any],
             raise TypeError(f'parameter {parameter.name!r} is missing a type annotation in callback {func.__qualname__!r}')
 
         resolved = discord.utils.resolve_annotation(parameter.annotation, globalns, globalns, cache)
-        param = discord.app_commands.transformers.annotation_to_parameter(resolved, parameter)
+        param    = discord.app_commands.transformers.annotation_to_parameter(resolved, parameter)
         parameters.append(param)
 
     values = sorted(parameters, key=lambda a: a.required, reverse=True)
     result = {v.name: v for v in values}
-    
+
     descriptions = discord.app_commands.commands._parse_args_from_docstring(func, result)
 
     try:
@@ -681,16 +681,16 @@ def process_arguments(parameters: Dict[str, type],
     complete: Dict[str, Any] = {}
     if not parameters:
         return complete
-    
+
     required_count = len([
         v
         for v in parameters.values()
         if type(None) not in get_args(v)
     ])
-    
+
     if len(given_args) < required_count:
         raise ValueError("Missing parameters!")
-    
+
     i = -1
     for name, target_type in parameters.items():
         i += 1
@@ -717,48 +717,48 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if 'loop' in kwargs:
             del kwargs['loop']
         discord.Client.__init__(self, *args, loop=self.loop, intents=intents, **kwargs)
-        self.stopped = Event()
+        self.stopped  = Event()
         self.updating = Lock()
-        self.prefix = prefix
-        self.rootdir = os.path.split(os.path.abspath(__file__))[0]
-        self.logpath = os.path.join(self.rootdir, 'log.txt')
+        self.prefix   = prefix
+        self.rootdir  = os.path.split(os.path.abspath(__file__))[0]
+        self.logpath  = os.path.join(self.rootdir, 'log.txt')
         self.gcommands: Dict[str, Callable[[discord.message.Message], Awaitable[None]]] = {
             'current-version': self.current_vers,
-            'online-version': self.online_vers,
-            'my-id': self.my_id,
-            'json': self.json,
-            'favicon': self.favicon,
-            'online': self.online,
-            'ping': self.ping,
-            'refresh': self.refresh,
-            'set-option': self.set_option__guild,
-            'get-option': self.get_option__guild,
-            'help': self.help_guild
+            'online-version' : self.online_vers,
+            'my-id'          : self.my_id,
+            'json'           : self.json,
+            'favicon'        : self.favicon,
+            'online'         : self.online,
+            'ping'           : self.ping,
+            'refresh'        : self.refresh,
+            'set-option'     : self.set_option__guild,
+            'get-option'     : self.get_option__guild,
+            'help'           : self.help_guild
         }
         self.dcommands: Dict[str, Callable[[discord.message.Message], Awaitable[None]]] = {
             'current-version': self.current_vers,
-            'online-version': self.online_vers,
-            'my-id': self.my_id,
-            'stop': self.stop,
-            'update': self.update,
-            'set-option': self.set_option__dm,
-            'get-option': self.get_option__dm,
-            'help': self.help_dm
+            'online-version' : self.online_vers,
+            'my-id'          : self.my_id,
+            'stop'           : self.stop,
+            'update'         : self.update,
+            'set-option'     : self.set_option__dm,
+            'get-option'     : self.get_option__dm,
+            'help'           : self.help_dm
         }
         gears.BaseBot.__init__(self, self.loop)
-        
+
         self.tree = discord.app_commands.CommandTree(self)
         for command_name, command_function in self.gcommands.items():
             callback, params = slash_handle(command_function)
             command: discord.app_commands.commands.Command = discord.app_commands.commands.Command(
-                name = command_name,
-                description = command_function.__doc__ or '',
-                callback = callback,
-                nsfw = False,
+                name                = command_name,
+                description         = command_function.__doc__ or '',
+                callback            = callback,
+                nsfw                = False,
                 auto_locale_strings = True
             )
-            command._params = params
-            command.checks = getattr(callback, '__discord_app_commands_checks__', [])
+            command._params    = params
+            command.checks     = getattr(callback, '__discord_app_commands_checks__', [])
             command._guild_ids = getattr(
                 callback, '__discord_app_commands_default_guilds__', None
             )
@@ -766,7 +766,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 callback, '__discord_app_commands_default_permissions__', None
             )
             command.guild_only = getattr(callback, '__discord_app_commands_guild_only__', False)
-            command.binding = getattr(command_function, '__self__', None)
+            command.binding    = getattr(command_function, '__self__', None)
             self.tree.add_command(command)
         self.tree.on_error = self.on_error# type: ignore
 
@@ -864,11 +864,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             self.add_gear(GuildServerPinger(self, gid))
             return 'restarted'
         return 'none'
-    
+
     async def register_commands(self, guild: discord.Guild) -> None:
         "Register commands for guild"
         self.tree.copy_global_to(guild = guild)
-        
+
         await self.tree.sync(guild = guild)
 
     async def eval_guild(self, guild_id: int, force_reset: Optional[bool]=False) -> int:
@@ -903,8 +903,8 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def on_ready(self) -> None:
         "Print information about bot and evaluate all guilds."
         print(f'{self.user} has connected to Discord!')
-        print(f'Prefix: {self.prefix}')
-        print(f'Intents: {self.intents}')
+        print(f'Prefix  : {self.prefix}')
+        print(f'Intents : {self.intents}')
         print(f'Root Dir: {self.rootdir}')
 
         configurationdir = os.path.join(self.rootdir, 'config')
@@ -923,11 +923,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             guildnames.append(f'{guild.name} (id: {guild.id})')
         spaces = max(len(name) for name in guildnames)
         print('\n'+'\n'.join(name.rjust(spaces) for name in guildnames)+'\n')
-        
+
         ids = await self.eval_guilds(True)
-        
+
         print('Guilds evaluated:\n'+'\n'.join([str(x) for x in ids])+'\n')
-        
+
         act = discord.Activity(type=discord.ActivityType.watching, name=f'for {self.prefix}')
         await self.change_presence(status=discord.Status.online, activity=act)
 
@@ -960,44 +960,38 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def my_id(self, message: discord.message.Message) -> None:
         "Tells you your user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
-
-    async def save_favicon(self, guild_id: int) -> None:
-        "Save favicon image to favicon folder for this guild's server"
-        gear = self.get_gear(str(guild_id))
-        if gear is None:
-            return
-        pinger: GuildServerPinger = gear
-        if pinger.active_state is None or pinger.active_state.name != 'ping' or not 'favicon' in pinger.last_json:
-            return
-        favicon_data = pinger.last_json['favicon']
-        if not favicon_data.startswith('data:image/png;base64,'):
-            return
-        favicon_data = favicon_data.split(',')[1]
-        try:
-            data = base64.b64decode(favicon_data)
-            filename = os.path.abspath(
-                os.path.join(self.rootdir, 'favicon', f'{guild_id}.png')
-            )
-            update.make_dirpath_exist(filename)
-            with open(filename, mode='wb') as favicon_file:
-                favicon_file.write(data)
-                favicon_file.close()
-        except binascii.Error:
-            print('Encountered error decoding base64 string for favicon.')
-
+    
     async def favicon(self, message: discord.message.Message) -> None:
         "Post the cached favicon for server."
         if message.guild is None:
             return
-        await self.save_favicon(message.guild.id)
-        filename = os.path.join(self.rootdir, 'favicon', f'{message.guild.id}.png')
-        if not os.path.exists(filename):
-            await message.channel.send('Something went wrong attempting to get favicon.')
+        gear = self.get_gear(str(message.guild.id))
+        if gear is None:
+            await message.channel.send('Server pinger is not active for this guild. '+
+                                       'Use command `refresh` to restart.')
             return
-        with open(filename, 'rb') as file_handle:
-            file = discord.File(file_handle, filename=filename)
-            await message.channel.send(file=file)
-            file_handle.close()
+        pinger: GuildServerPinger = gear
+        if pinger.active_state is None or pinger.active_state.name != 'ping':
+            await message.channel.send('Server pinger is not active for this guild. '+
+                                       'Use command `refresh` to restart.')
+            return
+        if not 'favicon' in pinger.last_json:
+            await message.channel.send('Server does not have a favicon. '+
+                                       'Ask the server owner to add one!')
+            return
+        favicon_data: str = pinger.last_json['favicon']
+        if not favicon_data.startswith('data:image/png;base64,'):
+            await message.channel.send('Server favicon is not encoded properly.')
+            return
+        favicon_data = favicon_data.split(',')[1]
+        try:
+            file_handle = io.BytesIO(base64.b64decode(favicon_data))
+        except binascii.Error:
+            await message.channel.send('Encountered error decoding base64 string for favicon.')
+            return
+        file = discord.File(file_handle, filename=f'{message.guild.id}.png')
+        await message.channel.send(file=file)
+        file_handle.close()
 
     async def json(self, message: discord.message.Message) -> None:
         "Get last json message from server."
@@ -1152,7 +1146,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                     await message.channel.send('Retrieving file list...')
                     try:
                         response = await get_github_file('files.json')
-                        paths = tuple(update.get_paths(json.loads(response)))
+                        paths    = tuple(update.get_paths(json.loads(response)))
                     except Exception:# pylint: disable=broad-except
                         # On failure, tell them we can't read file.
                         await message.channel.send('Could not read file list. Aborting update.')
@@ -1175,7 +1169,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 await message.channel.send('No update required.')
             return
         await message.channel.send('You do not have permission to run this command.')
-    
+
     async def get_option__guild_option_autocomplete(self,
                                                     interaction: discord.Interaction,
                                                     current: str) -> List[discord.app_commands.Choice[str]]:
@@ -1189,7 +1183,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             for option in valid
             if current.lower() in option.lower()
         ]
-    
+
     @discord.app_commands.autocomplete(option = get_option__guild_option_autocomplete)
     async def get_option__guild(self,
                                 message: discord.message.Message,
@@ -1212,7 +1206,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         option = option.lower()
         if option not in valid:
             await message.channel.send('Invalid option.'+validops)
-        
+
         value = configuration[option]
         if not value and value != 0:
             await message.channel.send(f'Option `{option}` is not set.')
@@ -1221,7 +1215,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             names = await self.replace_ids_w_names(value)
             value = combine_and(wrap_list_values(names, '`'))[1:-1]
         await message.channel.send(f'Value of option `{option}`: `{value}`.')
-    
+
     async def get_option__dm(self, message: discord.message.Message) -> None:
         "Get the value of the option given in the direct message configuration."
         args = parse_args(message.content, 1)
@@ -1264,7 +1258,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def help_dm(self, message: discord.message.Message) -> None:
         "Get all valid options for direct messages."
         await send_command_list(self.dcommands, 'DM', message.channel)
-    
+
     @discord.app_commands.rename(force_reset = 'force-reset')
     async def refresh(self,
                       message: discord.message.Message,
@@ -1273,10 +1267,10 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if message.guild is None:
             await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')
             raise ValueError("Message guild is None")
-        
+
         if force_reset:
-            configuration = self.get_guild_configuration(message.guild.id)
-            allowed_users = set(configuration.get('force-refresh-users', []))
+            configuration  = self.get_guild_configuration(message.guild.id)
+            allowed_users  = set(configuration.get('force-refresh-users', []))
             allowed_users |= {OWNER_ID, message.guild.owner}
             if message.author.id not in allowed_users:
                 await message.channel.send(
@@ -1289,7 +1283,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                                        'we have to let the old one realize it should stop.')
         await self.eval_guild(message.guild.id, force_reset)
         await message.channel.send('Guild has been re-evaluated.')
-    
+
     @staticmethod
     def set_option__guild_valid_options(user_id: int,
                                         guild_owner: int,
@@ -1331,7 +1325,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             )
             for option in interaction.extras['option']
         ]
-    
+
 ##    async def set_option__guild_value_autocomplete(self,
 ##                                                   interaction: discord.Interaction,
 ##                                                   current: str) -> List[discord.app_commands.Choice[str]]:
@@ -1354,7 +1348,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 ##            for option in valid
 ##            if current.replace(' ', '-').lower() in option.lower()
 ##        ]
-    
+
 ##    @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
     @discord.app_commands.autocomplete(
         option = set_option__guild_option_autocomplete,
@@ -1369,20 +1363,20 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')
             raise ValueError("Message guild is None")
         configuration = self.get_guild_configuration(message.guild.id)
-        
+
         valid = self.set_option__guild_valid_options(
             message.author.id,
             message.guild.owner.id if message.guild.owner is not None else OWNER_ID,
             configuration
         )
-        
+
         if not valid:
             await message.channel.send(
                 'You do not have permission to set any options. If you feel this is a mistake, '\
                 'please contact server admin(s) and have them give you permission.')
             return
         validops = get_valid_options(valid)
-        
+
         if not option in valid:
             await message.channel.send('Invalid option.'+validops)
             return
@@ -1390,10 +1384,12 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if value is None:
             msg = f'Insufficiant arguments for `{option}`.'
             base = '`clear`, a discord id, or the username of a new user to add to the '
-            arghelp = {'address': 'Server address of a java edition minecraft server.',
-                       'channel': 'Name of the discord channel to send join-leave messages to.',
-                       'set-option-users': base+'set option permission list.',
-                       'force-refresh-users': base+'force reset permission list.'}
+            arghelp = {
+                'address'            : 'Server address of a java edition minecraft server.',
+                'channel'            : 'Name of the discord channel to send join-leave messages to.',
+                'set-option-users'   : base+'set option permission list.',
+                'force-refresh-users': base+'force reset permission list.'
+            }
             msg += '\nArgument required: '+arghelp[option]
             await message.channel.send(msg)
             return
@@ -1473,9 +1469,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             msg = f'Insufficiant arguments for {option}.'
             base = '`clear`, a discord user id, or the username of a new user to add'\
                    ' to the permission list of users who can '
-            arghelp = {'stop-users': base+'stop the bot.',
-                       'update-users': base+'update the bot.',
-                       'set-option-users': base+'change stop and update permissions.'}
+            arghelp = {
+                'stop-users'      : base+'stop the bot.',
+                'update-users'    : base+'update the bot.',
+                'set-option-users': base+'change stop and update permissions.'
+            }
             msg += '\nArgument required: '+arghelp[option]
             await message.channel.send(msg)
             return
@@ -1545,7 +1543,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if self.stopped.is_set() and midx:
             await message.channel.send(f'{__title__} is in the process of shutting down.')
             return
-        
+
         if command not in commands:
             if not midx and content.startswith(self.prefix):
                 # if in a direct message and starts with our prefix,
@@ -1557,9 +1555,9 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             # Otherwise, send error of no command.
             await message.channel.send('No valid command given.'+err)
             return
-        
+
         command_func = commands[command]
-        
+
         annotations = get_type_hints(command_func)
         params = {}
         for name, typeval in annotations.items():
@@ -1568,14 +1566,14 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             if typeval in {discord.Message}:
                 continue
             params[name] = typeval
-        
+
         try:
             command_args = process_arguments(params, args[2:])
         except ValueError:
             names = combine_and([f'{k} ({v.__name__})' for k, v in params.items()])
             await message.channel.send(f'Missing one or more arguments: {names}')
             return
-        
+
         # If command is valid, run it.
         await command_func(message, **command_args)
 
@@ -1638,7 +1636,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         "Log error and continue."
         if event == 'on_message':
             print(f'Unhandled message: {args[0]}')
-        extra = 'Error Event:\n'+str(event)+'\n'
+        extra  = 'Error Event:\n'+str(event)+'\n'
         extra += 'Error args:\n'+'\n'.join(map(str, args))+'\nError kwargs:\n'
         extra += '\n'.join(f'{key}:{val}' for key, val in kwargs.items())
         log_active_exception(self.logpath, extra=extra)
@@ -1671,18 +1669,17 @@ or set DISCORD_TOKEN environment variable.''')
     print('\nStarting bot...')
 
     intents = discord.Intents(**{
-        'dm_messages': True,
-        'guild_messages': True,
-        'messages': True,
-        'guilds': True,
-        'members': True,
+        'dm_messages'    : True,
+        'guild_messages' : True,
+        'messages'       : True,
+        'guilds'         : True,
+        'members'        : True,
         'message_content': True
     })
     # 4867
 
     loop = asyncio.new_event_loop()
-    
-    bot = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
+    bot  = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
 
     try:
         loop.run_until_complete(bot.start(TOKEN))

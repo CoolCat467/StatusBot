@@ -95,7 +95,7 @@ class StateMachine:
 ##    __slots__ = 'states', 'active_state'
     def __init__(self) -> None:
         "Initialize StateMachine."
-        self.states: Dict[str, State] = {} # Stores the states
+        self.states      : Dict[str, State] = {} # Stores the states
         self.active_state: Union[State, None] = None# The currently active state
     
     def __repr__(self) -> str:
@@ -212,8 +212,8 @@ class Gear:
 ##    __slots__ = 'bot', 'name', 'running', 'stopped'
     def __init__(self, bot: 'BaseBot', name: str) -> None:
         "Store self.bot, and set self.running and self.stopped to False."
-        self.bot = bot
-        self.name = name
+        self.bot     = bot
+        self.name    = name
         self.running = False
         self.stopped = False
     
@@ -458,7 +458,7 @@ def run() -> None:
         def __init__(self, delay: int, next_: str) -> None:
             super().__init__(f'wait_{delay}->{next_}')
             self.delay = delay
-            self.next = next_
+            self.next  = next_
         
         async def do_actions(self) -> None:
             print(f'{self.name} waits {self.delay}.')

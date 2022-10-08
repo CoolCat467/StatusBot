@@ -13,15 +13,14 @@ __ver_major__ = 0
 __ver_minor__ = 1
 __ver_patch__ = 7
 
-from typing import Any
+from typing import Any, Callable, Coroutine
 
 import os
-from asyncio import gather
+import asyncio
 
-import aiohttp
-import async_timeout
+import httpx
 
-TIMEOUT = 10
+TIMEOUT = 60
 
 def get_address(user: str, repo: str, branch: str, path: str) -> str:
     "Get raw GitHub user content URL of a specific file."
@@ -65,21 +64,20 @@ def make_dirpath_exist(filepath: str) -> None:
 
 async def download_coroutine(url: str,
                              timeout: int = TIMEOUT,
-                             **sessionkwargs: Any) -> bytes:
+                             headers: dict = None) -> bytes:
     "Return content bytes found at URL."
-    # Make a session with our event loop
-    async with aiohttp.ClientSession(**sessionkwargs) as session:
-        # Make sure we have a timeout, so that in the event of
-        # network failures or something code doesn't get stuck
-        async with async_timeout.timeout(timeout):
-            # Go to the URL and get response
-            async with session.get(url) as response:
-                # Wait for our response
-                request_result = await response.content.read()
-                # Close response socket/file descriptor
-                response.close()
-        # Close session
-        await session.close()
+    async with httpx.AsyncClient(http2 = True, timeout = timeout) as client:
+        # Go to the URL and get response
+        response = await client.get(url, headers=headers)
+        
+        # Raise exceptions if errors happened
+        response.raise_for_status()
+        
+        # Get response content
+        request_result = response.read()
+        
+        # Close response
+        await response.aclose()
     return request_result
 
 async def get_file(repo: str,
@@ -132,4 +130,30 @@ async def update_files(basepath: str,# pylint: disable=too-many-arguments
             sfile.close()
         return path
     coros = (update_single(path) for path in paths)
-    return await gather(*coros)
+    return await asyncio.gather(*coros)
+
+async def run_async(loop: asyncio.AbstractEventLoop) -> None:
+    "Run asynchronously"
+    data = await get_file(
+        'StatusBot',
+        'version.txt',
+        'CoolCat467',
+        'master',
+        headers = {
+            'accept': 'text/plain',
+##            'host': 'raw.githubusercontent.com'
+##            'user-agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:105.0) Gecko/20100101 Firefox/105.0'
+        }
+    )
+    print(data.decode('utf-8'))
+
+def run() -> None:
+    "Run test"
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(run_async(loop))
+    finally:
+        loop.close()
+
+if __name__ == '__main__':
+    run()

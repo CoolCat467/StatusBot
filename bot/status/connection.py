@@ -18,8 +18,8 @@
 "TCP and UDP Connections, both asynchronous and not."
 
 # This version of mcstatus's connection module
-# has support for varlongs and has general text reformatting
-# and spaceing changes. Slight changes to Asyncronous TCP and UDP
+# has support for var longs and has general text reformatting
+# and spacing changes. Slight changes to Asynchronous TCP and UDP
 # closing as well.
 
 from __future__ import annotations
@@ -27,31 +27,30 @@ from __future__ import annotations
 import asyncio
 import socket
 import struct
-from abc import ABC, abstractmethod
+from abc       import ABC, abstractmethod
 from ipaddress import ip_address
-from typing import Iterable, Optional, Union
+from typing    import Optional, Union
 
 from ctypes import c_uint32 as unsigned_int32
-from ctypes import c_int32 as signed_int32
+from ctypes import c_int32  as signed_int32
 from ctypes import c_uint64 as unsigned_int64
-from ctypes import c_int64 as signed_int64
+from ctypes import c_int64  as signed_int64
 
 import asyncio_dgram
 
 def ip_type(address: Union[int, str]) -> Optional[int]:
-    "Returns what version of ip a given address is."
+    "Returns what version of IP a given address is."
     try:
         return ip_address(address).version
     except ValueError:
         return None
 
 class BaseWriteSync(ABC):
-    "Base syncronous write class"
+    "Base synchronous write class"
     __slots__: tuple = tuple()
     @abstractmethod
     def write(self, data: bytes) -> None:
         "Write data to self."
-        ...
     
     def __repr__(self) -> str:
         "Return representation of self."
@@ -134,12 +133,11 @@ class BaseWriteSync(ABC):
         self.write(data)
 
 class BaseWriteAsync(ABC):
-    "Base syncronous write class"
+    "Base synchronous write class"
     __slots__: tuple = tuple()
     @abstractmethod
     async def write(self, data: bytes) -> None:
         "Write data to self."
-        ...
     
     def __repr__(self) -> str:
         "Return representation of self."
@@ -222,12 +220,11 @@ class BaseWriteAsync(ABC):
         await self.write(data)
 
 class BaseReadSync(ABC):
-    "Base syncronous read class"
+    "Base synchronous read class"
     __slots__: tuple = tuple()
     @abstractmethod
     def read(self, length: int) -> bytearray:
-        "Read length bytes from self, return a bytearray."
-        ...
+        "Read length bytes from self, return a byte array."
     
     def __repr__(self) -> str:
         "Return representation of self."
@@ -235,32 +232,32 @@ class BaseReadSync(ABC):
     
     @staticmethod
     def _unpack(format_: str, data: bytes) -> int:
-        "Unpack data as bytes with format in big-enidian."
+        "Unpack data as bytes with format in big-endian."
         return struct.unpack('>' + format_, bytes(data))[0]
     
     def read_varint(self) -> int:
         """Read varint from self and return it.
         Max: 2 ** 31 - 1, Min: -(2 ** 31)
-        Raises IOError when varint recieved is too big."""
+        Raises IOError when varint received is too big."""
         result = 0
         for i in range(5):
             part = self.read(1)[0]
             result |= (part & 0x7F) << (7 * i)
             if not part & 0x80:
                 return signed_int32(result).value
-        raise IOError('Recieved varint is too big!')
+        raise IOError('received varint is too big!')
     
     def read_varlong(self) -> int:
         """Read varlong from self and return it.
         Max: 2 ** 63 - 1, Min: -(2 ** 63).
-        Raises IOError when varint recieved is too big."""
+        Raises IOError when varint received is too big."""
         result = 0
         for i in range(10):
             part = self.read(1)[0]
             result |= (part & 0x7F) << (7 * i)
             if not part & 0x80:
                 return signed_int64(result).value
-        raise IOError('Recieved varlong is too big!')
+        raise IOError('received varlong is too big!')
     
     def read_utf(self) -> str:
         "Read up to 32767 bytes by reading a varint, then decode bytes as utf8."
@@ -306,12 +303,11 @@ class BaseReadSync(ABC):
         return result
 
 class BaseReadAsync(ABC):
-    "Asyncronous Read connection base class."
+    "Asynchronous Read connection base class."
     __slots__: tuple = tuple()
     @abstractmethod
     async def read(self, length: int) -> bytearray:
-        "Read length bytes from self, return a bytearray."
-        ...
+        "Read length bytes from self, return a byte array."
     
     def __repr__(self) -> str:
         "Return representation of self."
@@ -319,32 +315,32 @@ class BaseReadAsync(ABC):
     
     @staticmethod
     def _unpack(format_: str, data: bytes) -> int:
-        "Unpack data as bytes with format in big-enidian."
+        "Unpack data as bytes with format in big-endian."
         return struct.unpack('>' + format_, bytes(data))[0]
     
     async def read_varint(self) -> int:
         """Read varint from self and return it.
         Max: 2 ** 31 - 1, Min: -(2 ** 31)
-        Raises IOError when varint recieved is too big."""
+        Raises IOError when varint received is too big."""
         result = 0
         for i in range(5):
             part = (await self.read(1))[0]
             result |= (part & 0x7F) << 7 * i
             if not part & 0x80:
                 return signed_int32(result).value
-        raise IOError('Recieved a varint that was too big!')
+        raise IOError('received a varint that was too big!')
     
     async def read_varlong(self) -> int:
         """Read varlong from self and return it.
         Max: 2 ** 63 - 1, Min: -(2 ** 63).
-        Raises IOError when varint recieved is too big."""
+        Raises IOError when varint received is too big."""
         result = 0
         for i in range(10):
             part = (await self.read(1))[0]
             result |= (part & 0x7F) << (7 * i)
             if not part & 0x80:
                 return signed_int64(result).value
-        raise IOError('Recieved varlong is too big!')
+        raise IOError('received varlong is too big!')
     
     async def read_utf(self) -> str:
         "Read up to 32767 bytes by reading a varint, then decode bytes as utf8."
@@ -409,27 +405,27 @@ class BaseConnection:
         raise TypeError(f'{self.__class__.__name__} does not support remaining()')
 
 class BaseSyncConnection(BaseConnection, BaseReadSync, BaseWriteSync):
-    "Base syncronous read and write class"
+    "Base synchronous read and write class"
     __slots__: tuple = tuple()
     
 class BaseAsyncReadSyncWriteConnection(BaseConnection, BaseReadAsync, BaseWriteSync):
-    "Base asyncronous read and syncronous write class"
+    "Base Asynchronous read and synchronous write class"
     __slots__: tuple = tuple()
 
 class BaseAsyncConnection(BaseConnection, BaseReadAsync, BaseWriteAsync):
-    "Base asyncronous read and write class"
+    "Base Asynchronous read and write class"
     __slots__: tuple = tuple()
 
 class Connection(BaseSyncConnection):
     "Base connection class."
     __slots__: tuple = ('sent', 'received')
     def __init__(self) -> None:
-        "Initialize self.send and self.received to an empty bytearray."
+        "Initialize self.send and self.received to an empty byte array."
         self.sent = bytearray()
         self.received = bytearray()
     
     def read(self, length: int) -> bytearray:
-        "Return self.recieved up to length bytes, then cut recieved up to that point."
+        "Return self.received up to length bytes, then cut received up to that point."
         result = self.received[:length]
         self.received = self.received[length:]
         return result
@@ -482,11 +478,11 @@ class SocketConnection(BaseSyncConnection):
         self.close()
 
 class TCPSocketConnection(SocketConnection):
-    "TCP Connection to addr. Timeout defaults to 3 secconds."
-    def __init__(self, addr: tuple[Optional[str], int], timeout: int=3):
-        "Create a connection to addr with self.socket, set TCP NODELAY to True."
+    "TCP Connection to address. Timeout defaults to 3 seconds."
+    def __init__(self, address: tuple[Optional[str], int], timeout: int=3):
+        "Create a connection to address with self.socket, set TCP NODELAY to True."
         super().__init__()
-        self.socket = socket.create_connection(addr, timeout=timeout)
+        self.socket = socket.create_connection(address, timeout=timeout)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     
     def read(self, length: int) -> bytearray:
@@ -504,15 +500,15 @@ class TCPSocketConnection(SocketConnection):
         self.socket.send(data)
 
 class UDPSocketConnection(SocketConnection):
-    "UDP Connection to addr. Default timout is 3 secconds."
+    "UDP Connection to address. Default timeout is 3 seconds."
     __slots__ = ('addr',)
-    def __init__(self, addr: tuple[str, int], timeout: int=3):
-        """Set self.addr to addr, set self.socket to new socket,
+    def __init__(self, address: tuple[str, int], timeout: int=3):
+        """Set address and set socket to new socket,
         AF_INET if IPv4, AF_INET6 otherwise."""
         super().__init__()
-        self.addr = addr
+        self.address = address
         self.socket = socket.socket(
-            socket.AF_INET if ip_type(addr[0]) == 4 else socket.AF_INET6,
+            socket.AF_INET if ip_type(address[0]) == 4 else socket.AF_INET6,
             socket.SOCK_DGRAM,
         )
         self.socket.settimeout(timeout)
@@ -529,23 +525,25 @@ class UDPSocketConnection(SocketConnection):
         return result
     
     def write(self, data: bytes) -> None:
-        "Use self.socket to send data to self.addr."
-        self.socket.sendto(data, self.addr)
+        "Use self.socket to send data to address."
+        self.socket.sendto(data, self.address)
 
 class TCPAsyncSocketConnection(BaseAsyncReadSyncWriteConnection):
-    "Asyncronous TCP connection to addr. Default timeout is 3 secconds."
+    "Asynchronous TCP connection to address. Default timeout is 3 seconds."
     __slots__ = ('reader', 'writer')
     def __init__(self) -> None:
-        self.reader: asyncio.StreamReader
-        self.writer: asyncio.StreamWriter
+        self.reader: Optional[asyncio.StreamReader] = None
+        self.writer: Optional[asyncio.StreamWriter] = None
     
-    async def connect(self, addr: tuple[str, int], timeout: int=3) -> None:
-        "Use asyncio to open a connection to addr (host, port)."
-        conn = asyncio.open_connection(addr[0], addr[1])
+    async def connect(self, address: tuple[str, int], timeout: int=3) -> None:
+        "Use asyncio to open a connection to address (host, port)."
+        conn = asyncio.open_connection(address[0], address[1])
         self.reader, self.writer = await asyncio.wait_for(conn, timeout=timeout)
     
     async def read(self, length: int) -> bytearray:
         "Read up to length bytes from self.reader."
+        if self.reader is None:
+            raise TypeError('Reader is None instead of asyncio StreamReader')
         result = bytearray()
         while len(result) < length:
             new = await self.reader.read(length - len(result))
@@ -556,6 +554,8 @@ class TCPAsyncSocketConnection(BaseAsyncReadSyncWriteConnection):
     
     def write(self, data: bytes) -> None:
         "Write data to self.writer."
+        if self.writer is None:
+            raise TypeError('Writer is None instead of asyncio StreamWriter')
         self.writer.write(data)
     
     def close(self) -> None:
@@ -568,16 +568,16 @@ class TCPAsyncSocketConnection(BaseAsyncReadSyncWriteConnection):
         self.close()
 
 class UDPAsyncSocketConnection(BaseAsyncConnection):
-    "Asyncronous UDP connection to addr. Default timeout is 3 secconds."
+    "Asynchronous UDP connection to address. Default timeout is 3 seconds."
     __slots__ = ('stream', 'timeout')
     def __init__(self) -> None:
-        self.stream: asyncio_dgram.aio.DatagramClient
+        self.stream: Optional[asyncio_dgram.aio.DatagramClient] = None
         self.timeout: int = 3
     
-    async def connect(self, addr: tuple, timeout: int=3) -> None:
-        "Connect to addr (host, port)"
+    async def connect(self, address: tuple[str, int], timeout: int=3) -> None:
+        "Connect to address (host, port)"
         self.timeout = timeout
-        conn = asyncio_dgram.connect((addr[0], addr[1]))
+        conn = asyncio_dgram.connect((address[0], address[1]))
         self.stream = await asyncio.wait_for(conn, timeout=self.timeout)
     
     def remaining(self) -> int:
@@ -586,6 +586,8 @@ class UDPAsyncSocketConnection(BaseAsyncConnection):
     
     async def read(self, length: int) -> bytearray:
         "Read from stream. Length does nothing."
+        if self.stream is None:
+            raise TypeError('Stream is None instead of asyncio_dgram.aio.DatagramClient')
         # pylint: disable=unused-variable
         data, remote_addr = await asyncio.wait_for(self.stream.recv(),
                                                    timeout=self.timeout)
@@ -593,6 +595,8 @@ class UDPAsyncSocketConnection(BaseAsyncConnection):
     
     async def write(self, data: bytes) -> None:
         "Send data with self.stream."
+        if self.stream is None:
+            raise TypeError('Stream is None instead of asyncio_dgram.aio.DatagramClient')
         await self.stream.send(data)
     
     def close(self) -> None:

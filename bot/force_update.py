@@ -41,20 +41,20 @@ async def update_files(timeout: int=20) -> None:
     "Preform update from GitHub."
     # If we need update, get file list.
     print('Retrieving file list...')
-    try:
-        response = await get_github_file('files.json')
-        paths = tuple(update.get_paths(json.loads(response)))
-    except Exception:
-        # On failure, tell them we can't read file.
-        print('Could not read file list. Aborting update.')
-        return
+##    try:
+    response = await get_github_file('files.json')
+    paths    = tuple(update.get_paths(json.loads(response)))
+##    except Exception:
+##        # On failure, tell them we can't read file.
+##        print('Could not read file list. Aborting update.')
+##        return
     # Get max amount of time this could take.
     # Tell user number of files we are updating.
     print(f'{len(paths)} files will now be updated.\n')
     # Update said files.
     rootdir = split(ROOTDIR)[0]
     print('\n'.join(paths))
-    await update.update_files(rootdir, paths, 'StatusBot', __author__, 'master', timeout)
+##    await update.update_files(rootdir, paths, 'StatusBot', __author__, 'master', timeout)
     print('\nAll files in file list updated.')
 
 def run() -> None:

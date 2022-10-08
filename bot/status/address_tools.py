@@ -6,10 +6,10 @@
 
 __all__ = ['ip_type', 'parse_address', 'lookup', 'find_ip']
 
-from typing import Union, Tuple, Optional
 import socket
+from typing       import Union, Tuple, Optional
 from urllib.parse import urlparse
-from ipaddress import ip_address
+from ipaddress    import ip_address
 
 import dns.resolver
 
@@ -31,7 +31,9 @@ def parse_address(address: str) -> Tuple[str, Optional[int]]:
         raise ValueError(f"Invalid address '{address}'")
     return tmp.hostname, tmp.port
 
-def lookup(address: str, default_port: int=80, format_host: str='{}',
+def lookup(address: str,
+           default_port: int = 80,
+           format_host: str = '{}',
            qname: str='A') -> Tuple[str, int]:
     "Look up address and return ip after sucessful lookup."
     host, port = parse_address(address)

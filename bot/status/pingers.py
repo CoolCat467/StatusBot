@@ -4,11 +4,6 @@
 
 "Asynchronous and non-asynchronous Server Pinger classes."
 
-# This version of mcstatus's pingers module
-# has async and regular functions use the same parts with subfunctions
-
-__all__ = ['AsyncServerPinger']
-
 import datetime
 import json
 from random import randint
@@ -16,7 +11,7 @@ from random import randint
 from status.connection import Connection, TCPAsyncSocketConnection
 
 class AsyncServerPinger:
-    "Async Server Pinger class, pings server with connection given."
+    "Asynchronous Server Pinger class, pings server with connection given."
     __slots__ = 'version', 'connection', 'host', 'port', 'ping_token'
     def __init__(
         self,
@@ -98,8 +93,8 @@ class AsyncServerPinger:
         # We have no trivial way of getting a time delta :(
         return (delta.days * 24 * 60 * 60 + delta.seconds) * 1000 + delta.microseconds / 1000
     
-    async def test_ping(self) -> float:# type: ignore
-        "Send test ping, return delay (in miliseconds) delta from response."
+    async def test_ping(self) -> float:
+        "Send test ping, return delay (in milliseconds) delta from response."
         sent = self._test_ping_request()
         
         response = await self.connection.read_buffer()
