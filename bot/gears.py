@@ -32,27 +32,27 @@ class State:
         "Initialize state with a name."
         self.name = name
         self.machine: 'StateMachine'
-    
+
     def __str__(self) -> str:
         "Return <{self.name} {class-name}>."
         return f'<{self.name} {self.__class__.__name__}>'
-    
+
     def __repr__(self) -> str:
         "Return self as string."
         return str(self)
-    
+
     def entry_actions(self) -> None:
         "Preform entry actions for this State."
         return None
-    
+
     def do_actions(self) -> None:
         "Preform actions for this State."
         return None
-    
+
     def check_conditions(self) -> Union[str, None]:
         "Check state and return new state name. None -> remains in current state."
         return None
-    
+
     def exit_actions(self) -> None:
         "Preform exit actions for this State."
         return None
@@ -64,27 +64,27 @@ class AsyncState:
         "Initialize state with a name."
         self.name = name
         self.machine: 'AsyncStateMachine'
-    
+
     def __str__(self) -> str:
         "Return <{self.name} {class-name}>."
         return f'<{self.name} {self.__class__.__name__}>'
-    
+
     def __repr__(self) -> str:
         "Return self as string."
         return str(self)
-    
+
     async def entry_actions(self) -> None:
         "Preform entry actions for this State."
         return None
-    
+
     async def do_actions(self) -> None:
         "Preform actions for this State."
         return None
-    
+
     async def check_conditions(self) -> Union[str, None]:
         "Check state and return new state name. None -> remains in current state."
         return None
-    
+
     async def exit_actions(self) -> None:
         "Preform exit actions for this State."
         return None
@@ -97,44 +97,44 @@ class StateMachine:
         "Initialize StateMachine."
         self.states      : Dict[str, State] = {} # Stores the states
         self.active_state: Union[State, None] = None# The currently active state
-    
+
     def __repr__(self) -> str:
         "Return <{class-name} {self.states}>"
         text = f'<{self.__class__.__name__}'
         if hasattr(self, 'states'):
             text += f' {self.states}'
         return text+'>'
-    
+
     def add_state(self, state: State) -> None:
         "Add a State instance to the internal dictionary."
         if not isinstance(state, State):
             raise TypeError(f'"{type(state).__name__}" is not an instance of State!')
         state.machine = self
         self.states[state.name] = state
-    
+
     def add_states(self, states: Iterable[State]) -> None:
         "Add multiple State instances to internal dictionary."
         for state in states:
             self.add_state(state)
-    
+
     def remove_state(self, state_name: str) -> None:
         "Remove state with given name from internal dictionary."
         if not state_name in self.states:
             raise ValueError(f'{state_name} is not a registered State.')
         del self.states[state_name]
-    
+
     def set_state(self, new_state_name: str) -> None:
         "Change states and preform any exit / entry actions."
         if not new_state_name in self.states:
             raise KeyError(f'"{new_state_name}" not found in internal states dictionary!')
-        
+
         if not self.active_state is None:
             self.active_state.exit_actions()
-        
+
         self.active_state = self.states[new_state_name]
         if not self.active_state is None:
             self.active_state.entry_actions()
-    
+
     def think(self) -> None:
         "Preform the actions of the active state, check conditions, and potentially change states."
         # Only continue if there is an active state
@@ -156,45 +156,45 @@ class AsyncStateMachine:
         "Initialize AsyncStateMachine."
         self.states: Dict[str, AsyncState] = {} # Stores the states
         self.active_state: Union[AsyncState, None] = None# The currently active state
-    
+
     def __repr__(self) -> str:
         "Return <{class-name} {self.states}>"
         text = f'<{self.__class__.__name__}'
         if hasattr(self, 'states'):
             text += f' {self.states}'
         return text+'>'
-    
+
     def add_state(self, state: AsyncState) -> None:
         "Add an AsyncState instance to the internal dictionary."
         if not isinstance(state, AsyncState):
             raise TypeError(f'"{type(state).__name__}" is not an instance of AsyncState!')
         state.machine = self
         self.states[state.name] = state
-    
+
     def add_states(self, states: Iterable[AsyncState]) -> None:
         "Add multiple State instances to internal dictionary."
         for state in states:
             self.add_state(state)
-    
+
     def remove_state(self, state_name: str) -> None:
         "Remove state with given name from internal dictionary."
         if not state_name in self.states:
             raise ValueError(f'{state_name} is not a registered AsyncState.')
         del self.states[state_name]
-    
+
     async def set_state(self, new_state_name: str) -> None:
         "Change states and preform any exit / entry actions."
         if not new_state_name in self.states:
             raise KeyError(f'"{new_state_name}" not found in internal states dictionary!')
-        
+
         if not self.active_state is None:
             await self.active_state.exit_actions()
-        
+
         self.active_state = self.states[new_state_name]
-        
+
         if not self.active_state is None:
             await self.active_state.entry_actions()
-    
+
     async def think(self) -> None:
         "Preform the actions of the active state, check conditions, and potentially change states."
         # Only continue if there is an active state
@@ -216,24 +216,24 @@ class Gear:
         self.name    = name
         self.running = False
         self.stopped = False
-    
+
     def gear_init(self) -> None:
         "Do whatever instance requires to start running. Must not stop bot."
         return None
-    
+
     def submit_coro(self, coro: Coroutine) -> asyncio.Task:
         "Submit a coroutine as task for bot event loop to complete"
         return self.bot.loop.create_task(coro)
-    
+
     async def hault(self) -> None:
         "Set self.running to False and self.stopped to True."
         self.running = False
         self.stopped = True
-    
+
     def gear_shutdown(self) -> None:
         "Shutdown gear. Only called after it's been stopped. Must not stop bot."
         return None
-    
+
     def __repr__(self) -> str:
         "Return <{class-name}>"
         return f'<{self.__class__.__name__}>'
@@ -244,11 +244,11 @@ class BaseBot:
     def __init__(self, eventloop: asyncio.AbstractEventLoop) -> None:
         self.loop = eventloop
         self.gears: Dict[str, Gear] = {}
-    
+
     def __repr__(self) -> str:
         "Return <{class-name}>"
         return f'<{self.__class__.__name__}>'
-    
+
     def add_gear(self, new_gear: Gear) -> None:
         "Add a new gear to this bot."
         if not isinstance(new_gear, Gear):
@@ -257,7 +257,7 @@ class BaseBot:
             raise RuntimeError(f'A gear named "{new_gear.name}" already exists!')
         self.gears[new_gear.name] = new_gear
         self.gears[new_gear.name].gear_init()
-    
+
     def remove_gear(self, gear_name: str) -> None:
         "Remove a gear from this bot."
         if gear_name in self.gears:
@@ -267,18 +267,18 @@ class BaseBot:
             del self.gears[gear_name]
         else:
             raise KeyError(f'Gear {gear_name} not found!')
-    
+
     def get_gear(self, gear_name: str) -> Union[Gear, None]:
         "Return a gear object if a gear with given name exists or None"
         if gear_name in self.gears:
             return self.gears[gear_name]
         return None
-    
+
     @property
     def gear_close(self) -> bool:
         "True if gear objects should be closed."
         return False
-    
+
     async def close(self) -> None:
         "Close this bot and it's gears."
         coros = [gear.hault()
@@ -287,7 +287,7 @@ class BaseBot:
         await asyncio.gather(*coros)
         for gkey in tuple(self.gears.keys()):
             self.remove_gear(gkey)
-    
+
     async def wait_ready(self) -> None:
         "Blocking until ready"
 
@@ -301,14 +301,14 @@ class Timer(Gear):
         self.delay = max(0, delay)
         self.task: asyncio.Task
         self.ticks = math.inf
-    
+
     def gear_init(self) -> None:
         "Create task in the bot event loop."
         self.task = self.submit_coro(self.wait_for_ready_start())
-    
+
     def on_stop(self) -> None:
         "Function called when timer has stopped ticking."
-    
+
     async def wait_for_ready_start(self) -> None:
         "Await self.bot.wait_until_ready(), then await self.start()."
         await self.bot.wait_ready()
@@ -320,7 +320,7 @@ class Timer(Gear):
         finally:
             self.stopped = True
             self.on_stop()
-    
+
     async def hault(self) -> None:
         "Set self.running to False, cancel self.task, and wait for it to cancel completely."
         # Stop running no matter what
@@ -346,11 +346,11 @@ class Timer(Gear):
                     pass
                 return True
             self.stopped = await wait_for_cancelled()
-    
+
     async def tick(self) -> bool:
         "Return False if Timer should continue running. Called every self.delay seconds."
         return True
-    
+
     async def start(self) -> None:
         "Keep running self.tick every self.delay second or until self.bot.gear_close is True."
         if self.min_delay > 0:
@@ -381,7 +381,7 @@ class StateTimerExitState(AsyncState):
     __slots__: tuple = tuple()
     def __init__(self) -> None:
         super().__init__('Hault')
-    
+
     async def check_conditions(self) -> None:
         "Set self.state_timer.active_state to None."
         self.machine.active_state = None
@@ -395,27 +395,27 @@ class StateTimer(Timer, AsyncStateMachine):
         Timer.__init__(self, bot, name, delay)
         
         self.add_state(StateTimerExitState())
-    
+
     def __repr__(self) -> str:
         "Return representation of self."
         return AsyncStateMachine.__repr__(self)
-    
+
     async def initialize_state(self) -> None:
         "In subclass, set initial asynchronous state."
 ##        await self.set_state('Hault')
         return None
-    
+
     async def start(self) -> None:
         await self.initialize_state()
         return await super().start()
-    
+
     async def tick(self) -> bool:
         "Preform actions for AsyncStateTimer. Return False if no active state is set."
         await self.think()
         if self.bot.gear_close:
             self.active_state = None
         return self.active_state is None
-    
+
     async def hault(self) -> None:
         await self.set_state('Hault')
         self.ticks = math.inf
@@ -459,11 +459,11 @@ def run() -> None:
             super().__init__(f'wait_{delay}->{next_}')
             self.delay = delay
             self.next  = next_
-        
+
         async def do_actions(self) -> None:
             print(f'{self.name} waits {self.delay}.')
             await asyncio.sleep(self.delay)
-        
+
         async def check_conditions(self) -> str:
             print(f'Going to next state {self.next}.')
             return self.next

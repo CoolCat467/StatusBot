@@ -37,6 +37,7 @@ import inspect
 from dotenv import load_dotenv
 import discord# type: ignore
 ##from discord.ext import tasks, commands
+from aiohttp.client_exceptions import ClientConnectorError
 
 # Update talks to GitHub
 import update
@@ -465,7 +466,10 @@ class GuildServerPinger(gears.StateTimer):
             except Exception:# pylint: disable=broad-except
                 log_active_exception(self.bot.logpath)
             finally:
-                await self.channel.send('Server pinger stopped.')
+                try:
+                    await self.channel.send('Server pinger stopped.')
+                except ClientConnectorError:
+                    pass
         else:
             await self.channel.send('No address for this guild defined, pinger not started.')
 
@@ -1033,6 +1037,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         gear = self.get_gear(str(message.guild.id))
         if gear is not None:
             pinger: GuildServerPinger = gear
+            
             if pinger.active_state is None:
                 await message.channel.send('Server pinger is not active for this guild. '+
                                            'Use command `refresh` to restart.')
@@ -1679,6 +1684,7 @@ or set DISCORD_TOKEN environment variable.''')
     # 4867
 
     loop = asyncio.new_event_loop()
+    global bot
     bot  = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
 
     try:
