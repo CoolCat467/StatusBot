@@ -1004,30 +1004,30 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             raise ValueError("Message guild is None")
         gear = self.get_gear(str(message.guild.id))
         if gear is None:
-            pinger: GuildServerPinger = gear
-            if pinger.active_state is None:
-                await message.channel.send('Server pinger is not active for this guild. '+
-                                           'Use command `refresh` to restart.')
-                return
-            if pinger.active_state.name == 'ping':
-                lastdict = pinger.last_json
-                if 'favicon' in lastdict:
-                    lastdict['favicon'] = '<base64 image data>'
-                msg = json.dumps(lastdict, sort_keys=True, indent=2)
-                await send_over_2000(
-                    message.channel.send,# type: ignore
-                    msg,
-                    'json\n',
-                    '```',
-                    start = 'Last received json message:\n'
-                )
-                return
-            delay = format_time(pinger.wait_time)
-            await message.channel.send(
-                f'Cannot connect to server at this time, try again in {delay}.')
+            await message.channel.send('Server pinger is not active for this guild. '+
+                                       'Use command `refresh` to restart.')
             return
-        await message.channel.send('Server pinger is not running for this guild. '\
-                                   'Use command `refresh` to restart.')
+        pinger: GuildServerPinger = gear
+        if pinger.active_state is None:
+            await message.channel.send('Server pinger is not active for this guild. '+
+                                       'Use command `refresh` to restart.')
+            return
+        if pinger.active_state.name == 'ping':
+            lastdict = pinger.last_json
+            if 'favicon' in lastdict:
+                lastdict['favicon'] = '<base64 image data>'
+            msg = json.dumps(lastdict, sort_keys=True, indent=2)
+            await send_over_2000(
+                message.channel.send,# type: ignore
+                msg,
+                'json\n',
+                '```',
+                start = 'Last received json message:\n'
+            )
+            return
+        delay = format_time(pinger.wait_time)
+        await message.channel.send(
+            f'Cannot connect to server at this time, try again in {delay}.')
 
     async def ping(self, message: discord.message.Message) -> None:
         "Get the connection latency to this guild's server."
