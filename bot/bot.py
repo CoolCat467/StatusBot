@@ -8,10 +8,10 @@
 
 __title__     = 'StatusBot'
 __author__    = 'CoolCat467'
-__version__   = '0.6.0'
+__version__   = '0.6.1'
 __ver_major__ = 0
 __ver_minor__ = 6
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 from typing import Any, Awaitable, Callable, Dict, List, Final, Iterable, Optional, Set, Union, get_type_hints, get_args
 
@@ -966,7 +966,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         "Tells you your user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
 
-    async def ensure_pinger_good(self, message: discord.message.Message) -> GuildServerPinger | None:
+    async def ensure_pinger_good(self, message: discord.message.Message) -> Union[GuildServerPinger, None]:
         "Return GuildServerPinger if pinger is working properly, else None"
         if message.guild is None:
             await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')

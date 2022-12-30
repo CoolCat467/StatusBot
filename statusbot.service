@@ -1,0 +1,14 @@
+[Unit]
+Description=StatusBot Autostart
+After=network.target
+StartLimitIntervalSec=0
+RestartSec=1
+
+[Service]
+Type=forking
+User=pi
+ExecStart=/home/pi/startup.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
