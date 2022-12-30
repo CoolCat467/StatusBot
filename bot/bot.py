@@ -8,10 +8,10 @@
 
 __title__     = 'StatusBot'
 __author__    = 'CoolCat467'
-__version__   = '0.5.1'
+__version__   = '0.6.0'
 __ver_major__ = 0
-__ver_minor__ = 5
-__ver_patch__ = 1
+__ver_minor__ = 6
+__ver_patch__ = 0
 
 from typing import Any, Awaitable, Callable, Dict, List, Final, Iterable, Optional, Set, Union, get_type_hints, get_args
 
@@ -734,6 +734,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             'favicon'        : self.favicon,
             'online'         : self.online,
             'ping'           : self.ping,
+            'forge-mods'     : self.forge_mods,
             'refresh'        : self.refresh,
             'set-option'     : self.set_option__guild,
             'get-option'     : self.get_option__guild,
@@ -964,21 +965,35 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     async def my_id(self, message: discord.message.Message) -> None:
         "Tells you your user id."
         await message.channel.send(f'Your user id is `{message.author.id}`.')
-    
-    async def favicon(self, message: discord.message.Message) -> None:
-        "Post the cached favicon for server."
+
+    async def ensure_pinger_good(self, message: discord.message.Message) -> GuildServerPinger | None:
+        "Return GuildServerPinger if pinger is working properly, else None"
         if message.guild is None:
-            return
+            await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')
+            raise ValueError("Message guild is None")
         gear = self.get_gear(str(message.guild.id))
         if gear is None:
-            await message.channel.send('Server pinger is not active for this guild. '+
+            await message.channel.send('Server pinger is not running for this guild. '\
                                        'Use command `refresh` to restart.')
-            return
+            return None
         pinger: GuildServerPinger = gear
-        if pinger.active_state is None or pinger.active_state.name != 'ping':
+        if pinger.active_state is None:
             await message.channel.send('Server pinger is not active for this guild. '+
                                        'Use command `refresh` to restart.')
+            return None
+        if pinger.active_state.name != 'ping':
+            delay = format_time(pinger.wait_time)
+            await message.channel.send(
+                f'Cannot connect to server at this time, try again in {delay}.')
+            return None
+        return pinger
+
+    async def favicon(self, message: discord.message.Message) -> None:
+        "Post the favicon from this guild's server."
+        pinger = self.ensure_pinger_good(message)
+        if pinger is None:
             return
+
         if not 'favicon' in pinger.last_json:
             await message.channel.send('Server does not have a favicon. '+
                                        'Ask the server owner to add one!')
@@ -998,95 +1013,91 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         file_handle.close()
 
     async def json(self, message: discord.message.Message) -> None:
-        "Get last json message from server."
-        if message.guild is None:
-            await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')
-            raise ValueError("Message guild is None")
-        gear = self.get_gear(str(message.guild.id))
-        if gear is None:
-            await message.channel.send('Server pinger is not active for this guild. '+
-                                       'Use command `refresh` to restart.')
+        "Post the last json message from this guild's server."
+        pinger = self.ensure_pinger_good(message)
+        if pinger is None:
             return
-        pinger: GuildServerPinger = gear
-        if pinger.active_state is None:
-            await message.channel.send('Server pinger is not active for this guild. '+
-                                       'Use command `refresh` to restart.')
-            return
-        if pinger.active_state.name == 'ping':
-            lastdict = pinger.last_json
-            if 'favicon' in lastdict:
-                lastdict['favicon'] = '<base64 image data>'
-            msg = json.dumps(lastdict, sort_keys=True, indent=2)
-            await send_over_2000(
-                message.channel.send,# type: ignore
-                msg,
-                'json\n',
-                '```',
-                start = 'Last received json message:\n'
-            )
-            return
-        delay = format_time(pinger.wait_time)
-        await message.channel.send(
-            f'Cannot connect to server at this time, try again in {delay}.')
+
+        lastdict = pinger.last_json
+        if 'favicon' in lastdict:
+            lastdict['favicon'] = '<base64 image data>'
+        msg = json.dumps(lastdict, sort_keys=True, indent=2)
+        await send_over_2000(
+            message.channel.send,# type: ignore
+            msg,
+            'json\n',
+            '```',
+            start = 'Last received json message:\n'
+        )
 
     async def ping(self, message: discord.message.Message) -> None:
-        "Get the connection latency to this guild's server."
-        if message.guild is None:
-            await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')
-            raise ValueError("Message guild is None")
-        gear = self.get_gear(str(message.guild.id))
-        if gear is not None:
-            pinger: GuildServerPinger = gear
-            
-            if pinger.active_state is None:
-                await message.channel.send('Server pinger is not active for this guild. '+
-                                           'Use command `refresh` to restart.')
-                return
-            if pinger.active_state.name == 'ping':
-                msg = f'`{pinger.last_delay}ms`'
-                await message.channel.send(
-                    f"{__title__}'s last received latency to defined guild server:\n"+msg)
-                return None
-            delay = format_time(pinger.wait_time)
-            await message.channel.send(
-                f'Cannot connect to server at this time, try again in {delay}.')
+        "Post the connection latency to this guild's server."
+        pinger = self.ensure_pinger_good(message)
+        if pinger is None:
             return
-        await message.channel.send('Server pinger is not running for this guild. '\
-                                   'Use command `refresh` to restart.')
+
+        msg = f'`{pinger.last_delay}ms`'
+        await message.channel.send(
+            f"{__title__}'s last received latency to defined guild server:\n"+msg)
+
+    async def forge_mods(self, message: discord.message.Message) -> None:
+        "Get a list of forge mods from this guild's server if it's modded."
+        pinger = self.ensure_pinger_good(message)
+        if pinger is None:
+            return
+
+        if not 'forgeData' in pinger.last_json:
+            await message.channel.send(f"There was no forge data in {__title__}'s last received json message from this guild's server.")
+            return
+        forge_data = pinger.last_json['forgeData']
+        if not 'channels' in forge_data or not 'mods' in forge_data:
+            await message.channel.send('Error: Forge data response is missing `channels` and or `mods` field')
+            return
+
+        channels = forge_data['channels']
+        mods: Dict[str, str] = forge_data['mods']
+
+        mod_data: List[Dict[str, str]] = []
+        for name, version in mods.items():
+##            required = True
+##            if version == '<not required for client>':
+##                version = '<unknown>'
+##                required = False
+            mod_item = {
+                'name': name,
+                'version': version,
+##                'required': required
+            }
+            mod_data.append(mod_item)
+
+        msg = json.dumps(mod_data, sort_keys=True, indent=2)
+        await send_over_2000(
+            message.channel.send,# type: ignore
+            msg,
+            'json\n',
+            '```',
+            start = 'Forge Mods:\n'
+        )
 
     async def online(self, message: discord.message.Message) -> None:
         "Get the usernames of the players currently connected to this guild's server."
-        if message.guild is None:
-            await message.channel.send(f'Message guild is `None`, this is an error. Please report at {GITHUB_URL}/issues.')
-            raise ValueError("Message guild is None")
-        gear = self.get_gear(str(message.guild.id))
-        if gear is not None:
-            pinger: GuildServerPinger = gear
-            if pinger.active_state is None:
-                await message.channel.send('Server pinger is not active for this guild. '\
-                                           'Use command `refresh` to restart.')
-                return
-            if pinger.active_state.name == 'ping':
-                players = list(pinger.last_online)
-                if players:
-                    player_text = combine_and(wrap_list_values(players, '`'))
-                    await send_over_2000(
-                        message.channel.send, # type: ignore
-                        player_text,
-                        start='Players online in last received sample:'
-                    )
-                elif pinger.last_online_count:
-                    await message.channel.send(f'There were `{pinger.last_online_count}` '\
-                                               'players online in last received message.')
-                else:
-                    await message.channel.send('No players were online in the last received sample.')
-                return
-            delay = format_time(pinger.wait_time)
-            await message.channel.send(
-                f'Cannot connect to server at this time, try again in {delay}.')
+        pinger = self.ensure_pinger_good(message)
+        if pinger is None:
             return
-        await message.channel.send('Server pinger is not running for this guild. '\
-                                   'Use command `refresh` to restart.')
+
+        players = list(pinger.last_online)
+        if players:
+            player_text = combine_and(wrap_list_values(players, '`'))
+            await send_over_2000(
+                message.channel.send, # type: ignore
+                player_text,
+                start='Players online in last received sample:'
+            )
+        elif pinger.last_online_count:
+            await message.channel.send(f'There were `{pinger.last_online_count}` '\
+                                       'players online in last received message.')
+        else:
+            await message.channel.send('No players were online in the last received sample.')
 
     async def stop(self, message: discord.message.Message) -> None:
         "Stop this bot."
