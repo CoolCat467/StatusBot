@@ -125,6 +125,10 @@ class BaseWriteSync(ABC):
         "Write 8 bytes for value 0 - 18446744073709551613 (2 ** 64 - 1)."
         self.write(self._pack('Q', value))
     
+    def write_bool(self, value: bool) -> None:
+        "Write 1 byte for boolean True or False"
+        self.write(self._pack('?', value))
+    
     def write_buffer(self, buffer: 'Connection') -> None:
         """Flush buffer, then write a varint of the length of the buffer's
         data, then write buffer data."""
@@ -212,6 +216,10 @@ class BaseWriteAsync(ABC):
         "Write 8 bytes for value 0 - 18446744073709551613 (2 ** 64 - 1)."
         await self.write(self._pack('Q', value))
     
+    async def write_bool(self, value: bool) -> None:
+        "Write 1 byte for boolean True or False"
+        await self.write(self._pack('?', value))
+    
     async def write_buffer(self, buffer: 'Connection') -> None:
         """Flush buffer, then write a varint of the length of the buffer's
         data, then write buffer data."""
@@ -295,6 +303,10 @@ class BaseReadSync(ABC):
         "Return 0 - 18446744073709551613 (2 ** 64 - 1). Read 8 bytes."
         return self._unpack('Q', self.read(8))
     
+    def read_bool(self) -> bool:
+        "Return True or False. Read 1 byte."
+        return self._unpack('?', self.read(1)) == 1
+    
     def read_buffer(self) -> 'Connection':
         "Read a varint for length, then return a new connection from length read bytes."
         length = self.read_varint()
@@ -377,6 +389,10 @@ class BaseReadAsync(ABC):
     async def read_ulong(self) -> int:
         "Return 0 - 18446744073709551613 (2 ** 64 - 1). Read 8 bytes."
         return self._unpack('Q', await self.read(8))
+    
+    async def read_bool(self) -> bool:
+        "Return True or False. Read 1 byte."
+        return self._unpack('?', await self.read(1)) == 1
     
     async def read_buffer(self) -> Connection:
         "Read a varint for length, then return a new connection from length read bytes."
