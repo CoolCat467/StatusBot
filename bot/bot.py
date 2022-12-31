@@ -8,10 +8,10 @@
 
 __title__     = 'StatusBot'
 __author__    = 'CoolCat467'
-__version__   = '0.6.1'
+__version__   = '0.6.2'
 __ver_major__ = 0
 __ver_minor__ = 6
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 from typing import Any, Awaitable, Callable, Dict, List, Final, Iterable, Optional, Set, Union, get_type_hints, get_args
 
@@ -1021,6 +1021,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         lastdict = pinger.last_json
         if 'favicon' in lastdict:
             lastdict['favicon'] = '<base64 image data>'
+        if 'forgeData' in lastdict:
+            if 'channels' in lastdict['forgeData']:
+                lastdict['forgeData']['channels'] = {
+                    ':'.join(k):v for k, v in lastdict['forgeData']['channels']
+                }
         msg = json.dumps(lastdict, sort_keys=True, indent=2)
         await send_over_2000(
             message.channel.send,# type: ignore
