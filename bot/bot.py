@@ -8,10 +8,10 @@
 
 __title__     = 'StatusBot'
 __author__    = 'CoolCat467'
-__version__   = '0.6.2'
+__version__   = '0.7.0'
 __ver_major__ = 0
-__ver_minor__ = 6
-__ver_patch__ = 2
+__ver_minor__ = 7
+__ver_patch__ = 0
 
 from typing import Any, Awaitable, Callable, Dict, List, Final, Iterable, Optional, Set, Union, get_type_hints, get_args
 
@@ -194,6 +194,35 @@ def parse_args(string: str, ignore: int=0, sep: str=' ') -> list[str]:
 def wrap_list_values(items: Iterable[str], wrap: str='`') -> list[str]:
     "Wrap all items in list of strings with wrap. Ex. ['cat'] -> ['`cat`']"
     return [f'{wrap}{item}{wrap}' for item in items]
+
+def calculate_edit_distance(a: str, b: str) -> int:
+    "Calculate Levenshtein Edit distance"
+    prev = list(range(len(b)+1))
+    new = [0 for _ in range(len(b)+1)]
+    for y, char_a in enumerate(a):
+        new[0] = y+1
+        for x, char_b in enumerate(b):
+            # If equal, new value is same as last excluding current
+            if char_a == char_b:
+                new[x+1] = prev[x]
+            else:
+                # Otherwise, smallest change plus one to get to this state
+                new[x+1] = min([new[x]]+prev[x:x+2])+1
+        for i, v in enumerate(new):
+            prev[i] = v
+    # Smallest edit for whole comparison is just the final entry of the matrix
+    return new[-1]
+
+def closest(given: str, options: list[str]) -> str:
+    "Get closest text to given from options"
+    best = ''
+    best_score = sum((len(opt) for opt in options))
+    for option in options:
+        score = calculate_edit_distance(given, option)
+        if score < best_score:
+            best_score = score
+            best = option
+    return option
 
 def log_active_exception(logpath: Optional[str], extra: str = None) -> None:
     "Log active exception."
@@ -1574,7 +1603,9 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 )
                 return
             # Otherwise, send error of no command.
-            await message.channel.send('No valid command given.'+err)
+            best = closest(command, commands)
+            suggest = f'Did you mean `{best}`?'
+            await message.channel.send(f'No valid command given. {suggest}'+err)
             return
 
         command_func = commands[command]
