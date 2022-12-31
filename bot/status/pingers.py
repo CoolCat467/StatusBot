@@ -32,14 +32,14 @@ def decode_optimized(string: str) -> Connection:
     bits = 0
     for _ in range(len(string) - 2):
         while bits >= 8:
-            buffer.receive((value & 0xff).to_bytes())
+            buffer.receive((value & 0xff).to_bytes(length=1))
             value >>= 8
             bits -= 8
         value |= (read() & 0x7FFF) << bits
         bits += 15
 
     while buffer.remaining() < size:
-        buffer.receive((value & 0xff).to_bytes())
+        buffer.receive((value & 0xff).to_bytes(length=1))
         value >>= 8
         bits -= 8
     return buffer
