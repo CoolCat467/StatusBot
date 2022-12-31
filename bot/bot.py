@@ -1024,7 +1024,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         if 'forgeData' in lastdict:
             if 'channels' in lastdict['forgeData']:
                 lastdict['forgeData']['channels'] = {
-                    ':'.join(k):v for k, v in lastdict['forgeData']['channels']
+                    ':'.join(k):v for k, v in lastdict['forgeData']['channels'].items()
                 }
         msg = json.dumps(lastdict, sort_keys=True, indent=2)
         await send_over_2000(
