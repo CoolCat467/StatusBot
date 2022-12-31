@@ -990,7 +990,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def favicon(self, message: discord.message.Message) -> None:
         "Post the favicon from this guild's server."
-        pinger = self.ensure_pinger_good(message)
+        pinger = await self.ensure_pinger_good(message)
         if pinger is None:
             return
 
@@ -1014,7 +1014,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def json(self, message: discord.message.Message) -> None:
         "Post the last json message from this guild's server."
-        pinger = self.ensure_pinger_good(message)
+        pinger = await self.ensure_pinger_good(message)
         if pinger is None:
             return
 
@@ -1032,7 +1032,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def ping(self, message: discord.message.Message) -> None:
         "Post the connection latency to this guild's server."
-        pinger = self.ensure_pinger_good(message)
+        pinger = await self.ensure_pinger_good(message)
         if pinger is None:
             return
 
@@ -1042,7 +1042,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def forge_mods(self, message: discord.message.Message) -> None:
         "Get a list of forge mods from this guild's server if it's modded."
-        pinger = self.ensure_pinger_good(message)
+        pinger = await self.ensure_pinger_good(message)
         if pinger is None:
             return
 
@@ -1081,7 +1081,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def online(self, message: discord.message.Message) -> None:
         "Get the usernames of the players currently connected to this guild's server."
-        pinger = self.ensure_pinger_good(message)
+        pinger = await self.ensure_pinger_good(message)
         if pinger is None:
             return
 
