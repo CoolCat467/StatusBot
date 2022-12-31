@@ -213,7 +213,7 @@ def calculate_edit_distance(a: str, b: str) -> int:
     # Smallest edit for whole comparison is just the final entry of the matrix
     return new[-1]
 
-def closest(given: str, options: list[str]) -> str:
+def closest(given: str, options: Iterable[str]) -> str:
     "Get closest text to given from options"
     best = ''
     best_score = sum((len(opt) for opt in options))
@@ -1603,7 +1603,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 )
                 return
             # Otherwise, send error of no command.
-            best = closest(command, commands)
+            best = closest(command, tuple(commands))
             suggest = f'Did you mean `{best}`?'
             await message.channel.send(f'No valid command given. {suggest}'+err)
             return
