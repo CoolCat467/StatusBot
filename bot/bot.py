@@ -222,7 +222,7 @@ def closest(given: str, options: Iterable[str]) -> str:
         if score < best_score:
             best_score = score
             best = option
-    return option
+    return best
 
 def log_active_exception(logpath: Optional[str], extra: str = None) -> None:
     "Log active exception."
@@ -1566,9 +1566,14 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def process_command_message(self, message: discord.message.Message, mode: str='guild') -> None:
         "Process new command message. Calls self.command[command](message)."
-        err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # 1 if it's guild, 0 if direct message.
         midx = int(mode.lower() == 'guild')
+        
+        if self.stopped.is_set() and midx:
+            await message.channel.send(f'{__title__} is in the process of shutting down.')
+            return
+        
+        err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # Format error text depending on if direct or guild message.
         err = err.format(('', self.prefix+' ')[midx])
         # Command list depends on direct or guild too.
@@ -1590,22 +1595,18 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         # Get command. zeroth if direct, first if guild because of prefix.
         command = args[midx].lower()
 
-        if self.stopped.is_set() and midx:
-            await message.channel.send(f'{__title__} is in the process of shutting down.')
-            return
-
         if command not in commands:
             if not midx and content.startswith(self.prefix):
                 # if in a direct message and starts with our prefix,
                 await message.channel.send(
                     "When you talk to me in DMs, there is no need to start with"\
-                    "my prefix for me to react!"
+                    " my prefix for me to react!"
                 )
                 return
             # Otherwise, send error of no command.
             best = closest(command, tuple(commands))
             suggest = f'Did you mean `{best}`?'
-            await message.channel.send(f'No valid command given. {suggest}'+err)
+            await message.channel.send(f'No valid command given. {suggest}{err}')
             return
 
         command_func = commands[command]
