@@ -6,15 +6,18 @@
 
 # Programmed by CoolCat467
 
+from __future__ import annotations
+
 __title__ = 'Gears'
 __author__ = 'CoolCat467'
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 __ver_major__ = 0
 __ver_minor__ = 1
-__ver_patch__ = 7
+__ver_patch__ = 8
 
+from typing import Any
 import math
-from typing import Union, Iterable, Dict, Coroutine
+from typing import Union, Iterable, Coroutine
 import asyncio
 import concurrent.futures
 
@@ -95,7 +98,7 @@ class StateMachine:
 ##    __slots__ = 'states', 'active_state'
     def __init__(self) -> None:
         "Initialize StateMachine."
-        self.states      : Dict[str, State] = {} # Stores the states
+        self.states      : dict[str, State] = {} # Stores the states
         self.active_state: Union[State, None] = None# The currently active state
 
     def __repr__(self) -> str:
@@ -154,7 +157,7 @@ class AsyncStateMachine:
 ##    __slots__ = 'states', 'active_state'
     def __init__(self) -> None:
         "Initialize AsyncStateMachine."
-        self.states: Dict[str, AsyncState] = {} # Stores the states
+        self.states: dict[str, AsyncState] = {} # Stores the states
         self.active_state: Union[AsyncState, None] = None# The currently active state
 
     def __repr__(self) -> str:
@@ -221,7 +224,7 @@ class Gear:
         "Do whatever instance requires to start running. Must not stop bot."
         return None
 
-    def submit_coro(self, coro: Coroutine) -> asyncio.Task:
+    def submit_coro(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
         "Submit a coroutine as task for bot event loop to complete"
         return self.bot.loop.create_task(coro)
 
@@ -243,7 +246,7 @@ class BaseBot:
     __slots__ = ('loop', 'gears')
     def __init__(self, eventloop: asyncio.AbstractEventLoop) -> None:
         self.loop = eventloop
-        self.gears: Dict[str, Gear] = {}
+        self.gears: dict[str, Gear] = {}
 
     def __repr__(self) -> str:
         "Return <{class-name}>"
@@ -299,7 +302,7 @@ class Timer(Gear):
         "self.name = name. Delay is seconds."
         super().__init__(bot, name)
         self.delay = max(0, delay)
-        self.task: asyncio.Task
+        self.task: Union[asyncio.Task[Any], None] = None
         self.ticks = math.inf
 
     def gear_init(self) -> None:
@@ -326,14 +329,15 @@ class Timer(Gear):
         # Stop running no matter what
         self.running = False
         # Cancel task
-        try:
-            async with async_timeout.timeout(self.delay):
-                await self.task
-        except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+        if self.task is not None:
             try:
-                self.task.cancel()
-            except Exception:# pylint: disable=broad-except
-                pass
+                async with async_timeout.timeout(self.delay):
+                    await self.task
+            except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+                try:
+                    self.task.cancel()
+                except Exception:# pylint: disable=broad-except
+                    pass
         if not self.stopped:
             async def wait_for_cancelled() -> bool:
                 try:
@@ -378,7 +382,7 @@ class Timer(Gear):
 
 class StateTimerExitState(AsyncState):
     "State Timer Exit State. Cause StateTimer to finally finish."
-    __slots__: tuple = tuple()
+    __slots__ = ()
     def __init__(self) -> None:
         super().__init__('Hault')
 
@@ -437,7 +441,7 @@ def run() -> None:
     loop = asyncio.new_event_loop()
     # hack bot to close loop when closed
     class _Bot(BaseBot):
-        __slots__: tuple = tuple()
+        __slots__ = ()
         async def close(self) -> None:
             await super().close()
             print('Closed, stopping loop.')
@@ -445,7 +449,7 @@ def run() -> None:
     mr_bot = _Bot(loop)
     # hack state timer to create bot close task on completion
     class _StateTimerWithClose(StateTimer):
-        __slots__: tuple = tuple()
+        __slots__ = ()
         async def wait_for_ready_start(self) -> None:
             await super().wait_for_ready_start()
             self.submit_coro(self.bot.close())

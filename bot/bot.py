@@ -6,14 +6,18 @@
 
 # Programmed by CoolCat467
 
+from __future__ import annotations
+
 __title__     = 'StatusBot'
 __author__    = 'CoolCat467'
-__version__   = '0.7.0'
+__version__   = '0.7.1'
 __ver_major__ = 0
 __ver_minor__ = 7
-__ver_patch__ = 0
+__ver_patch__ = 1
 
-from typing import Any, Awaitable, Callable, Dict, List, Final, Iterable, Optional, Set, Union, get_type_hints, get_args
+from typing import (Any, Awaitable, Coroutine, Callable,
+                    Final, Iterable, Optional, Union,
+                    get_type_hints, get_args)
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -28,11 +32,10 @@ import io
 import asyncio
 import concurrent.futures
 from threading import Event, Lock
-##import logging
 import binascii
 import base64
-
 import inspect
+##import logging
 
 from dotenv import load_dotenv
 import discord# type: ignore
@@ -98,13 +101,13 @@ def read_file(filename: str) -> Union[str, None]:
         return data
     return None
 
-def read_json(filename: str) -> Union[dict, None]:
+def read_json(filename: str) -> Union[dict[str, Any], None]:
     "Return json loads of filename read. Returns None if filename not exists."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as rfile:
             try:
-                data = json.load(rfile)
+                data: dict[str, Any] = json.load(rfile)
             except json.decoder.JSONDecodeError:
                 return None
             finally:
@@ -112,7 +115,7 @@ def read_json(filename: str) -> Union[dict, None]:
         return data
     return None
 
-def write_json(filename: str, dictionary: dict, indent: int=2) -> None:
+def write_json(filename: str, dictionary: dict[str, Any], indent: int=2) -> None:
     "Write dictionary as json to filename."
     filename = os.path.abspath(filename)
     update.make_dirpath_exist(filename)
@@ -155,7 +158,7 @@ def split_time(seconds: int) -> list[int]:
         ret.append(edivs)
     return ret
 
-def combine_and(data: List[str]) -> str:
+def combine_and(data: list[str]) -> str:
     "Join values of text, and have 'and' with the last one properly."
     data = list(data)
     if len(data) >= 2:
@@ -224,7 +227,8 @@ def closest(given: str, options: Iterable[str]) -> str:
             best = option
     return best
 
-def log_active_exception(logpath: Optional[str], extra: str = None) -> None:
+def log_active_exception(logpath: Optional[str] = None,
+                         extra: str | None = None) -> None:
     "Log active exception."
     # Get values from exc_info
     values = sys.exc_info()
@@ -246,6 +250,266 @@ def log_active_exception(logpath: Optional[str], extra: str = None) -> None:
     print(msg)
     if logpath is not None:
         append_file(logpath, msg)
+
+def get_valid_options(valid: Iterable[str], wrap: str='`') -> str:
+    "Return string of ' Valid options are: {valid}' but with pretty formatting."
+    validops = combine_and(wrap_list_values(valid, wrap))
+    return f' Valid options are: {validops}.'
+
+def union_match(argument_type: type, target_type: type) -> bool:
+    "Return if argument type or optional of argument type is target type"
+    return argument_type == target_type or argument_type in get_args(target_type)
+
+def process_arguments(parameters: dict[str, type],
+                      given_args: list[str],
+                      message: discord.message.Message) -> dict[str, Any]:
+    "Process arguments to on_message handler"
+    assert message.guild is not None
+    complete: dict[str, Any] = {}
+    if not parameters:
+        return complete
+
+    required_count = len([
+        v
+        for v in parameters.values()
+        if type(None) not in get_args(v)
+    ])
+
+    if len(given_args) < required_count:
+        raise ValueError("Missing parameters!")
+
+    i = -1
+    for name, target_type in parameters.items():
+        i += 1
+        if i >= len(given_args):
+            arg = None
+        else:
+            arg = given_args[i]
+        arg_type = type(arg)
+        if union_match(arg_type, target_type):
+            complete[name] = arg
+            continue
+        if union_match(arg_type, str):
+            assert isinstance(arg, str)
+            matched = False
+            if union_match(target_type, discord.VoiceChannel):
+                for voice_channel in message.guild.voice_channels:
+                    if voice_channel.name == arg:
+                        complete[name] = voice_channel
+                        matched = True
+                        break
+            if union_match(target_type, discord.TextChannel):
+                for text_channel in message.guild.text_channels:
+                    if text_channel.name == arg:
+                        complete[name] = text_channel
+                        matched = True
+                        break
+            if union_match(target_type, float):
+                if arg.isdecimal():
+                    complete[name] = float(arg)
+                    continue
+            if union_match(target_type, int):
+                if arg.isdigit():
+                    complete[name] = int(arg)
+                    continue
+            if matched:
+                continue
+        raise ValueError
+    if parameters and union_match(target_type, str):
+        if i < len(given_args):
+            complete[name] += ' '+' '.join(given_args[i:])
+    return complete
+
+##def print_attrs(thing: object) -> None:
+##    "Print attributes of thing."
+##    for attr_name in dir(thing):
+####        if attr_name.startswith('__'):
+####            continue
+##        if not hasattr(thing, attr_name):
+##            print(f'!!! Thing dir says has but hasattr says no: {attr_name} !!!\n')
+##            continue
+##        attr = getattr(thing, attr_name)
+##        repr_attr = repr(attr)
+####        if repr_attr.startswith('<bound method'):
+####            continue
+##        print(f'{attr_name} {repr_attr} {type(attr)}\n')
+
+def override_methods(obj: Any, attrs: dict[str, Any]) -> Any:
+    "Override attributes of object."
+    class OverrideGetattr:
+        "Override get attribute"
+        def __getattr__(self, attr_name: str, /, default: Any=None) -> Any:
+            "Get attribute but maybe return proxy of attribute"
+            if not attr_name in attrs:
+                if default is None:
+                    return getattr(obj, attr_name)
+                return getattr(obj, attr_name, default)
+            return attrs[attr_name]
+        def __setattr__(self, attr_name: str, value: Any) -> None:
+            setattr(obj, attr_name, value)
+    return OverrideGetattr()
+
+def interaction_to_message(interaction: discord.Interaction) -> discord.Message:
+    "Convert slash command interaction to Message that can be handled the same way as on_message."
+    data: dict[str, Any] = {
+        'id'              : interaction.id,
+        'webhook_id'      : None,
+        'reactions'       : [],
+        'attachments'     : [],
+        'activity'        : None,
+        'embeds'          : [],
+        'edited_timestamp': None,
+        'type'            : 0,#discord.MessageType.default,
+        'pinned'          : False,
+        'flags'           : 0,
+        'mention_everyone': False,
+        'tts'             : False,
+        'content'         : '',
+        'nonce'           : None,#Optional[Union[int, str]]
+        'sticker_items'   : [],
+        'guild_id'        : interaction.guild_id,
+        'interaction'     : {
+            'id'    : interaction.id,
+            'type'  : 2,
+            'name'  : 'Interaction name',
+            'member': {
+                'roles': [] if isinstance(interaction.user, discord.User) else [role.id for role in interaction.user.roles],
+            },
+            'user'  : {
+                'username' : interaction.user.name,
+                'id'   : interaction.user.id,
+                'discriminator': interaction.user.discriminator,
+                'avatar': interaction.user._avatar,
+                'bot': interaction.user.bot,
+                'system': interaction.user.system,
+                'roles': [] if isinstance(interaction.user, discord.User) else [role.id for role in interaction.user.roles],
+            },
+        },
+##        'message_reference': None,
+        'application': {
+            'id'         : interaction.application_id,
+            'description': 'Application description',
+            'name'       : 'Application name',
+            'icon'       : None,
+            'cover_image': None
+        },
+##        'author'       : ,
+##        'member'       : ,
+##        'mentions'     : ,
+##        'mention_roles': ,
+##        'components'   :
+    }
+
+    message = discord.message.Message(
+        state   = interaction._state,
+        channel = interaction.channel,# type: ignore
+        data    = data# type: ignore
+    )
+
+    message.author = interaction.user
+
+    channel_send = message.channel.send
+    times = -1
+    async def send_message(*args: Any, **kwargs: Any) -> Any:
+        "Send message"
+        nonlocal times
+        times += 1
+        if times == 0:
+            return await interaction.response.send_message(*args, **kwargs)
+        return await channel_send(*args, **kwargs)
+
+    message.channel = override_methods(message.channel, {
+        'send': send_message,
+    })
+
+    return message
+
+def extract_parameters_from_callback(
+    func: Callable[..., Any],
+    globalns: dict[str, Any]
+) -> dict[str, discord.app_commands.transformers.CommandParameter]:
+    "Set up slash command things from function. Stolen from internals of discord.app_commands.commands"
+    params = inspect.signature(func).parameters
+    cache: dict[str, Any] = {}
+    required_params = 1
+    if len(params) < required_params:
+        raise TypeError(f'callback {func.__qualname__!r} must have more than {required_params - 1} parameter(s)')
+
+    iterator = iter(params.values())
+    for _ in range(0, required_params):
+        next(iterator)
+
+    parameters: list[discord.app_commands.transformers.CommandParameter] = []
+    for parameter in iterator:
+        if parameter.annotation is parameter.empty:
+            raise TypeError(f'parameter {parameter.name!r} is missing a type annotation in callback {func.__qualname__!r}')
+
+        resolved = discord.utils.resolve_annotation(parameter.annotation, globalns, globalns, cache)
+        param    = discord.app_commands.transformers.annotation_to_parameter(resolved, parameter)
+        parameters.append(param)
+
+    values = sorted(parameters, key=lambda a: a.required, reverse=True)
+    result = {v.name: v for v in values}
+
+    descriptions = discord.app_commands.commands._parse_args_from_docstring(func, result)
+
+    try:
+        descriptions.update(func.__discord_app_commands_param_description__)# type: ignore
+    except AttributeError:
+        for param in values:
+            if param.description is discord.utils.MISSING:
+                param.description = '…'
+    if descriptions:
+        discord.app_commands.commands._populate_descriptions(result, descriptions)
+
+    try:
+        renames = func.__discord_app_commands_param_rename__# type: ignore
+    except AttributeError:
+        pass
+    else:
+        discord.app_commands.commands._populate_renames(result, renames.copy())
+
+    try:
+        choices = func.__discord_app_commands_param_choices__# type: ignore
+    except AttributeError:
+        pass
+    else:
+        discord.app_commands.commands._populate_choices(result, choices.copy())
+
+    try:
+        autocomplete = func.__discord_app_commands_param_autocomplete__# type: ignore
+    except AttributeError:
+        pass
+    else:
+        discord.app_commands.commands._populate_autocomplete(result, autocomplete.copy())
+
+    return result
+
+def slash_handle(
+    message_command: Callable[[discord.Message], Awaitable[None]]
+) -> tuple[Callable[[discord.Interaction], Coroutine[Any, Any, Any]], Any]:
+    "Slash handle wrapper to convert interaction to message."
+    class Dummy:
+        "Dummy class so required_params = 2 for slash_handler"
+        async def slash_handler(*args: discord.Interaction, **kwargs: Any) -> None:
+            "Slash command wrapper for message-based command."
+            interaction: discord.Interaction = args[1]# type: ignore
+            try:
+                msg = interaction_to_message(interaction)
+            except Exception:
+                root = os.path.split(os.path.abspath(__file__))[0]
+                logpath = os.path.join(root, 'log.txt')
+                log_active_exception(logpath)
+                raise
+            try:
+                await message_command(msg, *args[2:], **kwargs)
+            except:
+                await msg.channel.send('An error occured processing the slash command')
+                await interaction._client.on_error('slash_command', message_command.__name__)
+                raise
+    params = extract_parameters_from_callback(message_command, message_command.__globals__)
+    merp = Dummy()
+    return merp.slash_handler, params# type: ignore
 
 async def send_over_2000(send_func: Callable[[str], Awaitable[None]],
                          text: str,
@@ -276,6 +540,20 @@ async def send_over_2000(send_func: Callable[[str], Awaitable[None]],
     for part in parts:
         await send_func(part)
 
+async def send_command_list(
+    commands: dict[str, Callable[[discord.message.Message], Coroutine[None, None, None]]],
+    name: str,
+    channel: discord.abc.Messageable
+) -> None:
+    "Send message on channel telling user about all valid name commands."
+    sort = sorted(commands.keys(), reverse=True)
+    command_data = [f'`{v}` - {commands[v].__doc__}' for v in sort]
+    await send_over_2000(
+        channel.send,# type: ignore
+        '\n'.join(command_data),
+        start=f"{__title__}'s Valid {name} Commands:\n"
+    )
+
 async def get_github_file(path: str, timeout: int = 10) -> str:
     "Return text from GitHub file in this project decoded as utf-8"
     file = await update.get_file(__title__, path, __author__, BRANCH, timeout)
@@ -297,7 +575,7 @@ class PingState(gears.AsyncState):
         self.machine.last_delay = math.inf
         self.machine.last_online = set()
 
-    async def handle_sample(self, players: Set[str]) -> None:
+    async def handle_sample(self, players: set[str]) -> None:
         "Handle change in players by players sample."
         # If different players,
         if players == self.machine.last_online:
@@ -365,7 +643,7 @@ class PingState(gears.AsyncState):
         self.machine.last_json = json_data
         self.machine.last_delay = ping
 
-        players: Set[str] = set()
+        players: set[str] = set()
         online = 0
 
         if not 'players' in json_data:
@@ -466,9 +744,9 @@ class GuildServerPinger(gears.StateTimer):
         super().__init__(bot, str(self.guild_id), self.tick_speed)
         self.server = mc.Server('')
         self.bot              : 'StatusBot'
-        self.last_json        : Dict[str, Any]    = {}
+        self.last_json        : dict[str, Any]    = {}
         self.last_delay       : Union[int, float] = 0
-        self.last_online      : Set[str]          = set()
+        self.last_online      : set[str]          = set()
         self.last_online_count: int               = 0
         self.channel          : discord.abc.Messageable
 
@@ -502,250 +780,14 @@ class GuildServerPinger(gears.StateTimer):
         else:
             await self.channel.send('No address for this guild defined, pinger not started.')
 
-def get_valid_options(valid: Iterable[str], wrap: str='`') -> str:
-    "Return string of ' Valid options are: {valid}' but with pretty formatting."
-    validops = combine_and(wrap_list_values(valid, wrap))
-    return f' Valid options are: {validops}.'
-
-async def send_command_list(commands: Dict[str, Callable],
-                            name: str,
-                            channel: discord.abc.Messageable) -> None:
-    "Send message on channel telling user about all valid name commands."
-    sort = sorted(commands.keys(), reverse=True)
-    commands = [f'`{v}` - {commands[v].__doc__}' for v in sort]
-    await send_over_2000(
-        channel.send,# type: ignore
-        '\n'.join(commands),
-        start=f"{__title__}'s Valid {name} Commands:\n"
-    )
-
-##def print_attrs(thing: object) -> None:
-##    "Print attributes of thing."
-##    for attr_name in dir(thing):
-####        if attr_name.startswith('__'):
-####            continue
-##        if not hasattr(thing, attr_name):
-##            print(f'!!! Thing dir says has but hasattr says no: {attr_name} !!!\n')
-##            continue
-##        attr = getattr(thing, attr_name)
-##        repr_attr = repr(attr)
-####        if repr_attr.startswith('<bound method'):
-####            continue
-##        print(f'{attr_name} {repr_attr} {type(attr)}\n')
-
-def override_methods(obj: Any, attrs: Dict[str, Any]) -> Any:
-    "Override attributes of object."
-    class OverrideGetattr:
-        "Override get attribute"
-        def __getattr__(self, attr_name: str, /, default: Any=None) -> Any:
-            "Get attribute but maybe return proxy of attribute"
-            if not attr_name in attrs:
-                if default is None:
-                    return getattr(obj, attr_name)
-                return getattr(obj, attr_name, default)
-            return attrs[attr_name]
-        def __setattr__(self, attr_name: str, value: Any) -> None:
-            setattr(obj, attr_name, value)
-    return OverrideGetattr()
-
-def interaction_to_message(interaction: discord.Interaction) -> discord.Message:
-    "Convert slash command interaction to message that Status bot handles."
-    data: Dict[str, Any] = {
-        'id'              : interaction.id,
-        'webhook_id'      : None,
-        'reactions'       : [],
-        'attachments'     : [],
-        'activity'        : None,
-        'embeds'          : [],
-        'edited_timestamp': None,
-        'type'            : 0,#discord.MessageType.default,
-        'pinned'          : False,
-        'flags'           : 0,
-        'mention_everyone': False,
-        'tts'             : False,
-        'content'         : '',
-        'nonce'           : None,#Optional[Union[int, str]]
-        'sticker_items'   : [],
-        'guild_id'        : interaction.guild_id,
-        'interaction'     : {
-            'id'    : interaction.id,
-            'type'  : 2,
-            'name'  : 'Interaction name',
-            'member': {
-                'roles': [] if isinstance(interaction.user, discord.User) else [role.id for role in interaction.user.roles],
-            },
-            'user'  : {
-                'id'   : interaction.user.id,
-                'roles': [] if isinstance(interaction.user, discord.User) else [role.id for role in interaction.user.roles],
-            },
-        },
-##        'message_reference': None,
-        'application': {
-            'id'         : interaction.application_id,
-            'description': 'Application description',
-            'name'       : 'Application name',
-            'icon'       : None,
-            'cover_image': None
-        },
-##        'author'       : ,
-##        'member'       : ,
-##        'mentions'     : ,
-##        'mention_roles': ,
-##        'components'   :
-    }
-
-    message = discord.message.Message(
-        state   = interaction._state,
-        channel = interaction.channel,# type: ignore
-        data    = data# type: ignore
-    )
-
-    message.author = interaction.user
-
-    channel_send = message.channel.send
-    times = -1
-    async def send_message(*args: Any, **kwargs: Any) -> Any:
-        "Send message"
-        nonlocal times
-        times += 1
-        if times == 0:
-            return await interaction.response.send_message(*args, **kwargs)
-        return await channel_send(*args, **kwargs)
-
-    message.channel = override_methods(message.channel, {
-        'send': send_message,
-    })
-
-    return message
-
-def extract_parameters_from_callback(func: Callable[..., Any],
-                                     globalns: Dict[str, Any]) -> Dict[str, discord.app_commands.transformers.CommandParameter]:
-    "Set up slash command things from function. Stolen from internals of discord.app_commands"
-    params = inspect.signature(func).parameters
-    cache: Dict = {}
-##    required_params = discord.utils.is_inside_class(func) + 1
-    required_params = 1
-    if len(params) < required_params:
-        raise TypeError(f'callback {func.__qualname__!r} must have more than {required_params - 1} parameter(s)')
-
-    iterator = iter(params.values())
-    for _ in range(0, required_params):
-        next(iterator)
-
-    parameters: List[discord.app_commands.commands.CommandParameter] = []
-    for parameter in iterator:
-        if parameter.annotation is parameter.empty:
-            raise TypeError(f'parameter {parameter.name!r} is missing a type annotation in callback {func.__qualname__!r}')
-
-        resolved = discord.utils.resolve_annotation(parameter.annotation, globalns, globalns, cache)
-        param    = discord.app_commands.transformers.annotation_to_parameter(resolved, parameter)
-        parameters.append(param)
-
-    values = sorted(parameters, key=lambda a: a.required, reverse=True)
-    result = {v.name: v for v in values}
-
-    descriptions = discord.app_commands.commands._parse_args_from_docstring(func, result)
-
-    try:
-        descriptions.update(func.__discord_app_commands_param_description__)# type: ignore
-    except AttributeError:
-        for param in values:
-            if param.description is discord.utils.MISSING:
-                param.description = '…'
-    if descriptions:
-        discord.app_commands.commands._populate_descriptions(result, descriptions)
-
-    try:
-        renames = func.__discord_app_commands_param_rename__# type: ignore
-    except AttributeError:
-        pass
-    else:
-        discord.app_commands.commands._populate_renames(result, renames.copy())
-
-    try:
-        choices = func.__discord_app_commands_param_choices__# type: ignore
-    except AttributeError:
-        pass
-    else:
-        discord.app_commands.commands._populate_choices(result, choices.copy())
-
-    try:
-        autocomplete = func.__discord_app_commands_param_autocomplete__# type: ignore
-    except AttributeError:
-        pass
-    else:
-        discord.app_commands.commands._populate_autocomplete(result, autocomplete.copy())
-
-    return result
-
-def slash_handle(
-    message_command: Callable[[discord.Message], Awaitable[None]]
-) -> tuple[Callable[[discord.Interaction], Awaitable[None]], Dict]:
-    "Slash handle wrapper to convert interaction to message."
-    class Dummy:
-        "Dummy class so required_params = 2 for slash_handler"
-        async def slash_handler(*args: List, **kwargs: Dict) -> None:
-            "Slash command wrapper for message-based command."
-            interaction: discord.Interaction = args[1]# type: ignore
-            try:
-                msg = interaction_to_message(interaction)
-            except Exception:
-                root = os.path.split(os.path.abspath(__file__))[0]
-                logpath = os.path.join(root, 'log.txt')
-                log_active_exception(logpath)
-                raise
-            try:
-                await message_command(msg, *args[2:], **kwargs)
-            except:
-                await msg.channel.send('An error occured processing the slash command')
-                await interaction._client.on_error('slash_command', message_command.__name__)
-                raise
-    params = extract_parameters_from_callback(message_command, message_command.__globals__)
-    merp = Dummy()
-    return merp.slash_handler, params# type: ignore
-
-def union_match(argument_type: type, target_type: type) -> bool:
-    "Return if argument type or optional of argument type is target type"
-    return argument_type == target_type or argument_type in get_args(target_type)
-
-def process_arguments(parameters: Dict[str, type],
-                      given_args: List[str]) -> Dict[str, Any]:
-    "Process arguments to on_message handler"
-    complete: Dict[str, Any] = {}
-    if not parameters:
-        return complete
-
-    required_count = len([
-        v
-        for v in parameters.values()
-        if type(None) not in get_args(v)
-    ])
-
-    if len(given_args) < required_count:
-        raise ValueError("Missing parameters!")
-
-    i = -1
-    for name, target_type in parameters.items():
-        i += 1
-        if i >= len(given_args):
-            arg = None
-        else:
-            arg = given_args[i]
-        arg_type = type(arg)
-        if union_match(arg_type, target_type):
-            complete[name] = arg
-            continue
-        raise ValueError
-    return complete
-
 class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public-methods,too-many-instance-attributes
     "StatusBot needs prefix, event loop, and any arguments to pass to discord.Client."
     def __init__(self,
                  prefix: str,
                  loop: asyncio.AbstractEventLoop,
-                 *args: List,
+                 *args: Any,
                  intents: discord.Intents,
-                 **kwargs: Dict[str, Any]) -> None:
+                 **kwargs: Any) -> None:
         self.loop = loop
         if 'loop' in kwargs:
             del kwargs['loop']
@@ -755,7 +797,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         self.prefix   = prefix
         self.rootdir  = os.path.split(os.path.abspath(__file__))[0]
         self.logpath  = os.path.join(self.rootdir, 'log.txt')
-        self.gcommands: Dict[str, Callable[[discord.message.Message], Awaitable[None]]] = {
+        self.gcommands: dict[str, Callable[[discord.message.Message], Coroutine[Any, Any, Any]]] = {
             'current-version': self.current_vers,
             'online-version' : self.online_vers,
             'my-id'          : self.my_id,
@@ -769,7 +811,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             'get-option'     : self.get_option__guild,
             'help'           : self.help_guild
         }
-        self.dcommands: Dict[str, Callable[[discord.message.Message], Awaitable[None]]] = {
+        self.dcommands: dict[str, Callable[[discord.message.Message], Coroutine[Any, Any, Any]]] = {
             'current-version': self.current_vers,
             'online-version' : self.online_vers,
             'my-id'          : self.my_id,
@@ -784,10 +826,10 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         self.tree = discord.app_commands.CommandTree(self)
         for command_name, command_function in self.gcommands.items():
             callback, params = slash_handle(command_function)
-            command: discord.app_commands.commands.Command = discord.app_commands.commands.Command(
+            command: discord.app_commands.commands.Command[Any, Any, None] = discord.app_commands.commands.Command(
                 name                = command_name,
                 description         = command_function.__doc__ or '',
-                callback            = callback,
+                callback            = callback,# type: ignore [arg-type]
                 nsfw                = False,
                 auto_locale_strings = True
             )
@@ -802,7 +844,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             command.guild_only = getattr(callback, '__discord_app_commands_guild_only__', False)
             command.binding    = getattr(command_function, '__self__', None)
             self.tree.add_command(command)
-        self.tree.on_error = self.on_error# type: ignore
+        self.tree.on_error = self.on_error# type: ignore [assignment]
 
     def __repr__(self) -> str:
 ##        up = self.__class__.__weakref__.__qualname__.split('.')[0]
@@ -825,7 +867,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         "Return the path to the configuration json file for all direct messages."
         return os.path.join(self.rootdir, 'config', 'dms.json')
 
-    def get_guild_configuration(self, guild_id: int) -> dict:
+    def get_guild_configuration(self, guild_id: int) -> dict[str, Any]:
         "Return a dictionary from the json read from guild configuration file."
         guildfile = self.get_guild_configuration_file(guild_id)
         guildconfiguration = read_json(guildfile)
@@ -836,7 +878,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             guildconfiguration = {}
         return guildconfiguration
 
-    def get_dm_configuration(self) -> dict:
+    def get_dm_configuration(self) -> dict[str, Any]:
         "Return a dictionary from the json read from the direct messages configuration file."
         dmfile = self.get_dm_configuration_file()
         dmconfiguration = read_json(dmfile)
@@ -845,12 +887,12 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             dmconfiguration = {}
         return dmconfiguration
 
-    def write_guild_configuration(self, guild_id: int, configuration: dict) -> None:
+    def write_guild_configuration(self, guild_id: int, configuration: dict[str, Any]) -> None:
         "Write guild configuration file from configuration dictionary."
         guildfile = self.get_guild_configuration_file(guild_id)
         write_file(guildfile, json.dumps(configuration, indent=2))
 
-    def write_dm_configuration(self, configuration: dict) -> None:
+    def write_dm_configuration(self, configuration: dict[str, Any]) -> None:
         "Write direct message configuration file from configuration dictionary."
         dmfile = self.get_dm_configuration_file()
         write_file(dmfile, json.dumps(configuration, indent=2))
@@ -923,7 +965,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                                f'Please set it with `{self.prefix} set-option address <address>`.')
         return guild_id
 
-    async def eval_guilds(self, force_reset: Optional[bool]=False) -> list:
+    async def eval_guilds(self, force_reset: Optional[bool]=False) -> list[int]:
         "Evaluate all guilds. Return list of guild ids evaluated."
         ids = []
         register = []
@@ -1005,6 +1047,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send('Server pinger is not running for this guild. '\
                                        'Use command `refresh` to restart.')
             return None
+        assert isinstance(gear, GuildServerPinger)
         pinger: GuildServerPinger = gear
         if pinger.active_state is None:
             await message.channel.send('Server pinger is not active for this guild. '+
@@ -1022,6 +1065,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         pinger = await self.ensure_pinger_good(message)
         if pinger is None:
             return
+        assert message.guild is not None
 
         if not 'favicon' in pinger.last_json:
             await message.channel.send('Server does not have a favicon. '+
@@ -1084,14 +1128,14 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             await message.channel.send(f"There was no forge data in {__title__}'s last received json message from this guild's server.")
             return
         forge_data = pinger.last_json['forgeData']
-        if not 'channels' in forge_data or not 'mods' in forge_data:
+        if not 'mods' in forge_data:# or not 'channels' in forge_data
             await message.channel.send('Error: Forge data response is missing `channels` and or `mods` field')
             return
 
-        channels = forge_data['channels']
-        mods: Dict[str, str] = forge_data['mods']
+##        channels = forge_data['channels']
+        mods: dict[str, str] = forge_data['mods']
 
-        mod_data: List[Dict[str, str]] = []
+        mod_data: list[dict[str, str]] = []
         for name, version in mods.items():
 ##            required = True
 ##            if version == '<not required for client>':
@@ -1163,7 +1207,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         "Get the newest version of StatusBot available on Github"
         # Get GitHub version string
         try:
-            version = await get_github_file('version.txt', 2.5)
+            version = await get_github_file('version.txt', 3)
         except asyncio.exceptions.TimeoutError:
             await message.channel.send('Connection timed out attempting to get version')
             raise
@@ -1220,9 +1264,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             return
         await message.channel.send('You do not have permission to run this command.')
 
-    async def get_option__guild_option_autocomplete(self,
-                                                    interaction: discord.Interaction,
-                                                    current: str) -> List[discord.app_commands.Choice[str]]:
+    async def get_option__guild_option_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> list[discord.app_commands.Choice[str]]:
         "Autocomplete get option guild options"
         if interaction.guild_id is None:
             return []
@@ -1234,7 +1280,9 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
             if current.lower() in option.lower()
         ]
 
-    @discord.app_commands.autocomplete(option = get_option__guild_option_autocomplete)
+    @discord.app_commands.autocomplete(# type: ignore [type-var]
+        option = get_option__guild_option_autocomplete
+    )
     async def get_option__guild(self,
                                 message: discord.message.Message,
                                 option: Optional[str] = None) -> None:
@@ -1337,7 +1385,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
     @staticmethod
     def set_option__guild_valid_options(user_id: int,
                                         guild_owner: int,
-                                        configuration: Dict[str, Any]) -> List[str]:
+                                        configuration: dict[str, Any]) -> list[str]:
         "Return list of valid options to set for set option - guild"
         valid = []
         # If message author is either bot owner or guild owner,
@@ -1354,7 +1402,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
     async def set_option__guild_option_autocomplete(self,
                                                     interaction: discord.Interaction,
-                                                    current: str) -> List[discord.app_commands.Choice[str]]:
+                                                    current: str) -> list[discord.app_commands.Choice[str]]:
         "Autocomplete set option guild options"
         if interaction.guild_id is None or interaction.user.id is None:
             return []
@@ -1378,11 +1426,11 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 
 ##    async def set_option__guild_value_autocomplete(self,
 ##                                                   interaction: discord.Interaction,
-##                                                   current: str) -> List[discord.app_commands.Choice[str]]:
+##                                                   current: str) -> list[discord.app_commands.Choice[str]]:
 ##        "Autocomplete set option guild options"
 ##        options = interaction.extras.get('option', ['set-option-users', 'address', 'channel', 'force-refresh-users'])
 ##        print(f'{options = }')
-##        valid: Set[str] = set()
+##        valid: set[str] = set()
 ##        for option in options:
 ##            if option in {'set-option-users', 'force-refresh-users'}:
 ##                valid |= {'clear', '<user-id>', '<username>'}
@@ -1400,7 +1448,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
 ##        ]
 
 ##    @commands.has_permissions(administrator=True, manage_messages=True, manage_roles=True)
-    @discord.app_commands.autocomplete(
+    @discord.app_commands.autocomplete(# type: ignore [type-var]
         option = set_option__guild_option_autocomplete,
 ##        value = set_option__guild_value_autocomplete
     )
@@ -1564,15 +1612,21 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         self.write_dm_configuration(configuration)
         await message.channel.send(f'Updated value of option `{option}` to `{value}`.')
 
-    async def process_command_message(self, message: discord.message.Message, mode: str='guild') -> None:
+    async def process_command_message(
+        self,
+        message: discord.message.Message,
+        mode: str = 'guild',
+    ) -> None:
         "Process new command message. Calls self.command[command](message)."
         # 1 if it's guild, 0 if direct message.
         midx = int(mode.lower() == 'guild')
-        
+
         if self.stopped.is_set() and midx:
-            await message.channel.send(f'{__title__} is in the process of shutting down.')
+            await message.channel.send(
+                f'{__title__} is in the process of shutting down.'
+            )
             return
-        
+
         err = ' Please enter a valid command. Use `{}help` to see valid commands.'
         # Format error text depending on if direct or guild message.
         err = err.format(('', self.prefix+' ')[midx])
@@ -1618,12 +1672,16 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
                 continue
             if typeval in {discord.Message}:
                 continue
+                
             params[name] = typeval
 
         try:
-            command_args = process_arguments(params, args[2:])
+            command_args = process_arguments(params, args[2:], message)
         except ValueError:
-            names = combine_and([f'{k} ({v.__name__})' for k, v in params.items()])
+            names = combine_and([
+                f'{k}' if not isinstance(v, type) else f'{k} ({v.__name__})'
+                for k, v in params.items()
+            ])
             await message.channel.send(f'Missing one or more arguments: {names}')
             return
 
@@ -1685,7 +1743,7 @@ class StatusBot(discord.Client, gears.BaseBot):# pylint: disable=too-many-public
         # can't send messages so skip.
 
     # Default, not affected by intents
-    async def on_error(self, event: str, *args: Any, **kwargs: Any) -> None:# pylint: disable=arguments-differ
+    async def on_error(self, event: str, /, *args: Any, **kwargs: Any) -> None:# pylint: disable=arguments-differ
         "Log error and continue."
         if event == 'on_message':
             print(f'Unhandled message: {args[0]}')
@@ -1732,7 +1790,6 @@ or set DISCORD_TOKEN environment variable.''')
     # 4867
 
     loop = asyncio.new_event_loop()
-    global bot
     bot  = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
 
     try:
@@ -1744,7 +1801,6 @@ or set DISCORD_TOKEN environment variable.''')
         # cancel all lingering tasks
         loop.close()
         print('\nBot has been deactivated.')
-    return
 
 if __name__ == '__main__':
     print(f'{__title__} v{__version__}\nProgrammed by {__author__}.')

@@ -13,7 +13,7 @@ __ver_major__ = 0
 __ver_minor__ = 1
 __ver_patch__ = 7
 
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Iterable
 
 import os
 import asyncio
@@ -26,13 +26,13 @@ def get_address(user: str, repo: str, branch: str, path: str) -> str:
     "Get raw GitHub user content URL of a specific file."
     return f'https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}'
 
-def is_new_ver_higher(current: tuple, newest: tuple) -> bool:
+def is_new_ver_higher(current: Iterable[Any], newest: Iterable[Any]) -> bool:
     "Return True if current version older than new version."
     return tuple(current) < tuple(newest)
 
-def get_paths(jdict: dict) -> list:
+def get_paths(jdict: dict[str, Any]) -> list[str]:
     "Read dictionary and figure out paths of files we want to update."
-    def read_dict(cdict: dict) -> list:
+    def read_dict(cdict: dict[str, Any]) -> list[str]:
         "Read a dictionary and return paths."
         paths = []
         for path in cdict:
@@ -64,7 +64,7 @@ def make_dirpath_exist(filepath: str) -> None:
 
 async def download_coroutine(url: str,
                              timeout: int = TIMEOUT,
-                             headers: dict = None) -> bytes:
+                             headers: dict[str, Any] | None = None) -> bytes:
     "Return content bytes found at URL."
     async with httpx.AsyncClient(http2 = True, timeout = timeout) as client:
         # Go to the URL and get response
@@ -83,8 +83,8 @@ async def download_coroutine(url: str,
 async def get_file(repo: str,
                    path: str,
                    user: str,
-                   branch: str='HEAD',
-                   timeout: int=TIMEOUT,
+                   branch: str = 'HEAD',
+                   timeout: int = TIMEOUT,
                    **sessionkwargs: Any) -> bytes:
     "Get a file from a GitHub repository. Return data as bytes."
     url = get_address(user, repo, branch, path)
@@ -110,13 +110,13 @@ async def update_file(basepath: str,# pylint: disable=too-many-arguments
         return False
     return True
 
-async def update_files(basepath: str,# pylint: disable=too-many-arguments
-                       paths: tuple,
+async def update_files(basepath: str, # pylint: disable=too-many-arguments
+                       paths: tuple[str, ...],
                        repo: str,
                        user: str,
-                       branch: str='HEAD',
-                       timeout: int=TIMEOUT,
-                       **sessionkwargs: Any) -> list:
+                       branch: str = 'HEAD',
+                       timeout: int = TIMEOUT,
+                       **sessionkwargs: Any) -> list[str]:
     "Update multiple files all from the same GitHub repository. Return list of paths."
     urlbase = get_address(user, repo, branch, '')
     async def update_single(path: str) -> str:
