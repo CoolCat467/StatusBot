@@ -6,6 +6,8 @@
 
 # Programmed by CoolCat467
 
+from __future__ import annotations
+
 __title__ = 'Update with Github'
 __author__ = 'CoolCat467'
 __version__ = '0.1.7'
@@ -13,7 +15,7 @@ __ver_major__ = 0
 __ver_minor__ = 1
 __ver_patch__ = 7
 
-from typing import Any, Callable, Coroutine, Iterable
+from typing import Any, Callable, Coroutine, Iterable, Union
 
 import os
 import asyncio
@@ -64,7 +66,7 @@ def make_dirpath_exist(filepath: str) -> None:
 
 async def download_coroutine(url: str,
                              timeout: int = TIMEOUT,
-                             headers: dict[str, Any] | None = None) -> bytes:
+                             headers: Union[dict[str, Any], None] = None) -> bytes:
     "Return content bytes found at URL."
     async with httpx.AsyncClient(http2 = True, timeout = timeout) as client:
         # Go to the URL and get response
