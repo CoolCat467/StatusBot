@@ -47,7 +47,7 @@ def ip_type(address: Union[int, str]) -> Optional[int]:
 
 class BaseWriteSync(ABC):
     "Base synchronous write class"
-    __slots__: tuple = tuple()
+    __slots__ = ()
     @abstractmethod
     def write(self, data: bytes) -> None:
         "Write data to self."
@@ -138,7 +138,7 @@ class BaseWriteSync(ABC):
 
 class BaseWriteAsync(ABC):
     "Base synchronous write class"
-    __slots__: tuple = tuple()
+    __slots__ = ()
     @abstractmethod
     async def write(self, data: bytes) -> None:
         "Write data to self."
@@ -229,7 +229,7 @@ class BaseWriteAsync(ABC):
 
 class BaseReadSync(ABC):
     "Base synchronous read class"
-    __slots__: tuple = tuple()
+    __slots__ = ()
     @abstractmethod
     def read(self, length: int) -> bytearray:
         "Read length bytes from self, return a byte array."
@@ -241,7 +241,8 @@ class BaseReadSync(ABC):
     @staticmethod
     def _unpack(format_: str, data: bytes) -> int:
         "Unpack data as bytes with format in big-endian."
-        return struct.unpack('>' + format_, bytes(data))[0]
+        value: int = struct.unpack('>' + format_, bytes(data))[0]
+        return value
     
     def read_varint(self) -> int:
         """Read varint from self and return it.
@@ -316,7 +317,7 @@ class BaseReadSync(ABC):
 
 class BaseReadAsync(ABC):
     "Asynchronous Read connection base class."
-    __slots__: tuple = tuple()
+    __slots__ = ()
     @abstractmethod
     async def read(self, length: int) -> bytearray:
         "Read length bytes from self, return a byte array."
@@ -328,7 +329,8 @@ class BaseReadAsync(ABC):
     @staticmethod
     def _unpack(format_: str, data: bytes) -> int:
         "Unpack data as bytes with format in big-endian."
-        return struct.unpack('>' + format_, bytes(data))[0]
+        value: int = struct.unpack('>' + format_, bytes(data))[0]
+        return value
     
     async def read_varint(self) -> int:
         """Read varint from self and return it.
@@ -403,7 +405,7 @@ class BaseReadAsync(ABC):
 
 class BaseConnection:
     "Base connection class, implements flush, receive, and remaining."
-    __slots__: tuple = tuple()
+    __slots__ = ()
     def __repr__(self) -> str:
         "Return representation of self."
         return f'<{self.__class__.__name__} Object>'
@@ -422,19 +424,19 @@ class BaseConnection:
 
 class BaseSyncConnection(BaseConnection, BaseReadSync, BaseWriteSync):
     "Base synchronous read and write class"
-    __slots__: tuple = tuple()
+    __slots__ = ()
     
 class BaseAsyncReadSyncWriteConnection(BaseConnection, BaseReadAsync, BaseWriteSync):
     "Base Asynchronous read and synchronous write class"
-    __slots__: tuple = tuple()
+    __slots__ = ()
 
 class BaseAsyncConnection(BaseConnection, BaseReadAsync, BaseWriteAsync):
     "Base Asynchronous read and write class"
-    __slots__: tuple = tuple()
+    __slots__ = ()
 
 class Connection(BaseSyncConnection):
     "Base connection class."
-    __slots__: tuple = ('sent', 'received')
+    __slots__ = ('sent', 'received')
     def __init__(self) -> None:
         "Initialize self.send and self.received to an empty byte array."
         self.sent = bytearray()

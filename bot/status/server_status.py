@@ -16,7 +16,7 @@ __ver_patch__ = 3
 
 __all__ = ['try_x_times', 'Server']
 
-from typing import Callable, Any, TypeVar, cast, Tuple
+from typing import Callable, Any, TypeVar, cast
 
 from functools import wraps as _wraps
 
@@ -79,13 +79,13 @@ class Server:
         finally:
             connection.close()
     
-    async def async_status(self, tries: int=3) -> Tuple[dict, float]:
+    async def async_status(self, tries: int = 3) -> tuple[dict[str, Any], float]:
         "Request the server's status and return the json from the response."
         connection = TCPAsyncSocketConnection()
         await connection.connect((self.host, self.port))
         
         @try_x_times(tries)
-        async def get_status() -> Tuple[dict, float]:
+        async def get_status() -> tuple[dict[str, Any], float]:
             pinger = AsyncServerPinger(
                 connection,
                 host=self.host,

@@ -286,7 +286,6 @@ def process_arguments(
     message: discord.message.Message
 ) -> dict[str, Any]:
     "Process arguments to on_message handler"
-    assert message.guild is not None
     complete: dict[str, Any] = {}
     if not parameters:
         return complete
@@ -314,18 +313,19 @@ def process_arguments(
         if union_match(arg_type, str):
             assert isinstance(arg, str)
             matched = False
-            if union_match(target_type, discord.VoiceChannel):
-                for voice_channel in message.guild.voice_channels:
-                    if voice_channel.name == arg:
-                        complete[name] = voice_channel
-                        matched = True
-                        break
-            if union_match(target_type, discord.TextChannel):
-                for text_channel in message.guild.text_channels:
-                    if text_channel.name == arg:
-                        complete[name] = text_channel
-                        matched = True
-                        break
+            if message.guild is not None:
+                if union_match(target_type, discord.VoiceChannel):
+                    for voice_channel in message.guild.voice_channels:
+                        if voice_channel.name == arg:
+                            complete[name] = voice_channel
+                            matched = True
+                            break
+                if union_match(target_type, discord.TextChannel):
+                    for text_channel in message.guild.text_channels:
+                        if text_channel.name == arg:
+                            complete[name] = text_channel
+                            matched = True
+                            break
             if union_match(target_type, float):
                 if arg.isdecimal():
                     complete[name] = float(arg)
@@ -520,7 +520,7 @@ def slash_handle(
         "Dummy class so required_params = 2 for slash_handler"
         async def slash_handler(*args: discord.Interaction, **kwargs: Any) -> None:
             "Slash command wrapper for message-based command."
-            interaction: discord.Interaction = args[1]# type: ignore
+            interaction: discord.Interaction = args[1]
             try:
                 msg = interaction_to_message(interaction)
             except Exception:

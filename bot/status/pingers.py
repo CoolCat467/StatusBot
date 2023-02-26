@@ -4,13 +4,13 @@
 
 "Asynchronous and non-asynchronous Server Pinger classes."
 
+from __future__ import annotations
+
 import datetime
 import json
 from random import randint
 import io
-from typing import Any, Dict, Tuple
-
-##from ctypes import c_int32  as signed_int32
+from typing import Any
 
 from status.connection import Connection, TCPAsyncSocketConnection
 
@@ -50,7 +50,7 @@ VERSION_FLAG_IGNORESERVERONLY = 0b1
 IGNORESERVERONLY = '<not required for client>'
 
 
-def process_response(data: Dict[str, Any]) -> Dict[str, Any]:
+def process_response(data: dict[str, Any]) -> dict[str, Any]:
     "Decode encoded forgeData if present"
     if not 'forgeData' in data:
         return data
@@ -60,9 +60,9 @@ def process_response(data: Dict[str, Any]) -> Dict[str, Any]:
 
     buffer = decode_optimized(forge['d'])
 
-    channels: Dict[Tuple[str, str], Tuple[str, bool]] = {}
-##    channels: Dict[str, Tuple[str, bool]] = {}
-    mods: Dict[str, str] = {}
+    channels: dict[tuple[str, str], tuple[str, bool]] = {}
+##    channels: dict[str, tuple[str, bool]] = {}
+    mods: dict[str, str] = {}
 
     try:
         truncated = buffer.read_bool()
@@ -90,12 +90,13 @@ def process_response(data: Dict[str, Any]) -> Dict[str, Any]:
 
         non_mod_channel_size = buffer.read_varint()
         for _ in range(non_mod_channel_size):
-            name = tuple(buffer.read_utf().split(':', 1))
+            mod_name, mod_id = buffer.read_utf().split(':', 1)
+            channel_key: tuple[str, str] = mod_name, mod_id
 ##            name = buffer.read_utf()
             version = buffer.read_utf()
             client_required = buffer.read_bool()
 ##            channels[name] = (version, client_required)
-            channels[name] = (version, client_required)
+            channels[channel_key] = (version, client_required)
     except Exception as ex:
         if not truncated:
             print(f'Encountered {ex!r} decoding forge response, silently ignoring')
@@ -122,7 +123,7 @@ class AsyncServerPinger:
         host: str = '',
         port: int = 0,
         version: int = 47,
-        ping_token: int = None,
+        ping_token: int | None = None,
     ) -> None:
         "Requires connection object. Other values optional, but makes better."
         if ping_token is None:
@@ -151,7 +152,7 @@ class AsyncServerPinger:
         self.connection.write_buffer(request)
 
     @staticmethod
-    def _read_status_process_response(response: Connection) -> dict:
+    def _read_status_process_response(response: Connection) -> dict[str, Any]:
         "Read response and return read value."
         if response.read_varint() != 0:
             raise IOError('Received invalid status response packet.')
@@ -159,9 +160,8 @@ class AsyncServerPinger:
             return process_response(json.loads(response.read_utf()))
         except ValueError as ex:
             raise IOError('Received invalid JSON') from ex
-        return {}
 
-    async def read_status(self) -> dict:
+    async def read_status(self) -> dict[str, Any]:
         "Read status and return json response. Raises IOError."
         self._read_status_request()
 
@@ -177,11 +177,12 @@ class AsyncServerPinger:
         self.connection.write_buffer(request)
         return sent
 
-    def _test_ping_process_response(self,
-                                    response: Connection,
-                                    sent: datetime.datetime,
-                                    received: datetime.datetime
-                                    ) -> float:
+    def _test_ping_process_response(
+        self,
+        response: Connection,
+        sent: datetime.datetime,
+        received: datetime.datetime
+    ) -> float:
         "Read response, make sure token is good, return delta in ms. IOError on failure."
         if response.read_varint() != 1:
             raise IOError('Received invalid ping response packet.')
