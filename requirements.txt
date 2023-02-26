@@ -1,5 +1,5 @@
-discord.py==2.1.0
-python-dotenv==0.21.1
+discord.py==2.1.1
+python-dotenv==1.0.0
 httpx[http2]==0.23.3
 asyncio-dgram==2.1.2
 dnspython==2.3.0
