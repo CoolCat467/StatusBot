@@ -15,7 +15,8 @@ echo "Moving old credentials over..."
 mv old/bot/.env StatusBot/bot/.env
 echo "Moving old config over..."
 mv old/bot/config StatusBot/bot/config
+
 cd StatusBot
-chmod 755 *
+chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh

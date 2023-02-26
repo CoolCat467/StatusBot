@@ -4,6 +4,7 @@
 
 VBot='StatusBot'
 VAuthor='CoolCat467'
+VPython='python3.11'
 echo -n "Install Directory: "
 read VInstallDir
 
@@ -14,12 +15,11 @@ cat > run.sh << EOF
 # Run bot in a virtual environment
 
 cd $VInstallDir/Bots
-python3 -m venv $VBot
+$VPython -m venv $VBot
 cd $VBot
 source bin/activate
-python3 -m pip install -r requirements.txt
-cd bot
-python3 bot.py
+$VPython -m pip install -r requirements.txt
+$VPython bot/bot.py
 deactivate
 EOF
 
@@ -31,7 +31,7 @@ cat > run-quick.sh << EOF
 
 cd $VInstallDir/Bots/$VBot
 source bin/activate
-python3 bot.py
+$VPython bot.py
 deactivate
 EOF
 
@@ -41,8 +41,9 @@ cat > looprun.sh << EOF
 # -*- coding: utf-8 -*-
 # Loop run.sh
 
-$VInstallDir/Bots/$VBot/run.sh
-$VInstallDir/Bots/$VBot/looprun.sh
+while true do
+    $VInstallDir/Bots/$VBot/run.sh
+done
 EOF
 
 
@@ -56,13 +57,15 @@ mkdir Bots
 cd Bots
 echo "Installing bot..."
 git clone https://github.com/$VAuthor/$VBot
+
 cd $VBot/bot
 touch .env
 echo "# .env" > .env
 echo "DISCORD_TOKEN=" >> .env
 nano .env
-cd ..
-chmod 755 *
+
+cd $VBot
+chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh
 EOF
@@ -86,8 +89,9 @@ echo "Moving old credentials over..."
 mv old/bot/.env $VBot/bot/.env
 echo "Moving old config over..."
 mv old/bot/config $VBot/bot/config
+
 cd $VBot
-chmod 755 *
+chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh
 EOF
