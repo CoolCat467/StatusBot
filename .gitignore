@@ -1,3 +1,6 @@
+# Binaries from virtual environment
+bin/
+
 # Config files
 config/
 
