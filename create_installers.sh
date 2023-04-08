@@ -41,7 +41,8 @@ cat > looprun.sh << EOF
 # -*- coding: utf-8 -*-
 # Loop run.sh
 
-while true do
+while true
+do
     $VInstallDir/Bots/$VBot/run.sh
 done
 EOF
