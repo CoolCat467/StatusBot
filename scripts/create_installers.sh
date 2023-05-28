@@ -91,7 +91,7 @@ mv old/.env $VBot/.env
 echo "Moving old config over..."
 mv old/src/StatusBot/config $VBot/src/StatusBot/config
 
-cd $VBot/scripts
+cd scripts
 chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh

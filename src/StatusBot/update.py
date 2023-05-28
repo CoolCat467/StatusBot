@@ -178,9 +178,10 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
             # 'host': 'raw.githubusercontent.com'
         },
     )
+    print(repr(data))
     import json
 
-    paths = tuple(get_paths(json.loads(data)))
+    paths = tuple(get_paths(json.loads(data.decode("utf-8"))))
     print(paths)
 
 

@@ -49,6 +49,7 @@ async def update_files(timeout: int = 20) -> None:
     print("Retrieving file list...")
     try:
         response = await get_github_file("files.json")
+        print(response)
         paths = tuple(update.get_paths(json.loads(response)))
     except Exception:
         # On failure, tell them we can't read file.
