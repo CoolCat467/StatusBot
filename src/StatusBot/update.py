@@ -168,6 +168,20 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
         },
     )
     print(data.decode("utf-8"))
+    data = await get_file(
+        "StatusBot",
+        "files.json",
+        "CoolCat467",
+        "master",
+        headers={
+            "accept": "text/plain",
+            # 'host': 'raw.githubusercontent.com'
+        },
+    )
+    import json
+
+    paths = tuple(get_paths(json.loads(data)))
+    print(paths)
 
 
 def run() -> None:

@@ -1477,6 +1477,7 @@ class StatusBot(
                         await message.channel.send(
                             "Could not read file list. Aborting update."
                         )
+                        log_active_exception()
                         return
                     # Get max amount of time this could take.
                     maxtime = format_time(timeout * len(paths))

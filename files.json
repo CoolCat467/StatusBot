@@ -6,7 +6,7 @@
         "update.py",
         "decode_mods.py",
         "bot.py",
-        "gears.py",
+        "gears.py"
       ]
     }
   },
@@ -17,7 +17,7 @@
       "looprun.sh",
       "install_update.sh",
       "install.sh",
-      "create_installers.sh",
+      "create_installers.sh"
     ]
   },
   "": [
@@ -25,6 +25,6 @@
     "files.json",
     "version.txt",
     "pyvenv.cfg",
-    "README.md",
+    "README.md"
   ]
 }
