@@ -4,5 +4,5 @@
 
 cd ~/Desktop/Bots/StatusBot
 source bin/activate
-python3.11 bot.py
+run_statusbot
 deactivate

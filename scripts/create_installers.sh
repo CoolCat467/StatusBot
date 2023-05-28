@@ -18,8 +18,8 @@ cd $VInstallDir/Bots
 $VPython -m venv $VBot
 cd $VBot
 source bin/activate
-$VPython -m pip install -r requirements.txt
-$VPython bot/bot.py
+$VPython -m pip install -e ../$VBot
+run_statusbot
 deactivate
 EOF
 
@@ -31,7 +31,7 @@ cat > run-quick.sh << EOF
 
 cd $VInstallDir/Bots/$VBot
 source bin/activate
-$VPython bot.py
+run_statusbot
 deactivate
 EOF
 
@@ -43,7 +43,7 @@ cat > looprun.sh << EOF
 
 while true
 do
-    $VInstallDir/Bots/$VBot/run.sh
+    $VInstallDir/Bots/$VBot/scripts/run.sh
 done
 EOF
 
@@ -59,13 +59,13 @@ cd Bots
 echo "Installing bot..."
 git clone https://github.com/$VAuthor/$VBot
 
-cd $VBot/bot
+cd $VBot
 touch .env
 echo "# .env" > .env
 echo "DISCORD_TOKEN=" >> .env
 nano .env
 
-cd $VBot
+cd scripts
 chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh
@@ -77,7 +77,7 @@ cat > install_update.sh << EOF
 # -*- coding: utf-8 -*-
 # Install new verion of bot
 
-cd $VInstallDir/Bots 
+cd $VInstallDir/Bots
 echo "Attempting to remove old."
 if [ -d "$VInstallDir/Bots/old" ] ; then
     rm old
@@ -87,11 +87,11 @@ mv $VBot old
 echo "Installing updated bot..."
 git clone https://github.com/$VAuthor/$VBot
 echo "Moving old credentials over..."
-mv old/bot/.env $VBot/bot/.env
+mv old/.env $VBot/.env
 echo "Moving old config over..."
-mv old/bot/config $VBot/bot/config
+mv old/src/StatusBot/config $VBot/src/StatusBot/config
 
-cd $VBot
+cd $VBot/scripts
 chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh

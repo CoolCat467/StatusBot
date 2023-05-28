@@ -9,14 +9,16 @@ Note, there may be random downtimes if problems occour, and because of the natur
 this bot whoever runs the bot will have access to the address of your minecraft server and
 the name of the channel the bot will be sending messages in.
 Prevent random people from joining your minecraft server by setting up a whitelist.
+They will find your public server eventually anyways; People are scanning the internet
+constantly.
 
 
 ## Installation
 For Fresh install use this command:
-`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/CoolCat467/StatusBot/HEAD/install.sh)"`
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/CoolCat467/StatusBot/HEAD/scripts/install.sh)"`
 
 For update installation use this command:
-`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/CoolCat467/StatusBot/HEAD/install_update.sh)"`
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/CoolCat467/StatusBot/HEAD/scripts/install_update.sh)"`
 
 
 ## Usage
@@ -36,7 +38,7 @@ In both installation cases, `looprun.sh` will be run, which will start the bot a
 it in the event of a critical error.
 
 Every time after you install the bot, all you have to do is run `looprun.sh` or just
-`run.sh`. Looprun will simply call the run script, and then re-call itself.
+`run.sh`. Looprun will simply call the run script forever.
 
 In the event of an error, information about the error is stored in `log.txt` in StatusBot's
 folder.
@@ -55,7 +57,7 @@ As of version 0.5.0, the following describes StatusBot's commands.
 
 `refresh [force]` - Refresh, or re-evaluate, the guild that the command message is sent in.
  Restarts server pinger if guild `address` value is set.
- 
+
  If 'force' is given as an additional argument and user is either
  the guild owner, StatusBot's owner, or a user in the `force-refresh-users` list,
  then you can force the guild server pinger to restart. Otherwise it only restarts if
@@ -63,22 +65,22 @@ As of version 0.5.0, the following describes StatusBot's commands.
 
 `set-option <name> <value>` - Set option <name> to <value> for the guild you are currently
   talking to StatusBot in.
-   
+
   If you are StatusBot's owner, you are the guild owner, or you are in the
   `set-option-users` list, the following settings can be modified:
-  
+
    `address` - Address of the java editon minecraft server StatusBot should monitor
-   
+
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
-   
+
    `force-refresh-users` - List of user IDs able to preform a force refresh.
-  
+
   If you are either StatusBot's owner or you are the guild owner, you modify the
   `set-option-users` list.
-  
+
   All of the following options take 'clear', a user id, or a username (including discriminator),
   to add to list as an argument.
-  
+
    `set-option-users` - List of user IDs able to modify `address` and `channel` values.
 
 `get-option <name>` - Tell you the value of option <name>. Anyone can retrieve any option.
@@ -92,7 +94,7 @@ As of version 0.5.0, the following describes StatusBot's commands.
 `ping` - Tell the user who sent the message the latency of the connection to the server.
 
 `favicon` - Post a picture of the server's favicon in the channel the command message was posted in.
- 
+
 `current-version` - Tell the user the current version of StatusBot.
 
 `online-version` - Tell the user the current online verison of StatusBot.
@@ -106,7 +108,7 @@ This value is controlled by `version.txt` in this repository.
 
  All of the following options take 'clear', a user id, or a username (including discriminator),
  to add to list as an argument.
- 
+
    `set-option-users` - List of users who can modify the `update-users` and `stop-users` lists.
 
   NOTE: This option can only be set by the bot owner.
@@ -124,12 +126,12 @@ This value is controlled by `version.txt` in this repository.
  if they are either the bot owner or in the `set-option-users` list.
 
 `stop` - Stop the bot. If `looprun.sh` was used, this has the effect of restarting the bot.
-  
+
   NOTE: This command will only work if you are in the `stop-users` list in the
   global dms config file.
 
 `update` - Attempt to update the bot to the newest version using this github repository.
-  
+
   NOTE: This command is nearly identically to the `stop` dm command, but uses the
   `update-users` global dm config value instead.
 
@@ -152,6 +154,4 @@ joined or left the server, StatusBot will tell you!
 
 
 ## Credits
-Most of the stuff to talk to minecraft server stolen from https://github.com/Dinnerbone/mcstatus with
-some changes.
 Parts of code stolen from WOOF (Web Offer One File) from https://github.com/simon-budig/woof

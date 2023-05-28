@@ -1,29 +1,30 @@
 {
-  "bot": {
-    "status": [
-      "address_tools.py",
-      "connection.py",
-      "pingers.py",
-      "server_status.py",
-      "__init__.py"
-    ],
+  "src": {
+    "StatusBot": {
+      "": [
+      	"__init__.py",
+        "update.py",
+        "decode_mods.py",
+        "bot.py",
+        "gears.py",
+      ]
+    }
+  },
+  "scripts": {
     "": [
-      "update.py",
-      "bot.py",
-      "gears.py"
+      "run.sh",
+      "run-quick.sh",
+      "looprun.sh",
+      "install_update.sh",
+      "install.sh",
+      "create_installers.sh",
     ]
   },
   "": [
-    "run.sh",
-    "run-quick.sh",
-    "looprun.sh",
-    "requirements.txt",
+    "pyproject.toml",
     "files.json",
     "version.txt",
     "pyvenv.cfg",
-    "install_update.sh",
-    "install.sh",
-    "create_installers.sh",
-    "README.md"
+    "README.md",
   ]
 }

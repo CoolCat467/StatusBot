@@ -8,13 +8,13 @@ cd Bots
 echo "Installing bot..."
 git clone https://github.com/CoolCat467/StatusBot
 
-cd StatusBot/bot
+cd StatusBot
 touch .env
 echo "# .env" > .env
 echo "DISCORD_TOKEN=" >> .env
 nano .env
 
-cd StatusBot
+cd scripts
 chmod 755 looprun.sh run.sh
 echo "Install complete."
 . looprun.sh

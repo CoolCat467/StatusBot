@@ -8,32 +8,35 @@
 
 from __future__ import annotations
 
-__title__ = 'Update with Github'
-__author__ = 'CoolCat467'
-__version__ = '0.1.7'
+__title__ = "Update with Github"
+__author__ = "CoolCat467"
+__version__ = "0.1.7"
 __ver_major__ = 0
 __ver_minor__ = 1
 __ver_patch__ = 7
 
-from typing import Any, Callable, Coroutine, Iterable, Union
-
-import os
 import asyncio
+import os
+from typing import Any, Iterable, Union
 
 import httpx
 
 TIMEOUT = 60
 
+
 def get_address(user: str, repo: str, branch: str, path: str) -> str:
     "Get raw GitHub user content URL of a specific file."
-    return f'https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}'
+    return f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}"
+
 
 def is_new_ver_higher(current: Iterable[Any], newest: Iterable[Any]) -> bool:
     "Return True if current version older than new version."
     return tuple(current) < tuple(newest)
 
+
 def get_paths(jdict: dict[str, Any]) -> list[str]:
     "Read dictionary and figure out paths of files we want to update."
+
     def read_dict(cdict: dict[str, Any]) -> list[str]:
         "Read a dictionary and return paths."
         paths = []
@@ -51,102 +54,121 @@ def get_paths(jdict: dict[str, Any]) -> list[str]:
                     if isinstance(file, str):
                         paths.append(os.path.join(path, file))
         return paths
+
     return read_dict(jdict)
 
-def make_dirpath_exist(filepath: str) -> None:
-    "Ensure full folder structure to file path given exists. If not exists, creates it."
-    # Folder we want to ensure exists.
-    folder = os.path.dirname(filepath)
-    # If folder not exist
-    if not os.path.exists(folder):
-        # Ensure above folder exists
-        make_dirpath_exist(folder)
-        # Make folder
-        os.mkdir(folder)
 
-async def download_coroutine(url: str,
-                             timeout: int = TIMEOUT,
-                             headers: Union[dict[str, Any], None] = None) -> bytes:
+def make_dirpath_exist(filepath: str) -> None:
+    """Ensure full folder structure to file path given exists.
+
+    If not exists, creates it."""
+    os.makedirs(filepath, exist_ok=True)
+
+
+async def download_coroutine(
+    url: str,
+    timeout: int = TIMEOUT,
+    headers: Union[dict[str, Any], None] = None,
+) -> bytes:
     "Return content bytes found at URL."
-    async with httpx.AsyncClient(http2 = True, timeout = timeout) as client:
+    async with httpx.AsyncClient(http2=True, timeout=timeout) as client:
         # Go to the URL and get response
         response = await client.get(url, headers=headers)
-        
+
         # Raise exceptions if errors happened
         response.raise_for_status()
-        
+
         # Get response content
         request_result = response.read()
-        
+
         # Close response
         await response.aclose()
     return request_result
 
-async def get_file(repo: str,
-                   path: str,
-                   user: str,
-                   branch: str = 'HEAD',
-                   timeout: int = TIMEOUT,
-                   **sessionkwargs: Any) -> bytes:
+
+async def get_file(
+    repo: str,
+    path: str,
+    user: str,
+    branch: str = "HEAD",
+    timeout: int = TIMEOUT,
+    **sessionkwargs: Any,
+) -> bytes:
     "Get a file from a GitHub repository. Return data as bytes."
     url = get_address(user, repo, branch, path)
     return await download_coroutine(url, timeout, **sessionkwargs)
 
-async def update_file(basepath: str,# pylint: disable=too-many-arguments
-                      repo: str,
-                      path: str,
-                      user: str,
-                      branch: str='HEAD',
-                      timeout: int=TIMEOUT,
-                      **sessionkwargs: Any) -> bool:
+
+async def update_file(
+    basepath: str,  # pylint: disable=too-many-arguments
+    repo: str,
+    path: str,
+    user: str,
+    branch: str = "HEAD",
+    timeout: int = TIMEOUT,
+    **sessionkwargs: Any,
+) -> bool:
     "Update file. Return False on exception, otherwise True."
     url = get_address(user, repo, branch, path)
     savepath = os.path.abspath(os.path.join(basepath, path))
     try:
-        with open(savepath, 'wb') as sfile:
-            sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
+        with open(savepath, "wb") as sfile:
+            sfile.write(
+                await download_coroutine(url, timeout, **sessionkwargs)
+            )
             sfile.close()
-    except Exception: # pylint: disable=W0703
+    except Exception:  # pylint: disable=W0703
         # We have to be able to catch all exceptions so we can return and
         # never have an exception in handling.
         return False
     return True
 
-async def update_files(basepath: str, # pylint: disable=too-many-arguments
-                       paths: tuple[str, ...],
-                       repo: str,
-                       user: str,
-                       branch: str = 'HEAD',
-                       timeout: int = TIMEOUT,
-                       **sessionkwargs: Any) -> list[str]:
-    "Update multiple files all from the same GitHub repository. Return list of paths."
-    urlbase = get_address(user, repo, branch, '')
+
+async def update_files(
+    basepath: str,  # pylint: disable=too-many-arguments
+    paths: tuple[str, ...],
+    repo: str,
+    user: str,
+    branch: str = "HEAD",
+    timeout: int = TIMEOUT,
+    **sessionkwargs: Any,
+) -> list[str]:
+    """Update multiple files all from the same GitHub repository.
+
+    Return list of paths."""
+    urlbase = get_address(user, repo, branch, "")
+
     async def update_single(path: str) -> str:
         "Update a single file."
         savepath = os.path.abspath(os.path.join(basepath, path))
         # Ensure folder for it exists too.
         make_dirpath_exist(savepath)
         url = urlbase + path
-        with open(savepath, 'wb') as sfile:
-            sfile.write(await download_coroutine(url, timeout, **sessionkwargs))
+        with open(savepath, "wb") as sfile:
+            sfile.write(
+                await download_coroutine(url, timeout, **sessionkwargs)
+            )
             sfile.close()
         return path
+
     coros = (update_single(path) for path in paths)
     return await asyncio.gather(*coros)
+
 
 async def run_async(loop: asyncio.AbstractEventLoop) -> None:
     "Run asynchronously"
     data = await get_file(
-        'StatusBot',
-        'version.txt',
-        'CoolCat467',
-        'master',
-        headers = {
-            'accept': 'text/plain',
-##            'host': 'raw.githubusercontent.com'
-        }
+        "StatusBot",
+        "version.txt",
+        "CoolCat467",
+        "master",
+        headers={
+            "accept": "text/plain",
+            # 'host': 'raw.githubusercontent.com'
+        },
     )
-    print(data.decode('utf-8'))
+    print(data.decode("utf-8"))
+
 
 def run() -> None:
     "Run test"
@@ -156,5 +178,6 @@ def run() -> None:
     finally:
         loop.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()
