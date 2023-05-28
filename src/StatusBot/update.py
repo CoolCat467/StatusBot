@@ -62,7 +62,7 @@ def make_dirpath_exist(filepath: str) -> None:
     """Ensure full folder structure to file path given exists.
 
     If not exists, creates it."""
-    os.makedirs(filepath, exist_ok=True)
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
 
 async def download_coroutine(
