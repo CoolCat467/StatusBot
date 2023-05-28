@@ -8,13 +8,13 @@
 
 __title__ = "Decode Mod Data"
 __author__ = "CoolCat467"
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 
 
 import io
 from typing import Any
 
-from mcstatus.pingers import RawResponse
+from mcstatus.pinger import RawResponse
 from mcstatus.protocol.connection import Connection
 
 
