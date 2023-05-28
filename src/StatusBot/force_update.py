@@ -28,7 +28,9 @@ async def get_github_file(path: str, timeout: int = 10) -> str:
     file = await update.get_file(
         "StatusBot", path, __author__, "master", timeout
     )
-    return file.decode("utf-8")
+    value = file.decode("utf-8")
+    assert isinstance(value, str)
+    return value
 
 
 async def getonlinevers() -> tuple[int, ...]:

@@ -27,33 +27,21 @@ import os
 import random
 import sys
 import traceback
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from threading import Event, Lock
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Final,
-    Iterable,
-    get_args,
-    get_type_hints,
-)
+from typing import Any, Final, get_args, get_type_hints
 
-# Decode forgeData tag
-import decode_mods
-import discord  # type: ignore
-
-# Gears is basically like discord's Cogs, but
-# by me.
-import gears
+import discord
 import mcstatus
-
-# Update talks to GitHub
-import update
 
 # from discord.ext import tasks, commands
 from aiohttp.client_exceptions import ClientConnectorError
 from dotenv import load_dotenv
+
+# Update talks to GitHub
+# decode_mods Decodes forgeData tag
+# Gears is basically like discord's Cogs, but by me.
+from . import decode_mods, gears, update
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -419,19 +407,33 @@ def interaction_to_message(
             "type": 2,
             "name": "Interaction name",
             "member": {
-                "joined_at": str_null(interaction.user.joined_at),
-                "premium_since": str_null(interaction.user.premium_since),
+                "joined_at": str_null(interaction.user.joined_at)
+                if isinstance(interaction.user, discord.Member)
+                else None,
+                "premium_since": str_null(interaction.user.premium_since)
+                if isinstance(interaction.user, discord.Member)
+                else None,
                 "roles": []
                 if isinstance(interaction.user, discord.User)
                 else [role.id for role in interaction.user.roles],
-                "nick": interaction.user.nick,
-                "pending": interaction.user.pending,
+                "nick": interaction.user.nick
+                if isinstance(interaction.user, discord.Member)
+                else None,
+                "pending": interaction.user.pending
+                if isinstance(interaction.user, discord.Member)
+                else None,
                 "avatar": interaction.user.avatar,
-                "flags": interaction.user._flags,
-                "permissions": interaction.user._permissions,
+                "flags": interaction.user._flags
+                if isinstance(interaction.user, discord.Member)
+                else None,
+                "permissions": interaction.user._permissions
+                if isinstance(interaction.user, discord.Member)
+                else None,
                 "communication_disabled_until": str_null(
                     interaction.user.timed_out_until
-                ),
+                )
+                if isinstance(interaction.user, discord.Member)
+                else None,
             },
             "user": {
                 "username": interaction.user.name,
@@ -445,7 +447,7 @@ def interaction_to_message(
                 else [role.id for role in interaction.user.roles],
             },
         },
-        #    'message_reference': None,
+        # 'message_reference': None,
         "application": {
             "id": interaction.application_id,
             "description": "Application description",
@@ -453,11 +455,11 @@ def interaction_to_message(
             "icon": None,
             "cover_image": None,
         },
-        #    'author'       : ,
-        #    'member'       : ,
-        #    'mentions'     : ,
-        #    'mention_roles': ,
-        #    'components'   :
+        # 'author'       : ,
+        # 'member'       : ,
+        # 'mentions'     : ,
+        # 'mention_roles': ,
+        # 'components'   :
     }
 
     message = discord.message.Message(
@@ -533,7 +535,7 @@ def extract_parameters_from_callback(
 
     try:
         name = "__discord_app_commands_param_description__"
-        descriptions.update(getattr(func, name))  # type: ignore
+        descriptions.update(getattr(func, name))
     except AttributeError:
         for param in values:
             if param.description is discord.utils.MISSING:
@@ -559,7 +561,7 @@ def extract_parameters_from_callback(
 
     try:
         name = "__discord_app_commands_param_autocomplete__"
-        autocomplete = getattr(func, name)  # type: ignore[attr-defined]
+        autocomplete = getattr(func, name)
     except AttributeError:
         pass
     else:
@@ -660,7 +662,9 @@ async def send_command_list(
 async def get_github_file(path: str, timeout: int = 10) -> str:
     "Return text from GitHub file in this project decoded as utf-8"
     file = await update.get_file(__title__, path, __author__, BRANCH, timeout)
-    return file.decode("utf-8")
+    value = file.decode("utf-8")
+    assert isinstance(value, str)
+    return value
 
 
 class PingState(gears.AsyncState):
@@ -915,7 +919,8 @@ class GuildServerPinger(gears.StateTimer):
 
 
 class StatusBot(
-    discord.Client, gears.BaseBot
+    discord.Client,
+    gears.BaseBot,
 ):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """StatusBot needs prefix, event loop, and any arguments
     to pass to discord.Client."""
@@ -1809,7 +1814,8 @@ class StatusBot(
                 # member = message.guild.get_member(value)
                 # member = self.get_user(value)
                 name = await self.get_user_name(
-                    id_value, message.guild.get_member
+                    id_value,
+                    message.guild.get_member,
                 )
                 if name is None:
                     await message.channel.send(
