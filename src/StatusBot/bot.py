@@ -10,10 +10,10 @@ from __future__ import annotations
 
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 __ver_major__ = 0
 __ver_minor__ = 8
-__ver_patch__ = 0
+__ver_patch__ = 1
 
 import asyncio
 import base64
@@ -753,7 +753,7 @@ class PingState(gears.AsyncState):
                 log_active_exception(self.machine.bot.logpath)
             return
         json_data = decode_mods.process_response(response.raw)
-        ping = response.latency
+        ping = round(response.latency, 3)
         # If success, get players.
         self.machine.last_json = json_data
         self.machine.last_delay = ping
