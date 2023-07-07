@@ -110,7 +110,7 @@ async def update_file(
 ) -> bool:
     "Update file. Return False on exception, otherwise True."
     url = get_address(user, repo, branch, path)
-    savepath = os.path.abspath(os.path.join(basepath, path))
+    savepath = os.path.abspath(os.path.join(basepath, *(path.split("/"))))
     try:
         with open(savepath, "wb") as sfile:
             sfile.write(

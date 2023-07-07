@@ -942,7 +942,7 @@ class StatusBot(
         self.stopped = Event()
         self.updating = Lock()
         self.prefix = prefix
-        self.rootdir = os.path.split(os.path.abspath(__file__))[0]
+        self.rootdir = os.path.dirname(os.path.abspath(__file__))
         self.logpath = os.path.join(self.rootdir, "log.txt")
         self.gcommands: dict[
             str, Callable[[discord.message.Message], Coroutine[Any, Any, Any]]
@@ -1494,7 +1494,7 @@ class StatusBot(
                         f"Please wait. This may take up to {maxtime} at most."
                     )
                     # Update said files.
-                    rootdir = os.path.split(self.rootdir)[0]
+                    rootdir = os.path.dirname(os.path.dirname(self.rootdir))
                     await update.update_files(
                         rootdir, paths, __title__, __author__, BRANCH, timeout
                     )
