@@ -1800,11 +1800,11 @@ class StatusBot(
                     id_value = int(value)
                 except ValueError:
                     # DANGER
-                    if "#" not in value:
-                        await message.channel.send(
-                            "Username does not have discriminator (ex. #1234)."
-                        )
-                        return
+                    # if "#" not in value:
+                    #     await message.channel.send(
+                    #         "Username does not have discriminator (ex. #1234)."
+                    #     )
+                    #     return
                     member = message.guild.get_member_named(value)
                     if member is None:
                         await message.channel.send(
@@ -1896,11 +1896,11 @@ class StatusBot(
                 value = int(value)
             except ValueError:
                 # DANGER
-                if "#" not in args[1]:
-                    await message.channel.send(
-                        "Username does not have discriminator (ex. #1234)."
-                    )
-                    return
+                # if "#" not in args[1]:
+                #     await message.channel.send(
+                #         "Username does not have discriminator (ex. #1234)."
+                #     )
+                #    return
                 member = await self.search_for_member_in_guilds(value)
                 if member is None:
                     await message.channel.send("User not found.")
