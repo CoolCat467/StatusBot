@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "StatusBot"
-version = "0.8.1"
+version = "0.8.2"
 authors = [
   { name="CoolCat467" },
 ]
@@ -22,7 +22,7 @@ dependencies = [
     "discord.py~=2.3.0",
     "python-dotenv~=1.0.0",
     "httpx[http2]~=0.24.1",
-    "mcstatus~=10.0.3",
+    "mcstatus~=11.0.0",
 ]
 
 [project.optional-dependencies]

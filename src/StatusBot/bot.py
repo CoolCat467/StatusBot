@@ -10,10 +10,10 @@ from __future__ import annotations
 
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 __ver_major__ = 0
 __ver_minor__ = 8
-__ver_patch__ = 1
+__ver_patch__ = 2
 
 import asyncio
 import base64
@@ -599,7 +599,7 @@ def slash_handle(
                     "An error occured processing the slash command"
                 )
                 if hasattr(interaction._client, "on_error"):
-                    await interaction._client.on_error(  # type: ignore
+                    await interaction._client.on_error(
                         "slash_command", message_command.__name__
                     )
                 raise
@@ -773,7 +773,7 @@ class PingState(gears.AsyncState):
                 if "name" in player:
                     players.add(player["name"])
 
-        if len(players) == 0 and online:
+        if not players and online:
             await self.handle_count(online)
             self.machine.last_online_count = online
         else:
