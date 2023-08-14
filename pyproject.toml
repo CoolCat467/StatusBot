@@ -30,7 +30,7 @@ dev = [
     "mypy~=1.5.0",              # must match .pre-commit-config.yaml
     "pre-commit",
     "pre-commit-hooks~=4.4.0",  # must match .pre-commit-config.yaml
-    "tox~=4.6.0",
+    "tox~=4.8.0",
 ]
 format = [
     "black~=23.7.0",            # must match .pre-commit-config.yaml
