@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Gears for bots.
 
 "Gears for Bots"
@@ -18,7 +17,8 @@ __ver_patch__ = 9
 import asyncio
 import concurrent.futures
 import math
-from typing import Any, Coroutine, Iterable, Union
+import traceback
+from typing import Any, Coroutine, Iterable
 
 import async_timeout
 
@@ -42,7 +42,7 @@ class State:
     def __init__(self, name: str) -> None:
         "Initialize state with a name."
         self.name = name
-        self.machine: "StateMachine"
+        self.machine: StateMachine
 
     def __str__(self) -> str:
         "Return <{self.name} {class-name}>."
@@ -53,11 +53,11 @@ class State:
         return str(self)
 
     def entry_actions(self) -> None:
-        "Preform entry actions for this State."
+        "Perform entry actions for this State."
         return None
 
     def do_actions(self) -> None:
-        "Preform actions for this State."
+        "Perform actions for this State."
         return None
 
     def check_conditions(self) -> str | None:
@@ -65,7 +65,7 @@ class State:
         return None
 
     def exit_actions(self) -> None:
-        "Preform exit actions for this State."
+        "Perform exit actions for this State."
         return None
 
 
@@ -76,7 +76,7 @@ class AsyncState:
     def __init__(self, name: str) -> None:
         "Initialize state with a name."
         self.name = name
-        self.machine: "AsyncStateMachine"
+        self.machine: AsyncStateMachine
 
     def __str__(self) -> str:
         "Return <{self.name} {class-name}>."
@@ -87,11 +87,11 @@ class AsyncState:
         return str(self)
 
     async def entry_actions(self) -> None:
-        "Preform entry actions for this State."
+        "Perform entry actions for this State."
         return None
 
     async def do_actions(self) -> None:
-        "Preform actions for this State."
+        "Perform actions for this State."
         return None
 
     async def check_conditions(self) -> str | None:
@@ -99,7 +99,7 @@ class AsyncState:
         return None
 
     async def exit_actions(self) -> None:
-        "Preform exit actions for this State."
+        "Perform exit actions for this State."
         return None
 
 
@@ -141,7 +141,7 @@ class StateMachine:
         del self.states[state_name]
 
     def set_state(self, new_state_name: str) -> None:
-        "Change states and preform any exit / entry actions."
+        "Change states and perform any exit / entry actions."
         if new_state_name not in self.states:
             raise KeyError(
                 f'"{new_state_name}" not found in internal states dictionary!'
@@ -155,11 +155,11 @@ class StateMachine:
             self.active_state.entry_actions()
 
     def think(self) -> None:
-        "Preform actions, check conditions, and change states"
+        "Perform actions, check conditions, and change states"
         # Only continue if there is an active state
         if self.active_state is None:
             return None
-        # Preform the actions of the active state
+        # Perform the actions of the active state
         self.active_state.do_actions()
         # Check conditions and potentially change states.
         new_state_name = self.active_state.check_conditions()
@@ -206,7 +206,7 @@ class AsyncStateMachine:
         del self.states[state_name]
 
     async def set_state(self, new_state_name: str) -> None:
-        "Change states and preform any exit / entry actions."
+        "Change states and perform any exit / entry actions."
         if new_state_name not in self.states:
             raise KeyError(
                 f'"{new_state_name}" not found in internal states dictionary!'
@@ -221,11 +221,11 @@ class AsyncStateMachine:
             await self.active_state.entry_actions()
 
     async def think(self) -> None:
-        "Preform actions, check conditions, and change states"
+        "Perform actions, check conditions, and change states"
         # Only continue if there is an active state
         if self.active_state is None:
             return None
-        # Preform the actions of the active state
+        # Perform the actions of the active state
         await self.active_state.do_actions()
         # Check conditions and potentially change states.
         new_state_name = await self.active_state.check_conditions()
@@ -237,7 +237,7 @@ class Gear:
     "Class that gets run by bots."
 
     # __slots__ = 'bot', 'name', 'running', 'stopped'
-    def __init__(self, bot: "BaseBot", name: str) -> None:
+    def __init__(self, bot: BaseBot, name: str) -> None:
         "Store self.bot, and set self.running and self.stopped to False."
         self.bot = bot
         self.name = name
@@ -330,15 +330,15 @@ class BaseBot:
 class Timer(Gear):
     "Class that will run coroutine self.run every delay seconds."
     # __slots__ = 'delay', 'task', 'ticks'
-    min_delay: Union[int, float] = 1
+    min_delay: int | float = 1
 
     def __init__(
-        self, bot: BaseBot, name: str, delay: Union[int, float] = 60
+        self, bot: BaseBot, name: str, delay: int | float = 60
     ) -> None:
         "self.name = name. Delay is seconds."
         super().__init__(bot, name)
         self.delay = max(0, delay)
-        self.task: Union[asyncio.Task[Any], None] = None
+        self.task: asyncio.Task[Any] | None = None
         self.ticks = math.inf
 
     def gear_init(self) -> None:
@@ -375,8 +375,8 @@ class Timer(Gear):
             except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                 try:
                     self.task.cancel()
-                except Exception:  # pylint: disable=broad-except
-                    pass
+                except Exception as exc:  # pylint: disable=broad-except
+                    traceback.print_exception(exc)
         if not self.stopped:
 
             async def wait_for_cancelled() -> bool:
@@ -393,7 +393,7 @@ class Timer(Gear):
             self.stopped = await wait_for_cancelled()
 
     async def tick(self) -> bool:
-        "Return False if Timer should continue running. Called periodicaly"
+        "Return False if Timer should continue running. Called periodically"
         return True
 
     async def start(self) -> None:
@@ -440,7 +440,7 @@ class StateTimer(Timer, AsyncStateMachine):
 
     # __slots__: tuple = tuple()
     def __init__(
-        self, bot: BaseBot, name: str, delay: Union[int, float] = 1
+        self, bot: BaseBot, name: str, delay: int | float = 1
     ) -> None:
         AsyncStateMachine.__init__(self)
         Timer.__init__(self, bot, name, delay)
@@ -461,7 +461,7 @@ class StateTimer(Timer, AsyncStateMachine):
         return await super().start()
 
     async def tick(self) -> bool:
-        """Preform actions for AsyncStateTimer.
+        """Perform actions for AsyncStateTimer.
 
         Return False if no active state is set."""
         await self.think()

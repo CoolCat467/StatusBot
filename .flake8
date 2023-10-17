@@ -1,6 +1,0 @@
-[flake8]
-per-file-ignores =
-    # Black formats string indices in a strange way that flake doesn't like
-    src/*: E203
-    # Tests have very long strings of text to check
-    tests/*: E501,E251

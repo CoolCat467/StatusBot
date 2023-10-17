@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # General tools for updating
 
 "General tools for updating."
@@ -17,7 +16,7 @@ __ver_patch__ = 7
 
 import asyncio
 import os
-from typing import Any, Iterable, Union
+from typing import Any, Iterable
 
 import httpx
 
@@ -68,7 +67,7 @@ def make_dirpath_exist(filepath: str) -> None:
 async def download_coroutine(
     url: str,
     timeout: int = TIMEOUT,
-    headers: Union[dict[str, Any], None] = None,
+    headers: dict[str, Any] | None = None,
 ) -> bytes:
     "Return content bytes found at URL."
     async with httpx.AsyncClient(http2=True, timeout=timeout) as client:
@@ -112,7 +111,7 @@ async def update_file(
     url = get_address(user, repo, branch, path)
     savepath = os.path.abspath(os.path.join(basepath, *(path.split("/"))))
     try:
-        with open(savepath, "wb") as sfile:
+        with open(savepath, "wb") as sfile:  # noqa: ASYNC101
             sfile.write(
                 await download_coroutine(url, timeout, **sessionkwargs)
             )
@@ -144,7 +143,7 @@ async def update_files(
         # Ensure folder for it exists too.
         make_dirpath_exist(savepath)
         url = urlbase + path
-        with open(savepath, "wb") as sfile:
+        with open(savepath, "wb") as sfile:  # noqa: ASYNC101
             sfile.write(
                 await download_coroutine(url, timeout, **sessionkwargs)
             )

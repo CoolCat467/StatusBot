@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Force update bot
 
 "Force Update Bot"
@@ -44,7 +43,7 @@ async def getonlinevers() -> tuple[int, ...]:
 
 
 async def update_files(timeout: int = 20) -> None:
-    "Preform update from GitHub."
+    "Perform update from GitHub."
     # If we need update, get file list.
     print("Retrieving file list...")
     try:
@@ -68,7 +67,7 @@ async def update_files(timeout: int = 20) -> None:
 
 
 def run() -> None:
-    "Preform update."
+    "Perform update."
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(update_files())

@@ -75,7 +75,7 @@ EOF
 cat > install_update.sh << EOF
 #!/bin/bash
 # -*- coding: utf-8 -*-
-# Install new verion of bot
+# Install new version of bot
 
 cd $VInstallDir/Bots
 echo "Attempting to remove old."

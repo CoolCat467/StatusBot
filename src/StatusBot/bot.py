@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # StatusBot for Discord
 
 "Status Bot for Discord using Python 3"
@@ -93,7 +92,7 @@ def read_file(filename: str) -> str | None:
     "Read data from file <filename>. Return None if file does not exist."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as rfile:
+        with open(filename, encoding="utf-8") as rfile:
             data = rfile.read()
             rfile.close()
         return data
@@ -104,7 +103,7 @@ def read_json(filename: str) -> dict[str, Any] | None:
     "Return json loads of filename read. Returns None if filename not exists."
     filename = os.path.abspath(filename)
     if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as rfile:
+        with open(filename, encoding="utf-8") as rfile:
             try:
                 data: dict[str, Any] = json.load(rfile)
             except json.decoder.JSONDecodeError:
@@ -246,7 +245,7 @@ def calculate_edit_distance(a: str, b: str) -> int:
 def closest(given: str, options: Iterable[str]) -> str:
     "Get closest text to given from options"
     best = ""
-    best_score = sum((len(opt) for opt in options))
+    best_score = sum(len(opt) for opt in options)
     for option in options:
         score = calculate_edit_distance(given, option)
         if score < best_score:
@@ -596,7 +595,7 @@ def slash_handle(
                 await message_command(msg, *args[2:], **kwargs)
             except Exception:
                 await msg.channel.send(
-                    "An error occured processing the slash command"
+                    "An error occurred processing the slash command"
                 )
                 if hasattr(interaction._client, "on_error"):
                     await interaction._client.on_error(
@@ -670,7 +669,7 @@ async def get_github_file(path: str, timeout: int = 10) -> str:
 class PingState(gears.AsyncState):
     "State where we ping server."
     __slots__ = "failed", "exit_ex"
-    machine: "GuildServerPinger"
+    machine: GuildServerPinger
 
     def __init__(self) -> None:
         super().__init__("ping")
@@ -797,7 +796,7 @@ class PingState(gears.AsyncState):
 class WaitRestartState(gears.AsyncState):
     "State where we wait for server to restart."
     __slots__ = "ignore_ticks", "success", "ticks", "ping"
-    machine: "GuildServerPinger"
+    machine: GuildServerPinger
 
     def __init__(self, ignore_ticks: int) -> None:
         super().__init__("await_restart")
@@ -825,7 +824,7 @@ class WaitRestartState(gears.AsyncState):
         "Attempt to talk to server."
         try:
             self.ping = await self.machine.server.async_ping()
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except  # noqa: S110
             pass
         else:
             return True
@@ -871,12 +870,12 @@ class GuildServerPinger(gears.StateTimer):
     tick_speed: int = 60
     wait_ticks: int = 5
 
-    def __init__(self, bot: "StatusBot", guild_id: int) -> None:
+    def __init__(self, bot: StatusBot, guild_id: int) -> None:
         "Needs bot we work for, and id of guild we are pinging the server for."
         self.guild_id = guild_id
         super().__init__(bot, str(self.guild_id), self.tick_speed)
         self.server: mcstatus.JavaServer
-        self.bot: "StatusBot"
+        self.bot: StatusBot
         self.last_json: dict[str, Any] = {}
         self.last_delay: int | float = 0
         self.last_online: set[str] = set()
@@ -1078,7 +1077,7 @@ class StatusBot(
         for channel in guild.text_channels:
             if channel.name in expect:
                 return channel
-        return random.choice(guild.text_channels)
+        return random.choice(guild.text_channels)  # noqa: S311
 
     async def search_for_member_in_guilds(
         self, username: str
@@ -1444,7 +1443,7 @@ class StatusBot(
         return tuple(map(int, version.strip().split(".")))
 
     async def update(self, message: discord.message.Message) -> None:
-        "Preform an update on this instance of StatusBot from GitHub."
+        "Perform an update on this instance of StatusBot from GitHub."
         timeout = 20
         if self.stopped.is_set():
             await message.channel.send(
@@ -2055,13 +2054,13 @@ Deleting guild settings"""
                 args = parse_args(message.clean_content.lower())
                 pfx = args[0] == self.prefix if len(args) >= 1 else False
                 # of it starts with us being mentioned,
-                ment = False
+                meant = False
                 if message.content.startswith("<@"):
                     new = message.content.replace("!", "")
                     new = new.replace("&", "")
                     assert self.user is not None, "self.user is None"
-                    ment = new.startswith(self.user.mention)
-                if pfx or ment:
+                    meant = new.startswith(self.user.mention)
+                if pfx or meant:
                     # we are, in reality, the fastest typer in world. aw yep.
                     async with message.channel.typing():
                         # Process message as guild
@@ -2100,7 +2099,7 @@ Deleting guild settings"""
         # coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         # await asyncio.gather(*coros)
 
-        print("Waiting to aquire updating lock...\n")
+        print("Waiting to acquire updating lock...\n")
         with self.updating:
             print("Closing...")
             await discord.Client.close(self)

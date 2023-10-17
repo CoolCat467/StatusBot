@@ -1,11 +1,13 @@
 # StatusBot
 StatusBot is a discord bot that will post information about a given Java Editon minecraft server in a given channel once configured.
 
+<!-- BADGIE TIME -->
+<!-- END BADGIE TIME -->
 
 ## Invite to your server
 Invite StatusBot to your discord server:
 [Invite link](https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=68608&scope=bot)
-Note, there may be random downtimes if problems occour, and because of the nature of
+Note, there may be random downtimes if problems occur, and because of the nature of
 this bot whoever runs the bot will have access to the address of your minecraft server and
 the name of the channel the bot will be sending messages in.
 Prevent random people from joining your minecraft server by setting up a whitelist.
@@ -22,8 +24,8 @@ For update installation use this command:
 
 
 ## Usage
-As far as I can tell, StatusBot only needs the following permissions intiger: `68608`
-If you preform a fresh install, you will need to set the discord token the bot will use.
+As far as I can tell, StatusBot only needs the following permissions integer: `68608`
+If you perform a fresh install, you will need to set the discord token the bot will use.
 The program looks for this token in a file named `.env`. If you use the fresh installer,
 the installer will automatically create this file and open it with `nano` for you to paste
 your token. If you use the update installer, it will move the old version to `old` and copy
@@ -73,7 +75,7 @@ As of version 0.5.0, the following describes StatusBot's commands.
 
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
 
-   `force-refresh-users` - List of user IDs able to preform a force refresh.
+   `force-refresh-users` - List of user IDs able to perform a force refresh.
 
   If you are either StatusBot's owner or you are the guild owner, you modify the
   `set-option-users` list.
@@ -97,7 +99,7 @@ As of version 0.5.0, the following describes StatusBot's commands.
 
 `current-version` - Tell the user the current version of StatusBot.
 
-`online-version` - Tell the user the current online verison of StatusBot.
+`online-version` - Tell the user the current online version of StatusBot.
 This value is controlled by `version.txt` in this repository.
 
 
@@ -139,7 +141,7 @@ This value is controlled by `version.txt` in this repository.
 
 `current-version` - Tell the user the current version of StatusBot.
 
-`online-version` - Tell the user the current online verison of StatusBot.
+`online-version` - Tell the user the current online version of StatusBot.
 This value is controlled by `version.txt` in this repository.
 
 
@@ -148,7 +150,7 @@ When StatusBot is connected to a guild and has it's `address` (and preferably al
 value set, StatusBot will go to the channel defined by the `channel` option (if unset, goes to first
 any channels with `bot` in the title, then `general`, and if that fails then a random text channel)
 and post the following message: `Server pinger started.` As long as the pinger is running every 60
-secconds (on default) StatusBot will connect to and ping the server found at `address` and see if
+seconds (on default) StatusBot will connect to and ping the server found at `address` and see if
 any players have joined or left since the last time it pinged said server. If any players have
 joined or left the server, StatusBot will tell you!
 

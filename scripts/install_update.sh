@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-# Install new verion of bot
+# Install new version of bot
 
 cd ~/Desktop/Bots
 echo "Attempting to remove old."
