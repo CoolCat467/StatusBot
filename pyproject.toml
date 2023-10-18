@@ -19,7 +19,7 @@ classifiers = [
 ]
 keywords = ["discord", "bot"]
 dependencies = [
-    "discord.py~=2.3.0",
+    "discord.py~=2.3.2",
     "python-dotenv~=1.0.0",
     "httpx[http2]~=0.25.0",
     "mcstatus~=11.0.1",

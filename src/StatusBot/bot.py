@@ -377,7 +377,7 @@ def override_methods(obj: Any, attrs: dict[str, Any]) -> Any:
 
 
 def interaction_to_message(
-    interaction: discord.Interaction,
+    interaction: discord.Interaction[StatusBot],
 ) -> discord.Message:
     "Convert slash command interaction to Message"
 
@@ -573,17 +573,19 @@ def extract_parameters_from_callback(
 
 def slash_handle(
     message_command: Callable[[discord.Message], Awaitable[None]]
-) -> tuple[Callable[[discord.Interaction], Coroutine[Any, Any, Any]], Any]:
+) -> tuple[
+    Callable[[discord.Interaction[StatusBot]], Coroutine[Any, Any, Any]], Any
+]:
     "Slash handle wrapper to convert interaction to message."
 
     class Dummy:
         "Dummy class so required_params = 2 for slash_handler"
 
         async def slash_handler(
-            *args: discord.Interaction, **kwargs: Any
+            *args: discord.Interaction[StatusBot], **kwargs: Any
         ) -> None:
             "Slash command wrapper for message-based command."
-            interaction: discord.Interaction = args[1]
+            interaction: discord.Interaction[StatusBot] = args[1]
             try:
                 msg = interaction_to_message(interaction)
             except Exception:
@@ -955,7 +957,7 @@ class StatusBot(
             "ping": self.ping,
             "forge-mods": self.forge_mods,
             "refresh": self.refresh,
-            "set-option": self.set_option__guild,
+            "set-option": self.set_option__guild,  # type: ignore[dict-item]
             "get-option": self.get_option__guild,
             "help": self.help_guild,
         }
@@ -1508,7 +1510,7 @@ class StatusBot(
         )
 
     async def get_option__guild_option_autocomplete(
-        self, interaction: discord.Interaction, current: str
+        self, interaction: discord.Interaction[StatusBot], current: str
     ) -> list[discord.app_commands.Choice[str]]:
         "Autocomplete get option guild options"
         if interaction.guild_id is None:
@@ -1662,7 +1664,7 @@ class StatusBot(
         return valid
 
     async def set_option__guild_option_autocomplete(
-        self, interaction: discord.Interaction, current: str
+        self, interaction: discord.Interaction[StatusBot], current: str
     ) -> list[discord.app_commands.Choice[str]]:
         "Autocomplete set option guild options"
         if interaction.guild_id is None or interaction.user.id is None:
@@ -1688,7 +1690,7 @@ class StatusBot(
 
     # async def set_option__guild_value_autocomplete(
     #     self,
-    #     interaction: discord.Interaction,
+    #     interaction: discord.Interaction[StatusBot],
     #     current: str
     # ) -> list[discord.app_commands.Choice[str]]:
     #     "Autocomplete set option guild options"
@@ -1830,6 +1832,7 @@ class StatusBot(
                         )
                         return
                     value = configuration[option] + value
+                assert value is not None
                 await message.channel.send(
                     f"Adding user `{name}` (id `{value[-1]}`)"
                 )

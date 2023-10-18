@@ -7,14 +7,14 @@
 
 __title__ = "Decode Mod Data"
 __author__ = "CoolCat467"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 import io
-from typing import Any
+from typing import Any, cast
 
-from mcstatus.pinger import RawResponse
 from mcstatus.protocol.connection import Connection
+from mcstatus.status_response import RawJavaResponse
 
 
 class ExtraConnection(Connection):
@@ -72,14 +72,14 @@ VERSION_FLAG_IGNORESERVERONLY = 0b1
 IGNORESERVERONLY = "<not required for client>"
 
 
-def process_response(response: RawResponse) -> dict[str, Any]:
+def process_response(response: RawJavaResponse) -> dict[str, Any]:
     "Decode encoded forgeData if present"
-    data: dict[str, Any] = response
+    data: dict[str, Any] = cast(dict[str, Any], response)
 
     if "forgeData" not in response:
         return data
-    forge = response["forgeData"]
-    if "d" not in response:
+    forge = data["forgeData"]
+    if "d" not in data:
         return data
 
     buffer = decode_optimized(forge["d"])
