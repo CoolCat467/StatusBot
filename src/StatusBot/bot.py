@@ -9,10 +9,10 @@ from __future__ import annotations
 
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 __ver_major__ = 0
 __ver_minor__ = 8
-__ver_patch__ = 2
+__ver_patch__ = 3
 
 import asyncio
 import base64
@@ -2054,13 +2054,13 @@ Deleting guild settings"""
                 args = parse_args(message.clean_content.lower())
                 pfx = args[0] == self.prefix if len(args) >= 1 else False
                 # of it starts with us being mentioned,
-                meant = False
+                mentioned = False
                 if message.content.startswith("<@"):
                     new = message.content.replace("!", "")
                     new = new.replace("&", "")
                     assert self.user is not None, "self.user is None"
-                    meant = new.startswith(self.user.mention)
-                if pfx or meant:
+                    mentioned = new.startswith(self.user.mention)
+                if pfx or mentioned:
                     # we are, in reality, the fastest typer in world. aw yep.
                     async with message.channel.typing():
                         # Process message as guild
