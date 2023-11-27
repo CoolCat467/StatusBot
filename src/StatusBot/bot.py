@@ -165,11 +165,11 @@ def split_time(seconds: int) -> list[int]:
     return ret
 
 
-def combine_and(data: list[str]) -> str:
-    "Join values of text, and have 'and' with the last one properly."
-    data = list(data)
+def combine_end(data: Iterable[str], final: str = "and") -> str:
+    "Join values of text, and have final with the last one properly."
+    data = list(map(str, data))
     if len(data) >= 2:
-        data[-1] = f"and {data[-1]}"
+        data[-1] = f"{final} {data[-1]}"
     if len(data) > 2:
         return ", ".join(data)
     return " ".join(data)
@@ -205,7 +205,7 @@ def format_time(seconds: int, single_title_allowed: bool = False) -> str:
     for index, value in zip_idx_values:
         title = single[index] if abs(value) < 2 else times[index]
         data.append(f"{value} {title}")
-    return combine_and(data)
+    return combine_end(data)
 
 
 def except_chars(text: str, valid: str = AZUP + AZLOW + NUMS + ".:-") -> str:
@@ -284,7 +284,7 @@ def log_active_exception(
 
 def get_valid_options(valid: Iterable[str], wrap: str = "`") -> str:
     "Return string of ' Valid options are: {valid}' with pretty formatting."
-    validops = combine_and(wrap_list_values(valid, wrap))
+    validops = combine_end(wrap_list_values(valid, wrap))
     return f" Valid options are: {validops}."
 
 
@@ -305,9 +305,10 @@ def process_arguments(
     if not parameters:
         return complete
 
-    required_count = len(
-        [0 for v in parameters.values() if type(None) not in get_args(v)]
-    )
+    required_count = 0
+    for v in parameters.values():
+        if type(None) not in get_args(v):
+            required_count += 1
 
     if len(given_args) < required_count:
         raise ValueError("Missing parameters!")
@@ -370,10 +371,25 @@ def override_methods(obj: Any, attrs: dict[str, Any]) -> Any:
                 return getattr(obj, attr_name, default)
             return attrs[attr_name]
 
-        def __setattr__(self, attr_name: str, value: Any) -> None:
-            setattr(obj, attr_name, value)
+        # def __setattr__(self, attr_name: str, value: Any) -> None:
+        #     setattr(obj, attr_name, value)
+        def __repr__(self) -> str:
+            return f"Overwritten {obj!r}"
 
-    return OverrideGetattr()
+    override = OverrideGetattr()
+    for attr in dir(obj):
+        if attr not in attrs and not attr.endswith("__"):
+            try:
+                setattr(override, attr, getattr(obj, attr))
+            except AttributeError:
+                print(attr)
+    set_function_name = "__setattr__"
+    setattr(
+        override,
+        set_function_name,
+        lambda attr_name, value: setattr(obj, attr_name, value),
+    )
+    return override
 
 
 def interaction_to_message(
@@ -697,7 +713,7 @@ class PingState(gears.AsyncState):
         def users_mesg(action: str, users: Iterable[str]) -> str:
             "Returns [{action}]: {users}"
             text = f"[{action}]:\n"
-            text += combine_and(wrap_list_values(users, "`"))
+            text += combine_end(wrap_list_values(users, "`"))
             return text
 
         # Collect left and joined messages.
@@ -738,7 +754,7 @@ class PingState(gears.AsyncState):
             self.exit_ex = f"`A {type(ex).__name__} Exception Has Occored"
             if ex.args:
                 sargs = list(map(str, ex.args))
-                self.exit_ex += ": " + combine_and(
+                self.exit_ex += ": " + combine_end(
                     wrap_list_values(sargs, '"')
                 )
             self.exit_ex += "`"
@@ -1002,7 +1018,7 @@ class StatusBot(
             )
             command.binding = getattr(command_function, "__self__", None)
             self.tree.add_command(command)
-        self.tree.on_error = self.on_error  # type: ignore [assignment]
+        self.tree.on_error = self.on_error  # type: ignore[assignment]
 
     def __repr__(self) -> str:
         #     up = self.__class__.__weakref__.__qualname__.split('.')[0]
@@ -1377,7 +1393,7 @@ class StatusBot(
 
         players = list(pinger.last_online)
         if players:
-            player_text = combine_and(wrap_list_values(players, "`"))
+            player_text = combine_end(wrap_list_values(players, "`"))
             await send_over_2000(
                 message.channel.send,  # type: ignore
                 player_text,
@@ -1557,7 +1573,7 @@ class StatusBot(
             return
         if isinstance(value, (list, tuple)):
             names = await self.replace_ids_w_names(value)
-            value = combine_and(wrap_list_values(names, "`"))[1:-1]
+            value = combine_end(wrap_list_values(names, "`"))[1:-1]
         await message.channel.send(f"Value of option `{option}`: `{value}`.")
 
     async def get_option__dm(self, message: discord.message.Message) -> None:
@@ -1590,7 +1606,7 @@ class StatusBot(
                     return
                 if isinstance(value, (list, tuple)):
                     names = await self.replace_ids_w_names(value)
-                    value = combine_and(wrap_list_values(names, "`"))[1:-1]
+                    value = combine_end(wrap_list_values(names, "`"))[1:-1]
                 await message.channel.send(
                     f"Value of option `{option}`: `{value}`."
                 )
@@ -2003,7 +2019,7 @@ class StatusBot(
         try:
             command_args = process_arguments(params, args[2:], message)
         except ValueError:
-            names = combine_and(
+            names = combine_end(
                 [
                     f"{k}"
                     if not isinstance(v, type)
@@ -2125,6 +2141,7 @@ or set DISCORD_TOKEN environment variable."""
             "guild_messages": True,
             "messages": True,
             "guilds": True,
+            "guild_typing": True,
             "members": True,
             "message_content": True,
         }
