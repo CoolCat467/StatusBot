@@ -22,7 +22,7 @@ dependencies = [
     "discord.py~=2.3.2",
     "python-dotenv~=1.0.0",
     "httpx[http2]~=0.25.0",
-    "mcstatus~=11.0.1",
+    "mcstatus~=11.1.0",
     "async-timeout~=4.0.3",
 ]
 
