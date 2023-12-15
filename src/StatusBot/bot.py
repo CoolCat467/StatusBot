@@ -60,7 +60,7 @@ BOT_PREFIX: Final = "!status"
 OWNER_ID: Final = 344282497103691777
 GITHUB_URL: Final = f"https://github.com/{__author__}/{__title__}"
 # Branch is branch of GitHub repository to update from
-BRANCH: Final = "master"
+BRANCH: Final = "main"
 
 # Text globals
 AZUP: Final = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

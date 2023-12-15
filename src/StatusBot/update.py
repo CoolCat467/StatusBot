@@ -160,7 +160,7 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
         "StatusBot",
         "version.txt",
         "CoolCat467",
-        "master",
+        "main",
         headers={
             "accept": "text/plain",
             # 'host': 'raw.githubusercontent.com'
@@ -171,7 +171,7 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
         "StatusBot",
         "files.json",
         "CoolCat467",
-        "master",
+        "main",
         headers={
             "accept": "text/plain",
             # 'host': 'raw.githubusercontent.com'
