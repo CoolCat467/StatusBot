@@ -9,10 +9,10 @@ from __future__ import annotations
 
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 __ver_major__ = 0
 __ver_minor__ = 8
-__ver_patch__ = 3
+__ver_patch__ = 4
 
 import asyncio
 import base64
@@ -1149,7 +1149,9 @@ class StatusBot(
             if action != "none":
                 await channel.send(f"Server pinger {action}.")
             else:
-                await channel.send("No action taken.")
+                await channel.send(
+                    "Server pinger is still running, non-critical configuration change."
+                )
         else:
             await channel.send(
                 "Server address not set, pinger not started. "
@@ -1567,7 +1569,7 @@ class StatusBot(
         if option not in valid:
             await message.channel.send("Invalid option." + validops)
 
-        value = configuration[option]
+        value = configuration.get(option)
         if not value and value != 0:
             await message.channel.send(f"Option `{option}` is not set.")
             return
@@ -1598,7 +1600,7 @@ class StatusBot(
         if valid:
             option = args[0].lower()
             if option in valid:
-                value = configuration[option]
+                value = configuration.get(option)
                 if not value and value != 0:
                     await message.channel.send(
                         f"Option `{option}` is not set."
