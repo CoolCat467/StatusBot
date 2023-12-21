@@ -41,8 +41,9 @@ import random
 import string
 import sys
 import traceback
+from collections.abc import Awaitable, Callable
 from threading import Event, Lock
-from typing import TYPE_CHECKING, Any, Final, get_args, get_type_hints
+from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
 
 import discord
 import mcstatus
@@ -58,7 +59,7 @@ from statusbot import decode_mods, gears, statemachine, update
 from statusbot.utils import combine_end, format_time
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Coroutine, Iterable
+    from collections.abc import Coroutine, Iterable
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -604,11 +605,71 @@ async def get_github_file(path: str, timeout: int = 10) -> str:
     return value
 
 
-class PingState(statemachine.AsyncState):
+class GuildServerPinger(gears.StateTimer):
+    """Server ping machine for guild."""
+
+    __slots__ = (
+        "guild_id",
+        "server",
+        "last_online",
+        "last_json",
+        "last_delay",
+        "last_online_count",
+        "last_online",
+        "channel",
+    )
+    tick_speed: int = 60
+    wait_ticks: int = 5
+
+    def __init__(self, bot: StatusBot, guild_id: int) -> None:
+        """Needs bot we work for, and id of guild we are pinging the server for."""
+        self.guild_id = guild_id
+        super().__init__(bot, str(self.guild_id), self.tick_speed)
+        self.server: mcstatus.JavaServer
+        self.bot: StatusBot
+        self.last_json: dict[str, Any] = {}
+        self.last_delay: int | float = 0
+        self.last_online: set[str] = set()
+        self.last_online_count: int = 0
+        self.channel: discord.abc.Messageable
+
+        self.add_state(PingState())
+        self.add_state(WaitRestartState(self.wait_ticks))
+
+    @property
+    def wait_time(self) -> int:
+        """Total wait time when in await_restart state."""
+        return self.tick_speed * self.wait_ticks
+
+    async def initialize_state(self) -> None:
+        """Set state to ping."""
+        await self.set_state("ping")
+
+    async def start(self) -> None:
+        """If configuration is good, run."""
+        configuration = self.bot.get_guild_configuration(self.guild_id)
+        self.channel = self.bot.guess_guild_channel(self.guild_id)
+        if "address" in configuration:
+            self.server = await mcstatus.JavaServer.async_lookup(
+                configuration["address"],
+            )
+            try:
+                await super().start()
+            except Exception:  # pylint: disable=broad-except
+                log_active_exception(self.bot.logpath)
+            finally:
+                with contextlib.suppress(ClientConnectorError):
+                    await self.channel.send("Server pinger stopped.")
+        else:
+            await self.channel.send(
+                "No address for this guild defined, pinger not started.",
+            )
+
+
+class PingState(statemachine.AsyncState[GuildServerPinger]):
     """State where we ping server."""
 
     __slots__ = ("failed", "exit_ex")
-    machine: GuildServerPinger
 
     def __init__(self) -> None:
         """Initialize Ping State."""
@@ -650,8 +711,11 @@ class PingState(statemachine.AsyncState):
         # Send message to guild channel.
         if message:
             await send_over_2000(
-                self.machine.channel.send,
-                message,  # type: ignore
+                cast(
+                    Callable[[str], Awaitable[None]],
+                    self.machine.channel.send,
+                ),
+                message,
             )
 
     async def handle_count(self, online: int) -> None:
@@ -735,11 +799,10 @@ class PingState(statemachine.AsyncState):
             await self.machine.channel.send(self.exit_ex)
 
 
-class WaitRestartState(statemachine.AsyncState):
+class WaitRestartState(statemachine.AsyncState[GuildServerPinger]):
     """State where we wait for server to restart."""
 
     __slots__ = ("ignore_ticks", "success", "ticks", "ping")
-    machine: GuildServerPinger
 
     def __init__(self, ignore_ticks: int) -> None:
         """Initialize await_restart state."""
@@ -797,67 +860,6 @@ class WaitRestartState(statemachine.AsyncState):
         else:
             await self.machine.channel.send(
                 "Could not re-establish connection to server.",
-            )
-
-
-class GuildServerPinger(gears.StateTimer):
-    """Server ping machine for guild."""
-
-    __slots__ = (
-        "guild_id",
-        "server",
-        "last_online",
-        "last_json",
-        "last_delay",
-        "last_online_count",
-        "last_online",
-        "channel",
-    )
-    tick_speed: int = 60
-    wait_ticks: int = 5
-
-    def __init__(self, bot: StatusBot, guild_id: int) -> None:
-        """Needs bot we work for, and id of guild we are pinging the server for."""
-        self.guild_id = guild_id
-        super().__init__(bot, str(self.guild_id), self.tick_speed)
-        self.server: mcstatus.JavaServer
-        self.bot: StatusBot
-        self.last_json: dict[str, Any] = {}
-        self.last_delay: int | float = 0
-        self.last_online: set[str] = set()
-        self.last_online_count: int = 0
-        self.channel: discord.abc.Messageable
-
-        self.add_state(PingState())
-        self.add_state(WaitRestartState(self.wait_ticks))
-
-    @property
-    def wait_time(self) -> int:
-        """Total wait time when in await_restart state."""
-        return self.tick_speed * self.wait_ticks
-
-    async def initialize_state(self) -> None:
-        """Set state to ping."""
-        await self.set_state("ping")
-
-    async def start(self) -> None:
-        """If configuration is good, run."""
-        configuration = self.bot.get_guild_configuration(self.guild_id)
-        self.channel = self.bot.guess_guild_channel(self.guild_id)
-        if "address" in configuration:
-            self.server = await mcstatus.JavaServer.async_lookup(
-                configuration["address"],
-            )
-            try:
-                await super().start()
-            except Exception:  # pylint: disable=broad-except
-                log_active_exception(self.bot.logpath)
-            finally:
-                with contextlib.suppress(ClientConnectorError):
-                    await self.channel.send("Server pinger stopped.")
-        else:
-            await self.channel.send(
-                "No address for this guild defined, pinger not started.",
             )
 
 
@@ -933,7 +935,7 @@ class StatusBot(
             ] = discord.app_commands.commands.Command(
                 name=command_name,
                 description=command_function.__doc__ or "",
-                callback=callback,  # type: ignore [arg-type]
+                callback=callback,
                 nsfw=False,
                 auto_locale_strings=True,
             )
@@ -1725,9 +1727,10 @@ class StatusBot(
         self,
         message: discord.message.Message,
         option: str,
-        value: str | None = None,
+        new_value: str | None = None,
     ) -> None:
         """Set a guild configuration option."""
+        value: list[int] | list[str] | str | None = new_value
         if message.guild is None:
             await message.channel.send(
                 "Message guild is `None`, this is an error. "
@@ -1883,7 +1886,7 @@ class StatusBot(
             msg += "\nArgument required: " + arghelp[option]
             await message.channel.send(msg)
             return
-        value = args[1]
+        value: list[str] | list[int] | str | int = args[1]
         if not value:
             await message.channel.send("Value to set must not be blank!")
             return

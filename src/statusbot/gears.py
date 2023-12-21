@@ -247,20 +247,6 @@ class Timer(Gear):
                     self.running = False
 
 
-class StateTimerExitState(AsyncState):
-    """State Timer Exit State. Cause StateTimer to finally finish."""
-
-    __slots__ = ()
-
-    def __init__(self) -> None:
-        """Initialize Hault state."""
-        super().__init__("Hault")
-
-    async def check_conditions(self) -> None:
-        """Set self.state_timer.active_state to None."""
-        self.machine.active_state = None
-
-
 class StateTimer(Timer):
     """StateTimer is a StateMachine Timer.
 
@@ -323,6 +309,20 @@ class StateTimer(Timer):
         await super().hault()
 
 
+class StateTimerExitState(AsyncState[StateTimer]):
+    """State Timer Exit State. Cause StateTimer to finally finish."""
+
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        """Initialize Hault state."""
+        super().__init__("Hault")
+
+    async def check_conditions(self) -> None:
+        """Set self.state_timer.active_state to None."""
+        self.machine.active_state = None
+
+
 def run() -> None:
     """Run an example of this module."""
     print("This is hacked example of StateTimer.")
@@ -351,7 +351,7 @@ def run() -> None:
     multi_speed_clock = _StateTimerWithClose(mr_bot, "MultiSpeedClock", 0.5)
 
     # Define asynchronous state to just wait and then change state.
-    class WaitState(AsyncState):
+    class WaitState(AsyncState[_StateTimerWithClose]):
         """Wait state example class."""
 
         __slots__ = ("delay", "next")
