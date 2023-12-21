@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 # Force update bot
 
-"Force Update Bot"
+"Force Update Bot."
 
 # Programmed by CoolCat467
 
 # Copyright 2023 CoolCat467
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+from __future__ import annotations
 
 __title__ = "Force update"
 __author__ = "CoolCat467"
@@ -38,9 +39,13 @@ ROOTDIR: Final = split(abspath(__file__))[0]
 
 
 async def get_github_file(path: str, timeout: int = 10) -> str:
-    "Return text from GitHub file in this project decoded as utf-8"
+    "Return text from GitHub file in this project decoded as utf-8."
     file = await update.get_file(
-        "StatusBot", path, __author__, "master", timeout
+        "StatusBot",
+        path,
+        __author__,
+        "HEAD",
+        timeout,
     )
     value = file.decode("utf-8")
     assert isinstance(value, str)
@@ -76,7 +81,12 @@ async def update_files(timeout: int = 20) -> None:
     rootdir = split(ROOTDIR)[0]
     print("\n".join(paths))
     await update.update_files(
-        rootdir, paths, "StatusBot", __author__, "master", timeout
+        rootdir,
+        paths,
+        "StatusBot",
+        __author__,
+        "HEAD",
+        timeout,
     )
     print("\nAll files in file list updated.")
 

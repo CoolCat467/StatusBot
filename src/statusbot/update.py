@@ -6,13 +6,13 @@
 # Programmed by CoolCat467
 
 # Copyright 2023 CoolCat467
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,7 +75,8 @@ def get_paths(jdict: dict[str, Any]) -> list[str]:
 def make_dirpath_exist(filepath: str) -> None:
     """Ensure full folder structure to file path given exists.
 
-    If not exists, creates it."""
+    If not exists, creates it.
+    """
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
 
@@ -128,7 +129,7 @@ async def update_file(
     try:
         with open(savepath, "wb") as sfile:  # noqa: ASYNC101
             sfile.write(
-                await download_coroutine(url, timeout, **sessionkwargs)
+                await download_coroutine(url, timeout, **sessionkwargs),
             )
             sfile.close()
     except Exception:  # pylint: disable=W0703
@@ -149,7 +150,8 @@ async def update_files(
 ) -> list[str]:
     """Update multiple files all from the same GitHub repository.
 
-    Return list of paths."""
+    Return list of paths.
+    """
     urlbase = get_address(user, repo, branch, "")
 
     async def update_single(path: str) -> str:
@@ -160,7 +162,7 @@ async def update_files(
         url = urlbase + path
         with open(savepath, "wb") as sfile:  # noqa: ASYNC101
             sfile.write(
-                await download_coroutine(url, timeout, **sessionkwargs)
+                await download_coroutine(url, timeout, **sessionkwargs),
             )
             sfile.close()
         return path
@@ -170,12 +172,12 @@ async def update_files(
 
 
 async def run_async(loop: asyncio.AbstractEventLoop) -> None:
-    "Run asynchronously"
+    "Run asynchronously."
     data = await get_file(
         "StatusBot",
         "version.txt",
         "CoolCat467",
-        "main",
+        "HEAD",
         headers={
             "accept": "text/plain",
             # 'host': 'raw.githubusercontent.com'
@@ -186,7 +188,7 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
         "StatusBot",
         "files.json",
         "CoolCat467",
-        "main",
+        "HEAD",
         headers={
             "accept": "text/plain",
             # 'host': 'raw.githubusercontent.com'
@@ -200,7 +202,7 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
 
 
 def run() -> None:
-    "Run test"
+    "Run test."
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(run_async(loop))

@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools>=42.0", "wheel"]
+requires = ["setuptools >= 64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "StatusBot"
-version = "0.8.2"
+name = "statusbot"
+dynamic = ["version"]
 authors = [
-  { name="CoolCat467" },
+  { name="CoolCat467", email="CoolCat467@duck.com" },
 ]
 description = "Discord bot to watch people play minecraft and report"
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -14,17 +14,29 @@ license = {file = "LICENSE"}
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Utilities",
     "Operating System :: OS Independent",
     "Typing :: Typed",
 ]
-keywords = ["discord", "bot"]
+keywords = ["discord", "bot", "minecraft"]
 dependencies = [
     "discord.py~=2.3.2",
     "python-dotenv~=1.0.0",
-    "httpx[http2]~=0.25.0",
+    "httpx[http2]~=0.26.0",
     "mcstatus~=11.1.0",
     "async-timeout~=4.0.3",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "statusbot.bot.__version__"}
 
 [project.urls]
 "Homepage" = "https://github.com/CoolCat467/StatusBot"
@@ -57,10 +69,6 @@ warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
-[tool.black]
-line-length = 79
-target-version = ['py311']
-
 [tool.ruff.isort]
 combine-as-imports = true
 
@@ -68,74 +76,118 @@ combine-as-imports = true
 all = true
 disable_all_dunder_policy = true
 
+[tool.black]
+line-length = 79
+target-version = ['py311']
+
 [tool.ruff]
 line-length = 79
 fix = true
 
 include = ["*.py", "*.pyi", "**/pyproject.toml"]
 select = [
-    "A",  # flake8-builtins
-    "ASYNC",  # flake8-async
-    "B",  # flake8-bugbear
-    "E",  # Error
-    "F",  # pyflakes
-    "I",  # isort
-    "RUF",  # Ruff-specific rules
-    "S",  # flake8-bandit
-    "UP",  # pyupgrade
-    "W",  # Warning
-    "YTT",  # flake8-2020
+    "A",     # flake8-builtins
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "COM",   # flake8-commas
+    "D",     # pydocstyle
+    "E",     # Error
+    "EXE",   # flake8-executable
+    "F",     # pyflakes
+    "FA",    # flake8-future-annotations
+    "I",     # isort
+    "N",     # pep8-naming
+    "PIE",   # flake8-pie
+    "PT",    # flake8-pytest-style
+    "PYI",   # flake8-pyi
+    "Q",     # flake8-quotes
+    "RET",   # flake8-return
+    "RUF",   # Ruff-specific rules
+    "S",     # flake8-bandit
+    "SIM",   # flake8-simplify
+    "SLOT",  # flake8-slots
+    "TCH",   # flake8-type-checking
+    "UP",    # pyupgrade
+    "W",     # Warning
+    "YTT",   # flake8-2020
 ]
 extend-ignore = [
-    'E501',  # line-too-long
+    "E501",  # line-too-long
     "S101",  # use of assert for tests and type narrowing
+    "D203",  # blank line thing
+    "D204",  # blank line thing
+    "D211",  # no-blank-line-before-class
+    "D213",  # multi-line-summary-second-line
+]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = [
+    "D100",  # undocumented-public-module
+    "D103",  # undocumented-public-function
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov-report term-missing --cov=statusbot"
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "__init__.py",
+]
+
+[tool.coverage.report]
+precision = 1
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "abc.abstractmethod",
+    "if TYPE_CHECKING.*:",
+    "if _t.TYPE_CHECKING:",
+    "if t.TYPE_CHECKING:",
+    "@overload",
+    'class .*\bProtocol\b.*\):',
+    "raise NotImplementedError",
+]
+partial_branches = [
+    "pragma: no branch",
+    "if not TYPE_CHECKING:",
+    "if not _t.TYPE_CHECKING:",
+    "if not t.TYPE_CHECKING:",
+    "if .* or not TYPE_CHECKING:",
+    "if .* or not _t.TYPE_CHECKING:",
+    "if .* or not t.TYPE_CHECKING:",
 ]
 
 [tool.tox]
 legacy_tox_ini = """
     [tox]
-    minversion = 3.11.0
-    envlist = py311, pycln, black, isort, pytest, flake8, mypy
+    envlist = py39, py310, py311, py312, pytest, mypy
     isolated_build = false
 
     [gh-actions]
     python =
-        3.11: py311, pytest, flake8, mypy
+        3.9: py39, pytest
+        3.10: py310, pytest
+        3.11: py311, pytest
+        3.12: py312, pytest, mypy
 
     [testenv]
-    basepython = python3.11
     setenv =
         PYTHONPATH = {toxinidir}
 
-    [testenv:flake8]
+    [testenv:pytest]
     deps =
-        flake8
-        flake8-bugbear
-        flake8-noqa
-    commands = flake8 src
+        pytest
+        pytest-cov
+    commands = pytest --basetemp={envtmpdir}
 
     [testenv:mypy]
     deps =
         mypy
     commands = mypy src
-
-    [format]
-    basepython = python3.11
-    setenv =
-        PYTHONPATH = {toxinidir}
-
-    [format:pycln]
-    deps =
-        pycln
-    commands = pycln src
-
-    [format:black]
-    deps =
-        black
-    commands = black src
-
-    [format:isort]
-    deps =
-        isort
-    commands = isort src
 """

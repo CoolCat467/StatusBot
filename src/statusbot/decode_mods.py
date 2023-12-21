@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 # Decode Mod Data - Decode forgeData tag
 
-"Decode forgeData tag"
+"Decode forgeData tag."
 
 # Programmed by CoolCat467
 
 # Copyright 2023 CoolCat467
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+from __future__ import annotations
 
 __title__ = "Decode Mod Data"
 __author__ = "CoolCat467"
@@ -26,19 +27,21 @@ __version__ = "0.0.2"
 
 
 import io
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from mcstatus.protocol.connection import Connection
-from mcstatus.status_response import RawJavaResponse
+
+if TYPE_CHECKING:
+    from mcstatus.status_response import RawJavaResponse
 
 
 class ExtraConnection(Connection):
-    """Connection but with missing boolean handlers"""
+    """Connection but with missing boolean handlers."""
 
     __slots__ = ()
 
     def write_bool(self, value: bool) -> None:
-        """Write 1 byte for boolean `True` or `False`"""
+        """Write 1 byte for boolean `True` or `False`."""
         self.write(self._pack("?", value))
 
     def read_bool(self) -> bool:
@@ -47,7 +50,7 @@ class ExtraConnection(Connection):
 
 
 def decode_optimized(string: str) -> ExtraConnection:
-    "Decode buffer from string"
+    "Decode buffer from string."
     text = io.StringIO(string)
 
     def read() -> int:
@@ -65,8 +68,10 @@ def decode_optimized(string: str) -> ExtraConnection:
         while bits >= 8:
             buffer.receive(
                 (value & 0xFF).to_bytes(
-                    length=1, byteorder="big", signed=False
-                )
+                    length=1,
+                    byteorder="big",
+                    signed=False,
+                ),
             )
             value >>= 8
             bits -= 8
@@ -75,7 +80,7 @@ def decode_optimized(string: str) -> ExtraConnection:
 
     while buffer.remaining() < size:
         buffer.receive(
-            (value & 0xFF).to_bytes(length=1, byteorder="big", signed=False)
+            (value & 0xFF).to_bytes(length=1, byteorder="big", signed=False),
         )
         value >>= 8
         bits -= 8
@@ -88,7 +93,7 @@ IGNORESERVERONLY = "<not required for client>"
 
 
 def process_response(response: RawJavaResponse) -> dict[str, Any]:
-    "Decode encoded forgeData if present"
+    "Decode encoded forgeData if present."
     data: dict[str, Any] = cast(dict[str, Any], response)
 
     if "forgeData" not in response:
@@ -142,7 +147,7 @@ def process_response(response: RawJavaResponse) -> dict[str, Any]:
         if not truncated:
             print(
                 f"Encountered {ex!r} decoding forge response, "
-                "silently ignoring"
+                "silently ignoring",
             )
         # Semi-expect errors if truncated
 
@@ -159,7 +164,7 @@ def process_response(response: RawJavaResponse) -> dict[str, Any]:
 
 
 def run() -> None:
-    "Run test of module"
+    "Run test of module."
 
 
 if __name__ == "__main__":
