@@ -47,7 +47,7 @@ version = {attr = "statusbot.bot.__version__"}
 StatusBot = ["py.typed"]
 
 [project.scripts]
-run_statusbot = "StatusBot:run"
+run_statusbot = "statusbot:run"
 
 [tool.mypy]
 mypy_path = "src"
