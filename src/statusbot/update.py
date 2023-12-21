@@ -28,9 +28,12 @@ __ver_patch__ = 7
 
 import asyncio
 import os
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 import httpx
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 TIMEOUT = 60
 
