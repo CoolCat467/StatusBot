@@ -30,11 +30,14 @@ import asyncio
 import concurrent.futures
 import math
 import traceback
-from typing import Any, Coroutine
+from typing import TYPE_CHECKING, Any
 
 import async_timeout
 
 from statusbot.statemachine import AsyncState, AsyncStateMachine
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
 
 __all__ = [
     "Gear",
@@ -46,12 +49,12 @@ __all__ = [
 
 
 class Gear(AsyncStateMachine):
-    "Class that gets run by bots."
+    """Class that gets run by bots."""
 
     __slots__ = ("bot", "name", "running", "stopped")
 
     def __init__(self, bot: BaseBot, name: str) -> None:
-        "Store self.bot, and set self.running and self.stopped to False."
+        """Store self.bot, and set self.running and self.stopped to False."""
         super().__init__()
 
         self.bot = bot
@@ -60,42 +63,43 @@ class Gear(AsyncStateMachine):
         self.stopped = False
 
     def gear_init(self) -> None:
-        "Do whatever instance requires to start running. Must not stop bot."
+        """Do whatever instance requires to start running. Must not stop bot."""
         return
 
     def submit_coro(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
-        "Submit a coroutine as task for bot event loop to complete."
+        """Submit a coroutine as task for bot event loop to complete."""
         return self.bot.loop.create_task(coro)
 
     async def hault(self) -> None:
-        "Set self.running to False and self.stopped to True."
+        """Set self.running to False and self.stopped to True."""
         self.running = False
         self.stopped = True
 
     def gear_shutdown(self) -> None:
-        "Shutdown gear. Only called after it's been stopped."
+        """Shutdown gear. Only called after it's been stopped."""
         return
 
     def __repr__(self) -> str:
-        "Return <{class-name}>."
+        """Return <{class-name}>."""
         return f"{self.__class__.__name__}({self.bot!r}, {self.name!r})"
 
 
 class BaseBot:
-    "Bot base class. Must initialize AFTER discord bot class."
+    """Bot base class. Must initialize AFTER discord bot class."""
 
     __slots__ = ("loop", "gears")
 
     def __init__(self, eventloop: asyncio.AbstractEventLoop) -> None:
+        """Initialize with event loop and no gears."""
         self.loop = eventloop
         self.gears: dict[str, Gear] = {}
 
     def __repr__(self) -> str:
-        "Return <{class-name}>."
+        """Return <{class-name}>."""
         return f"<{self.__class__.__name__}>"
 
     def add_gear(self, new_gear: Gear) -> None:
-        "Add a new gear to this bot."
+        """Add a new gear to this bot."""
         if not isinstance(new_gear, Gear):
             raise TypeError(
                 f'"{type(new_gear).__name__}" is not an instance of Gear!',
@@ -108,7 +112,7 @@ class BaseBot:
         self.gears[new_gear.name].gear_init()
 
     def remove_gear(self, gear_name: str) -> None:
-        "Remove a gear from this bot."
+        """Remove a gear from this bot."""
         if gear_name in self.gears:
             if not self.gears[gear_name].stopped:
                 raise RuntimeError("Gear has not been stopped!")
@@ -118,18 +122,18 @@ class BaseBot:
             raise KeyError(f"Gear {gear_name} not found!")
 
     def get_gear(self, gear_name: str) -> Gear | None:
-        "Return a gear object if a gear with given name exists or None."
+        """Return a gear object if a gear with given name exists or None."""
         if gear_name in self.gears:
             return self.gears[gear_name]
         return None
 
     @property
     def gear_close(self) -> bool:
-        "True if gear objects should be closed."
+        """True if gear objects should be closed."""
         return False
 
     async def close(self) -> None:
-        "Close this bot and it's gears."
+        """Close this bot and it's gears."""
         coros = [
             gear.hault()
             for gear in iter(self.gears.values())
@@ -140,36 +144,37 @@ class BaseBot:
             self.remove_gear(gkey)
 
     async def wait_ready(self) -> None:
-        "Blocking until ready."
+        """Blocking until ready."""
 
 
 class Timer(Gear):
-    "Class that will run coroutine self.run every delay seconds."
+    """Class that will run coroutine self.run every delay seconds."""
 
-    # __slots__ = 'delay', 'task', 'ticks'
+    __slots__ = ("delay", "task", "ticks")
     min_delay: int | float = 1
 
     def __init__(
         self,
         bot: BaseBot,
         name: str,
-        delay: int | float = 60,
+        delay: float = 60,
     ) -> None:
-        "self.name = name. Delay is seconds."
+        """self.name = name. Delay is seconds."""
         super().__init__(bot, name)
+
         self.delay = max(0, delay)
         self.task: asyncio.Task[Any] | None = None
         self.ticks = math.inf
 
     def gear_init(self) -> None:
-        "Create task in the bot event loop."
+        """Create task in the bot event loop."""
         self.task = self.submit_coro(self.wait_for_ready_start())
 
     def on_stop(self) -> None:
-        "Function called when timer has stopped ticking."
+        """Timer has stopped ticking."""
 
     async def wait_for_ready_start(self) -> None:
-        "Await self.bot.wait_until_ready(), then await self.start()."
+        """Await self.bot.wait_until_ready(), then await self.start()."""
         await self.bot.wait_ready()
         self.running = True
         try:
@@ -184,7 +189,7 @@ class Timer(Gear):
             self.on_stop()
 
     async def hault(self) -> None:
-        "Set self.running to False, cancel self.task, wait for it to cancel."
+        """Set self.running to False, cancel self.task, wait for it to cancel."""
         # Stop running no matter what
         self.running = False
         # Cancel task
@@ -213,11 +218,11 @@ class Timer(Gear):
             self.stopped = await wait_for_cancelled()
 
     async def tick(self) -> bool:
-        "Return False if Timer should continue running. Called periodically."
+        """Return False if Timer should continue running. Called periodically."""
         return True
 
     async def start(self) -> None:
-        "Keep running self.tick every self.delay second or until close time."
+        """Keep running self.tick every self.delay second or until close time."""
         if self.min_delay > 0:
             while self.running:
                 waited = self.min_delay * self.ticks
@@ -243,21 +248,23 @@ class Timer(Gear):
 
 
 class StateTimerExitState(AsyncState):
-    "State Timer Exit State. Cause StateTimer to finally finish."
+    """State Timer Exit State. Cause StateTimer to finally finish."""
 
     __slots__ = ()
 
     def __init__(self) -> None:
+        """Initialize Hault state."""
         super().__init__("Hault")
 
     async def check_conditions(self) -> None:
-        "Set self.state_timer.active_state to None."
+        """Set self.state_timer.active_state to None."""
         self.machine.active_state = None
 
 
 class StateTimer(Timer):
-    """StateTimer is a StateMachine Timer, or a timer with different
-    states it can switch in and out of.
+    """StateTimer is a StateMachine Timer.
+
+    A timer with different states it can switch in and out of.
     """
 
     __slots__ = ()
@@ -266,23 +273,24 @@ class StateTimer(Timer):
         self,
         bot: BaseBot,
         name: str,
-        delay: int | float = 1,
+        delay: float = 1,
     ) -> None:
-        AsyncStateMachine.__init__(self)
-        Timer.__init__(self, bot, name, delay)
+        """Initialize State Timer."""
+        super().__init__(bot, name, delay)
 
         self.add_state(StateTimerExitState())
 
     def __repr__(self) -> str:
-        "Return representation of self."
+        """Return representation of self."""
         return AsyncStateMachine.__repr__(self)
 
     async def initialize_state(self) -> None:
-        "In subclass, set initial asynchronous state."
+        """In subclass, set initial asynchronous state."""
         # await self.set_state('Hault')
         return
 
     async def start(self) -> None:
+        """Keep running self.tick every self.delay second or until close time."""
         await self.initialize_state()
         return await super().start()
 
@@ -297,6 +305,7 @@ class StateTimer(Timer):
         return self.active_state is None
 
     async def hault(self) -> None:
+        """Set self.running to False, cancel self.task, wait for it to cancel."""
         await self.set_state("Hault")
         self.ticks = math.inf
 
@@ -315,7 +324,7 @@ class StateTimer(Timer):
 
 
 def run() -> None:
-    "Run an example of this module."
+    """Run an example of this module."""
     print("This is hacked example of StateTimer.")
     loop = asyncio.new_event_loop()
 
@@ -343,7 +352,7 @@ def run() -> None:
 
     # Define asynchronous state to just wait and then change state.
     class WaitState(AsyncState):
-        "Wait state example class."
+        """Wait state example class."""
 
         __slots__ = ("delay", "next")
 

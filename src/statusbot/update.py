@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-# General tools for updating
-
-"General tools for updating."
+"""General tools for updating."""
 
 # Programmed by CoolCat467
 
@@ -39,20 +36,20 @@ TIMEOUT = 60
 
 
 def get_address(user: str, repo: str, branch: str, path: str) -> str:
-    "Get raw GitHub user content URL of a specific file."
+    """Get raw GitHub user content URL of a specific file."""
     return f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}"
 
 
 def is_new_ver_higher(current: Iterable[Any], newest: Iterable[Any]) -> bool:
-    "Return True if current version older than new version."
+    """Return True if current version older than new version."""
     return tuple(current) < tuple(newest)
 
 
 def get_paths(jdict: dict[str, Any]) -> list[str]:
-    "Read dictionary and figure out paths of files we want to update."
+    """Read dictionary and figure out paths of files we want to update."""
 
     def read_dict(cdict: dict[str, Any]) -> list[str]:
-        "Read a dictionary and return paths."
+        """Read a dictionary and return paths."""
         paths = []
         for path in cdict:
             nxt = cdict[path]
@@ -85,7 +82,7 @@ async def download_coroutine(
     timeout: int = TIMEOUT,
     headers: dict[str, Any] | None = None,
 ) -> bytes:
-    "Return content bytes found at URL."
+    """Return content bytes found at URL."""
     async with httpx.AsyncClient(http2=True, timeout=timeout) as client:
         # Go to the URL and get response
         response = await client.get(url, headers=headers)
@@ -109,7 +106,7 @@ async def get_file(
     timeout: int = TIMEOUT,
     **sessionkwargs: Any,
 ) -> bytes:
-    "Get a file from a GitHub repository. Return data as bytes."
+    """Return a file from a GitHub repository. Return data as bytes."""
     url = get_address(user, repo, branch, path)
     return await download_coroutine(url, timeout, **sessionkwargs)
 
@@ -123,7 +120,7 @@ async def update_file(
     timeout: int = TIMEOUT,
     **sessionkwargs: Any,
 ) -> bool:
-    "Update file. Return False on exception, otherwise True."
+    """Update file. Return False on exception, otherwise True."""
     url = get_address(user, repo, branch, path)
     savepath = os.path.abspath(os.path.join(basepath, *(path.split("/"))))
     try:
@@ -155,7 +152,7 @@ async def update_files(
     urlbase = get_address(user, repo, branch, "")
 
     async def update_single(path: str) -> str:
-        "Update a single file."
+        """Update a single file."""
         savepath = os.path.abspath(os.path.join(basepath, path))
         # Ensure folder for it exists too.
         make_dirpath_exist(savepath)
@@ -172,7 +169,7 @@ async def update_files(
 
 
 async def run_async(loop: asyncio.AbstractEventLoop) -> None:
-    "Run asynchronously."
+    """Run asynchronously."""
     data = await get_file(
         "StatusBot",
         "version.txt",
@@ -202,7 +199,7 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
 
 
 def run() -> None:
-    "Run test."
+    """Run test."""
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(run_async(loop))

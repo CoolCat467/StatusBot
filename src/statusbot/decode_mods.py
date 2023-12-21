@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-# Decode Mod Data - Decode forgeData tag
-
-"Decode forgeData tag."
+"""Decode Mod Data - Decode forgeData tag."""
 
 # Programmed by CoolCat467
 
@@ -18,6 +15,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
 from __future__ import annotations
 
 __title__ = "Decode Mod Data"
@@ -50,7 +48,7 @@ class ExtraConnection(Connection):
 
 
 def decode_optimized(string: str) -> ExtraConnection:
-    "Decode buffer from string."
+    """Decode buffer from string."""
     text = io.StringIO(string)
 
     def read() -> int:
@@ -93,7 +91,7 @@ IGNORESERVERONLY = "<not required for client>"
 
 
 def process_response(response: RawJavaResponse) -> dict[str, Any]:
-    "Decode encoded forgeData if present."
+    """Decode encoded forgeData if present."""
     data: dict[str, Any] = cast(dict[str, Any], response)
 
     if "forgeData" not in response:
@@ -163,10 +161,5 @@ def process_response(response: RawJavaResponse) -> dict[str, Any]:
     return data
 
 
-def run() -> None:
-    "Run test of module."
-
-
 if __name__ == "__main__":
     print(f"{__title__}\nProgrammed by {__author__}.\n")
-    run()

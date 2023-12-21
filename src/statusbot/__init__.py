@@ -1,3 +1,5 @@
+"""StatusBot Package."""
+
 from .bot import run
 
 # Copyright 2023 CoolCat467
@@ -14,6 +16,8 @@ from .bot import run
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+__title__ = "StatusBot"
+__author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
 
 if __name__ == "__main__":

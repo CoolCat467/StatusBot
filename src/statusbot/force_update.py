@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-# Force update bot
-
-"Force Update Bot."
+"""Force Update Bot."""
 
 # Programmed by CoolCat467
 
@@ -18,6 +15,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
 from __future__ import annotations
 
 __title__ = "Force update"
@@ -39,7 +37,7 @@ ROOTDIR: Final = split(abspath(__file__))[0]
 
 
 async def get_github_file(path: str, timeout: int = 10) -> str:
-    "Return text from GitHub file in this project decoded as utf-8."
+    """Return text from GitHub file in this project decoded as utf-8."""
     file = await update.get_file(
         "StatusBot",
         path,
@@ -53,7 +51,7 @@ async def get_github_file(path: str, timeout: int = 10) -> str:
 
 
 async def getonlinevers() -> tuple[int, ...]:
-    "Return online version as tuple."
+    """Return online version as tuple."""
     # Get GitHub version string
     version = await get_github_file("version.txt")
     # Send message about it.
@@ -63,7 +61,7 @@ async def getonlinevers() -> tuple[int, ...]:
 
 
 async def update_files(timeout: int = 20) -> None:
-    "Perform update from GitHub."
+    """Perform update from GitHub."""
     # If we need update, get file list.
     print("Retrieving file list...")
     try:
@@ -92,7 +90,7 @@ async def update_files(timeout: int = 20) -> None:
 
 
 def run() -> None:
-    "Perform update."
+    """Perform update."""
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(update_files())
