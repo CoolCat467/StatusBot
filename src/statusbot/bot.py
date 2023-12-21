@@ -22,9 +22,6 @@ __title__ = "StatusBot"
 __author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
 __version__ = "0.8.4"
-__ver_major__ = 0
-__ver_minor__ = 8
-__ver_patch__ = 4
 
 import asyncio
 import base64
@@ -1165,19 +1162,6 @@ class StatusBot(
         )
         await self.change_presence(status=discord.Status.online, activity=act)
 
-    async def get_user_name(
-        self,
-        uid: int,
-        getmember: Callable[[int], discord.User | discord.Member]
-        | None = None,
-    ) -> str | None:
-        """Return the name of user with id given."""
-        get_member = self.get_user if getmember is None else getmember
-        member = get_member(uid)
-        if member is None:
-            return member
-        return f"{member.name}#{member.discriminator}"
-
     async def replace_ids_w_names(
         self,
         names: Iterable[str | int],
@@ -1189,9 +1173,9 @@ class StatusBot(
         replaced = []
         for item in names:
             if isinstance(item, int):
-                username = await self.get_user_name(item)
-                if username is not None:
-                    replaced.append(f"{username} (id. {item})")
+                user = self.get_user(item)
+                if user is not None:
+                    replaced.append(f"{user.name} (id. {item})")
                     continue
             replaced.append(str(item))
         return replaced
@@ -1401,7 +1385,7 @@ class StatusBot(
         version = read_file(os.path.join(proj_root, "version.txt"))
         await message.channel.send(f"Current version: {version}")
         if not version:
-            return (__ver_major__, __ver_minor__, __ver_patch__)
+            return tuple(map(int, __version__.strip().split(".")))
         return tuple(map(int, version.strip().split(".")))
 
     async def online_vers(
@@ -1791,11 +1775,11 @@ class StatusBot(
                 await message.channel.send("Channel not found in this guild.")
                 return
         elif option in {"set-option-users", "force-refresh-users"}:
-            if value.lower() == "clear":
+            if str(value).lower() == "clear":
                 value = []
             else:
                 try:
-                    id_value = int(value)
+                    id_value = int(str(value))
                 except ValueError:
                     # DANGER
                     # if "#" not in value:
@@ -1803,7 +1787,7 @@ class StatusBot(
                     #         "Username does not have discriminator (ex. #1234)."
                     #     )
                     #     return
-                    member = message.guild.get_member_named(value)
+                    member = message.guild.get_member_named(str(value))
                     if member is None:
                         await message.channel.send(
                             "User not found / User not in this guild.",
@@ -1812,9 +1796,9 @@ class StatusBot(
                     id_value = member.id
                 # member = message.guild.get_member(value)
                 # member = self.get_user(value)
-                name = await self.get_user_name(
-                    id_value,
-                    message.guild.get_member,
+                name: str | None = getattr(  # noqa: B009
+                    message.guild.get_member(id_value),
+                    "name",
                 )
                 if name is None:
                     await message.channel.send(
@@ -1890,11 +1874,11 @@ class StatusBot(
         if not value:
             await message.channel.send("Value to set must not be blank!")
             return
-        if value.lower() == "clear":
+        if str(value).lower() == "clear":
             value = []
         else:
             try:
-                value = int(value)
+                value = int(str(value))
             except ValueError:
                 # DANGER
                 # if "#" not in args[1]:
@@ -1902,16 +1886,16 @@ class StatusBot(
                 #         "Username does not have discriminator (ex. #1234)."
                 #     )
                 #    return
-                member = await self.search_for_member_in_guilds(value)
+                member = await self.search_for_member_in_guilds(str(value))
                 if member is None:
                     await message.channel.send("User not found.")
                     return
                 value = member.id
-            # name = self.get_user(value)
-            name = await self.get_user_name(value)
-            if name is None:
+            user = self.get_user(value)
+            if user is None:
                 await message.channel.send("User not found.")
                 return
+            name = user.name
             value = [value]
             if option in configuration:
                 if value[0] in configuration[option]:
@@ -1921,6 +1905,7 @@ class StatusBot(
                     )
                     return
                 value = configuration[option] + value
+            assert isinstance(value, list)
             await message.channel.send(
                 f"Adding user `{name}` (id `{value[-1]}`)",
             )
