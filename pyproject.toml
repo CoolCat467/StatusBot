@@ -30,7 +30,7 @@ keywords = ["discord", "bot", "minecraft"]
 dependencies = [
     "discord.py~=2.3.2",
     "python-dotenv~=1.0.0",
-    "httpx[http2]~=0.26.0",
+    "httpx[http2]~=0.27.0",
     "mcstatus~=11.1.0",
     "async-timeout~=4.0.3",
 ]
