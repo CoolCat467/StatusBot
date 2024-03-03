@@ -11,7 +11,7 @@ StatusBot is a discord bot that will post information about a given Java Editon 
 
 ## Invite to your server
 Invite StatusBot to your discord server:
-[Invite link](https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=68608&scope=bot)
+[Invite link](https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=274877910016&scope=bot)
 Note, there may be random downtimes if problems occur, and because of the nature of
 this bot whoever runs the bot will have access to the address of your minecraft server and
 the name of the channel the bot will be sending messages in.
