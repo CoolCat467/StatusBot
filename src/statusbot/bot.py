@@ -894,8 +894,7 @@ class StatusBot(
     ) -> None:
         """Initialize StatusBot."""
         self.loop = loop
-        if "loop" in kwargs:
-            del kwargs["loop"]
+
         discord.Client.__init__(
             self,
             *args,
@@ -2118,16 +2117,17 @@ Deleting guild settings"""
             await discord.Client.close(self)
 
 
-def run() -> None:
-    """Run bot."""
+def setup_bot(loop: asyncio.AbstractEventLoop) -> tuple[
+    StatusBot,
+    asyncio.Task[None],
+]:
+    """Return StatusBot run parts."""
     if TOKEN is None:
-        print(
-            """\nNo token set!
+        raise RuntimeError(
+            """No token set!
 Either add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,
 or set DISCORD_TOKEN environment variable.""",
         )
-        return
-    print("\nStarting bot...")
 
     intents = discord.Intents(
         dm_messages=True,
@@ -2140,15 +2140,35 @@ or set DISCORD_TOKEN environment variable.""",
     )
     # 4867
 
+    bot_run_task: asyncio.Task[None] | None = None
+
+    bot = StatusBot(
+        BOT_PREFIX,
+        loop=loop,
+        intents=intents,
+    )
+
+    bot_run_task = loop.create_task(bot.start(TOKEN))
+    assert bot_run_task is not None
+
+    return bot, bot_run_task
+
+
+def run() -> None:
+    """Run bot."""
+    print("\nStarting bot...")
+
     loop = asyncio.new_event_loop()
-    bot = StatusBot(BOT_PREFIX, loop=loop, intents=intents)
+
+    bot, bot_run_task = setup_bot(loop)
 
     try:
-        loop.run_until_complete(bot.start(TOKEN))
+        loop.run_until_complete(bot_run_task)
     except KeyboardInterrupt:
-        print("\nClosing bot...")
-        loop.run_until_complete(bot.close())
+        print("Received KeyboardInterrupt")
     finally:
+        print("\nShutting down bot...")
+        loop.run_until_complete(bot.close())
         # cancel all lingering tasks
         loop.close()
         print("\nBot has been deactivated.")
