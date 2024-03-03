@@ -198,7 +198,7 @@ async def run_async(loop: asyncio.AbstractEventLoop) -> None:
     import json
 
     paths = tuple(get_paths(json.loads(data.decode("utf-8"))))
-    print(paths)
+    print(f"\n{paths = }")
 
 
 def run() -> None:

@@ -123,6 +123,7 @@ extend-ignore = [
     "D204",  # blank line thing
     "D211",  # no-blank-line-before-class
     "D213",  # multi-line-summary-second-line
+    "TRIO109",  # trio-async-function-with-timeout
 ]
 
 [tool.ruff.lint.per-file-ignores]

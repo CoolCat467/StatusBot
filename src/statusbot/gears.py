@@ -85,7 +85,7 @@ class Gear(AsyncStateMachine):
 
 
 class BaseBot:
-    """Bot base class. Must initialize AFTER discord bot class."""
+    """Bot base class."""
 
     __slots__ = ("loop", "gears")
 
