@@ -2,7 +2,7 @@
 
 # Programmed by CoolCat467
 
-# Copyright 2023 CoolCat467
+# Copyright 2021-2024 CoolCat467
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from __future__ import annotations
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
-__version__ = "0.8.4"
+__version__ = "0.8.5"
 
 import asyncio
 import base64
@@ -35,7 +35,6 @@ import json
 import math
 import os
 import random
-import string
 import sys
 import traceback
 from collections.abc import Awaitable, Callable
@@ -138,14 +137,6 @@ def write_json(
             json.dump(dictionary, wfile, indent=indent)
         finally:
             wfile.close()
-
-
-def except_chars(
-    text: str,
-    valid: str = string.ascii_letters + string.digits + ".:-",
-) -> str:
-    """Return every character in text that is also in valid string."""
-    return "".join(i for i in text if i in valid)
 
 
 def parse_args(string: str, ignore: int = 0, sep: str = " ") -> list[str]:
@@ -298,18 +289,21 @@ def override_methods(obj: Any, attrs: dict[str, Any]) -> Any:
 
 def interaction_to_message(
     interaction: discord.Interaction[StatusBot],
+    used_defer: bool = False,
 ) -> discord.Message:
     """Convert slash command interaction to Message."""
 
     def str_null(x: object | None) -> str | None:
         return None if x is None else str(x)
 
-    data: dict[str, Any] = {
+    data: discord.types.message.Message = {
         "id": interaction.id,
-        "webhook_id": None,
+        "channel_id": interaction.channel_id or 0,
+        "timestamp": "",
+        # "webhook_id": None,
         "reactions": [],
         "attachments": [],
-        "activity": None,
+        # "activity": None,
         "embeds": [],
         "edited_timestamp": None,
         "type": 0,  # discord.MessageType.default,
@@ -318,17 +312,30 @@ def interaction_to_message(
         "mention_everyone": False,
         "tts": False,
         "content": "",
-        "nonce": None,  # Optional[Union[int, str]]
+        "nonce": 0,  # Optional[Union[int, str]]
         "sticker_items": [],
-        "guild_id": interaction.guild_id,
+        "guild_id": f"{interaction.guild_id}",
         "interaction": {
             "id": interaction.id,
             "type": 2,
             "name": "Interaction name",
             "member": {
-                "joined_at": (
-                    str_null(interaction.user.joined_at)
+                "deaf": (
+                    str_null(interaction.user.voice.deaf)  # type: ignore[typeddict-item]
                     if isinstance(interaction.user, discord.Member)
+                    and interaction.user.voice
+                    else None
+                ),
+                "mute": (
+                    str_null(interaction.user.voice.deaf)  # type: ignore[typeddict-item]
+                    if isinstance(interaction.user, discord.Member)
+                    and interaction.user.voice
+                    else None
+                ),
+                "joined_at": (
+                    interaction.user.joined_at.isoformat()  # type: ignore[typeddict-item]
+                    if isinstance(interaction.user, discord.Member)
+                    and interaction.user.joined_at
                     else None
                 ),
                 "premium_since": (
@@ -342,46 +349,48 @@ def interaction_to_message(
                     else [role.id for role in interaction.user.roles]
                 ),
                 "nick": (
-                    interaction.user.nick
+                    interaction.user.nick  # type: ignore[typeddict-item]
                     if isinstance(interaction.user, discord.Member)
                     else None
                 ),
                 "pending": (
-                    interaction.user.pending
+                    interaction.user.pending  # type: ignore[typeddict-item]
                     if isinstance(interaction.user, discord.Member)
                     else None
                 ),
-                "avatar": interaction.user.avatar,
+                "avatar": getattr(interaction.user.avatar, "url", None),  # type: ignore[typeddict-item]
                 "flags": (
-                    interaction.user._flags
+                    interaction.user._flags  # type: ignore[typeddict-item]
                     if isinstance(interaction.user, discord.Member)
                     else None
                 ),
                 "permissions": (
-                    interaction.user._permissions
+                    interaction.user._permissions  # type: ignore[typeddict-item]
                     if isinstance(interaction.user, discord.Member)
                     else None
                 ),
                 "communication_disabled_until": (
-                    str_null(
-                        interaction.user.timed_out_until,
+                    str_null(  # type: ignore[typeddict-item]
+                        interaction.user.timed_out_until.isoformat(),
                     )
                     if isinstance(interaction.user, discord.Member)
+                    and interaction.user.timed_out_until
                     else None
                 ),
             },
             "user": {
+                "global_name": interaction.user.name,
                 "username": interaction.user.name,
                 "id": interaction.user.id,
                 "discriminator": interaction.user.discriminator,
                 "avatar": interaction.user._avatar,
                 "bot": interaction.user.bot,
                 "system": interaction.user.system,
-                "roles": (
-                    []
-                    if isinstance(interaction.user, discord.User)
-                    else [role.id for role in interaction.user.roles]
-                ),
+                ##                "roles": (
+                ##                    []
+                ##                    if isinstance(interaction.user, discord.User)
+                ##                    else [role.id for role in interaction.user.roles]
+                ##                ),
             },
         },
         # 'message_reference': None,
@@ -390,19 +399,19 @@ def interaction_to_message(
             "description": "Application description",
             "name": "Application name",
             "icon": None,
-            "cover_image": None,
+            "cover_image": "Cover Image",
         },
-        # 'author'       : ,
+        # 'author': interaction.user,
         # 'member'       : ,
-        # 'mentions'     : ,
-        # 'mention_roles': ,
+        "mentions": [],
+        "mention_roles": [],
         # 'components'   :
     }
 
     message = discord.message.Message(
         state=interaction._state,
         channel=interaction.channel,  # type: ignore
-        data=data,  # type: ignore
+        data=data,
     )
 
     message.author = interaction.user
@@ -414,8 +423,11 @@ def interaction_to_message(
         """Send message."""
         nonlocal times
         times += 1
-        if times == 0:
+        if times == 0 and used_defer:
+            return await interaction.followup.send(*args, **kwargs)
+        if not interaction.response.is_done():
             return await interaction.response.send_message(*args, **kwargs)
+            # return await interaction.response.edit_message(*args, **kwargs)
         return await channel_send(*args, **kwargs)
 
     message.channel = override_methods(
@@ -520,6 +532,7 @@ def extract_parameters_from_callback(
 
 def slash_handle(
     message_command: Callable[[discord.Message], Awaitable[None]],
+    should_defer: bool = False,
 ) -> tuple[
     Callable[[discord.Interaction[StatusBot]], Coroutine[Any, Any, Any]],
     Any,
@@ -535,8 +548,11 @@ def slash_handle(
         ) -> None:
             """Slash command wrapper for message-based command."""
             interaction: discord.Interaction[StatusBot] = args[1]
+            if should_defer:
+                # Defer response
+                await interaction.response.defer()
             try:
-                msg = interaction_to_message(interaction)
+                msg = interaction_to_message(interaction, should_defer)
             except Exception:
                 root = os.path.split(os.path.abspath(__file__))[0]
                 logpath = os.path.join(root, "log.txt")
@@ -1191,6 +1207,8 @@ class StatusBot(
         for item in names:
             if isinstance(item, int):
                 user = self.get_user(item)
+                # # Slower but does not require members intent
+                # user = self.fetch_user(item)
                 if user is not None:
                     replaced.append(f"{user.name} (id. {item})")
                     continue
@@ -1633,13 +1651,13 @@ class StatusBot(
     @staticmethod
     def set_option__guild_valid_options(
         user_id: int,
-        guild_owner: int,
+        guild_admins: set[int],
         configuration: dict[str, Any],
     ) -> list[str]:
         """Return list of valid options to set for set option - guild."""
         valid = []
         # If message author is either bot owner or guild owner,
-        if user_id in {OWNER_ID, guild_owner}:
+        if user_id in {OWNER_ID} | guild_admins:
             # give them access to everything
             valid += [
                 "set-option-users",
@@ -1669,9 +1687,19 @@ class StatusBot(
         if guild is None:
             return []
         configuration = self.get_guild_configuration(interaction.guild_id)
+
+        admins: set[int] = set()
+        if guild.owner is not None:
+            admins.add(guild.owner.id)
+        if (
+            isinstance(interaction.user, discord.Member)
+            and interaction.user.guild_permissions.administrator
+        ):
+            admins.add(interaction.user.id)
+
         valid = self.set_option__guild_valid_options(
             interaction.user.id,
-            guild.owner.id if guild.owner is not None else OWNER_ID,
+            admins,
             configuration,
         )
         interaction.extras["option"] = [
@@ -1740,13 +1768,18 @@ class StatusBot(
             raise ValueError("Message guild is None")
         configuration = self.get_guild_configuration(message.guild.id)
 
+        admins: set[int] = set()
+        if message.guild.owner is not None:
+            admins.add(message.guild.owner.id)
+        if (
+            isinstance(message.author, discord.Member)
+            and message.author.guild_permissions.administrator
+        ):
+            admins.add(message.author.id)
+
         valid = self.set_option__guild_valid_options(
             message.author.id,
-            (
-                message.guild.owner.id
-                if message.guild.owner is not None
-                else OWNER_ID
-            ),
+            admins,
             configuration,
         )
 
@@ -1911,6 +1944,8 @@ class StatusBot(
                     return
                 value = member.id
             user = self.get_user(value)
+            # # Slower but does not require members intent
+            # user = self.fetch_user(value)
             if user is None:
                 await message.channel.send("User not found.")
                 return
@@ -2053,6 +2088,7 @@ Deleting guild settings"""
         # Skip messages from ourselves.
         if message.author == self.user:
             return
+        assert self.user is not None, "self.user should not be None"
 
         # If we can send message to person,
         if hasattr(message.channel, "send"):
@@ -2062,12 +2098,7 @@ Deleting guild settings"""
                 args = parse_args(message.clean_content.lower())
                 pfx = args[0] == self.prefix if len(args) >= 1 else False
                 # of it starts with us being mentioned,
-                mentioned = False
-                if message.content.startswith("<@"):
-                    new = message.content.replace("!", "")
-                    new = new.replace("&", "")
-                    assert self.user is not None, "self.user is None"
-                    mentioned = new.startswith(self.user.mention)
+                mentioned = self.user.mentioned_in(message)
                 if pfx or mentioned:
                     # we are, in reality, the fastest typer in world. aw yep.
                     async with message.channel.typing():
