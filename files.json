@@ -1,12 +1,15 @@
 {
   "src": {
-    "StatusBot": {
+    "statusbot": {
       "": [
-      	"__init__.py",
-        "update.py",
-        "decode_mods.py",
+        "gears.py",
         "bot.py",
-        "gears.py"
+        "force_update.py",
+        "statemachine.py",
+        "decode_mods.py",
+        "utils.py",
+        "update.py",
+        "__init__.py"
       ]
     }
   },
@@ -14,17 +17,17 @@
     "": [
       "run.sh",
       "run-quick.sh",
-      "looprun.sh",
       "install_update.sh",
       "install.sh",
+      "looprun.sh",
       "create_installers.sh"
     ]
   },
   "": [
-    "pyproject.toml",
+    "pyvenv.cfg",
     "files.json",
     "version.txt",
-    "pyvenv.cfg",
-    "README.md"
+    "README.md",
+    "pyproject.toml"
   ]
 }
