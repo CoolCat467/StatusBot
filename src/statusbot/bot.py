@@ -52,7 +52,7 @@ from dotenv import load_dotenv
 # decode_mods Decodes forgeData tag
 # Gears is basically like discord's Cogs, but by me.
 from statusbot import decode_mods, gears, statemachine, update
-from statusbot.utils import combine_end, format_time
+from statusbot.utils import combine_end, format_time, pretty_exception_name
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine, Iterable
@@ -680,21 +680,39 @@ class GuildServerPinger(gears.StateTimer):
         """If configuration is good, run."""
         configuration = self.bot.get_guild_configuration(self.guild_id)
         self.channel = self.bot.guess_guild_channel(self.guild_id)
-        if "address" in configuration:
-            self.server = await mcstatus.JavaServer.async_lookup(
-                configuration["address"],
-            )
-            try:
-                await super().start()
-            except Exception:  # pylint: disable=broad-except
-                log_active_exception(self.bot.logpath)
-            finally:
-                with contextlib.suppress(ClientConnectorError):
-                    await self.channel.send("Server pinger stopped.")
-        else:
+        if "address" not in configuration:
             await self.channel.send(
                 "No address for this guild defined, pinger not started.",
             )
+            await self.set_state("Hault")
+            return
+        try:
+            self.server = await mcstatus.JavaServer.async_lookup(
+                configuration["address"],
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            error = pretty_exception_name(exc)
+            with contextlib.suppress(ClientConnectorError):
+                await send_over_2000(
+                    cast(
+                        "Callable[[str], Awaitable[None]]",
+                        self.channel.send,
+                    ),
+                    text=error,
+                    wrap_with="```",
+                    start="An error occurred resolving DNS address:",
+                )
+                await self.channel.send("Server pinger stopped.")
+            await self.set_state("Hault")
+            return
+        try:
+            await super().start()
+        except Exception:  # pylint: disable=broad-except
+            log_active_exception(self.bot.logpath)
+        finally:
+            with contextlib.suppress(ClientConnectorError):
+                await self.channel.send("Server pinger stopped.")
+            await self.set_state("Hault")
 
 
 class PingState(statemachine.AsyncState[GuildServerPinger]):

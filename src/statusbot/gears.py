@@ -228,7 +228,11 @@ class Timer(Gear):
                 waited = self.min_delay * self.ticks
                 stop = False
                 if waited >= self.delay:
-                    stop = await self.tick()
+                    try:
+                        stop = await self.tick()
+                    except Exception:
+                        self.running = False
+                        raise
                     self.ticks = 0
                     waited = 0
                 if stop or self.bot.gear_close:

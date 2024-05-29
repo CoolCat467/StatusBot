@@ -109,5 +109,24 @@ def format_time(seconds: int, single_title_allowed: bool = False) -> str:
     return combine_end(data)
 
 
+def pretty_exception_name(exc: BaseException) -> str:
+    """Make exception into pretty text (split by spaces)."""
+    exc_str, reason = repr(exc).split("(", 1)
+    reason = reason[1:-2]
+    words = []
+    last = 0
+    for idx, char in enumerate(exc_str):
+        if char.islower():
+            continue
+        word = exc_str[last:idx]
+        if not word:
+            continue
+        words.append(word)
+        last = idx
+    words.append(exc_str[last:])
+    error = " ".join(w for w in words if w not in {"Error", "Exception"})
+    return f"{error} ({reason})"
+
+
 if __name__ == "__main__":
     print(f"{__title__}\nProgrammed by {__author__}.\n")
