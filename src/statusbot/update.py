@@ -127,7 +127,7 @@ async def update_file(
     url = get_address(user, repo, branch, path)
     savepath = os.path.abspath(os.path.join(basepath, *(path.split("/"))))
     try:
-        with open(savepath, "wb") as sfile:  # noqa: ASYNC101
+        with open(savepath, "wb") as sfile:
             sfile.write(
                 await download_coroutine(url, timeout, **sessionkwargs),
             )
@@ -160,7 +160,7 @@ async def update_files(
         # Ensure folder for it exists too.
         make_dirpath_exist(savepath)
         url = urlbase + path
-        with open(savepath, "wb") as sfile:  # noqa: ASYNC101
+        with open(savepath, "wb") as sfile:
             sfile.write(
                 await download_coroutine(url, timeout, **sessionkwargs),
             )
