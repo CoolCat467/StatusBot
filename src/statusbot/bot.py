@@ -1997,6 +1997,7 @@ class StatusBot(
         midx = int(mode.lower() == "guild")
 
         if self.stopped.is_set() and midx:
+            # Ignore if shutting down and in guild
             await message.channel.send(
                 f"{__title__} is in the process of shutting down.",
             )
@@ -2161,9 +2162,11 @@ Deleting guild settings"""
         # await asyncio.gather(*coros)
 
         print("Waiting to acquire updating lock...\n")
-        with self.updating:
-            print("Closing...")
-            await discord.Client.close(self)
+        while self.updating.locked():
+            print("Mid update, waiting for complete...")
+            await asyncio.sleep(1)
+        print("Closing...")
+        await discord.Client.close(self)
 
 
 def setup_bot(loop: asyncio.AbstractEventLoop) -> tuple[
