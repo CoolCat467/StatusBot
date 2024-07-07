@@ -7,10 +7,12 @@ export PYENV_ROOT="$HOME/.pyenv"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
+python3 -m pip install --upgrade uv
+
 cd ~/Applications
 # python3.11 -m venv StatusBot
 cd StatusBot
 # source bin/activate
-python3 -m pip install -e ../StatusBot
+uv pip install --system -e ../StatusBot
 run_statusbot
 # deactivate
