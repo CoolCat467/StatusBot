@@ -15,25 +15,25 @@ The words of which the initial letter is capitalized have meanings defined under
 For the purposes of these Terms and Conditions:
 
 *   **Application** means the software program provided by the Company downloaded by You on any electronic device, named StatusBot
-    
+
 *   **Application Store** means the digital distribution service operated and developed by Apple Inc. (Apple App Store) or Google Inc. (Google Play Store) in which the Application has been downloaded.
-    
+
 *   **Affiliate** means an entity that controls, is controlled by or is under common control with a party, where "control" means ownership of 50% or more of the shares, equity interest or other securities entitled to vote for election of directors or other managing authority.
-    
+
 *   **Country** refers to: United States
-    
+
 *   **Company** (referred to as either "the Company", "We", "Us", "Team", or "Our" in this Agreement) refers to StatusBot.
-    
+
 *   **Device** means any device that can access the Service such as a computer, a cellphone or a digital tablet.
-    
+
 *   **Service** refers to the Application.
-    
+
 *   **Terms and Conditions** (also referred as "Terms") mean these Terms and Conditions that form the entire agreement between You and the Company regarding the use of the Service.
-    
+
 *   **Third-party Social Media Service** means any services or content (including data, information, products or services) provided by a third-party that may be displayed, included or made available by the Service.
-    
+
 *   **You** means the individual accessing or using the Service, or the company, or other legal entity on behalf of which such individual is accessing or using the Service, as applicable.
-    
+
 
 ## Acknowledgment
 
@@ -122,5 +122,5 @@ Unless stated otherwise, continuing to use the Service after modifications to th
 If you have any questions about these Terms and Conditions, You can contact us:
 
 *   By email: coolcat467@duck.com
-    
+
 *   By visiting this page on our website: [https://github.com/CoolCat467/StatusBot/discussions](https://github.com/CoolCat467/StatusBot/discussions)
