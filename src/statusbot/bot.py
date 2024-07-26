@@ -1169,11 +1169,11 @@ class StatusBot(
     async def eval_guilds(self, force_reset: bool = False) -> list[int]:
         """Evaluate all guilds. Return list of guild ids evaluated."""
         ids = []
-        register = []
+        # register = []
         for guild in self.guilds:
-            register.append(self.register_commands(guild))
+            # register.append(self.register_commands(guild))
             ids.append(self.eval_guild(guild.id, force_reset))
-        await asyncio.gather(*register)
+        # await asyncio.gather(*register)
         return await asyncio.gather(*ids)
 
     # Default, not affected by intents.
@@ -1206,6 +1206,10 @@ class StatusBot(
         ids = await self.eval_guilds(True)
 
         print("Guilds evaluated:\n" + "\n".join([str(x) for x in ids]) + "\n")
+
+        synced = await self.tree.sync()
+
+        print(f"Slash commands {synced = }\n")
 
         act = discord.Activity(
             type=discord.ActivityType.watching,
