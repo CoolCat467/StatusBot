@@ -21,7 +21,7 @@ from __future__ import annotations
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
-__version__ = "0.8.6"
+__version__ = "0.8.7"
 
 import asyncio
 import base64
