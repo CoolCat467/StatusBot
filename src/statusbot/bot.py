@@ -967,49 +967,59 @@ class StatusBot(
             "my-id": self.my_id,
             "stop": self.stop,
             "update": self.update,
-            "set-option": self.set_option__dm,
-            "get-option": self.get_option__dm,
-            "help": self.help_dm,
+            "set-global-option": self.set_option__dm,
+            "get-global-option": self.get_option__dm,
+            "global-help": self.help_dm,
         }
         gears.BaseBot.__init__(self, self.loop)
 
         self.tree = discord.app_commands.CommandTree(self)
-        for command_name, command_function in self.gcommands.items():
-            callback, params = slash_handle(command_function)
-            command: discord.app_commands.commands.Command[
-                Any,
-                Any,
-                None,
-            ] = discord.app_commands.commands.Command(
-                name=command_name,
-                description=command_function.__doc__ or "",
-                callback=callback,
-                nsfw=False,
-                auto_locale_strings=True,
-            )
-            command._params = params
-            command.checks = getattr(
-                callback,
-                "__discord_app_commands_checks__",
-                [],
-            )
-            command._guild_ids = getattr(
-                callback,
-                "__discord_app_commands_default_guilds__",
-                None,
-            )
-            command.default_permissions = getattr(
-                callback,
-                "__discord_app_commands_default_permissions__",
-                None,
-            )
-            command.guild_only = getattr(
-                callback,
-                "__discord_app_commands_guild_only__",
-                False,
-            )
-            command.binding = getattr(command_function, "__self__", None)
-            self.tree.add_command(command)
+        for command_group, dm_only in (
+            (self.gcommands, False),
+            (self.dcommands, True),
+        ):
+            for command_name, command_function in command_group.items():
+                if dm_only and command_name in self.gcommands:
+                    continue
+                callback, params = slash_handle(command_function)
+                command: discord.app_commands.commands.Command[
+                    Any,
+                    Any,
+                    None,
+                ] = discord.app_commands.commands.Command(
+                    name=command_name,
+                    description=command_function.__doc__ or "",
+                    callback=callback,
+                    nsfw=False,
+                    auto_locale_strings=True,
+                )
+                if dm_only:
+                    command = discord.app_commands.dm_only(command)
+                elif command_name not in self.dcommands:
+                    command = discord.app_commands.guild_only(command)
+                command._params = params
+                command.checks = getattr(
+                    callback,
+                    "__discord_app_commands_checks__",
+                    [],
+                )
+                command._guild_ids = getattr(
+                    callback,
+                    "__discord_app_commands_default_guilds__",
+                    None,
+                )
+                command.default_permissions = getattr(
+                    callback,
+                    "__discord_app_commands_default_permissions__",
+                    None,
+                )
+                command.guild_only = getattr(
+                    callback,
+                    "__discord_app_commands_guild_only__",
+                    False,
+                )
+                command.binding = getattr(command_function, "__self__", None)
+                self.tree.add_command(command)
         self.tree.on_error = self.on_error  # type: ignore[assignment]
 
     def __repr__(self) -> str:
@@ -1200,7 +1210,7 @@ class StatusBot(
             guildnames.append(f"{guild.name} (id: {guild.id})")
         spaces = max(len(name) for name in guildnames)
         print(
-            "\n" + "\n".join(name.rjust(spaces) for name in guildnames) + "\n",
+            "\n".join(name.rjust(spaces) for name in guildnames) + "\n",
         )
 
         ids = await self.eval_guilds(True)
@@ -1208,8 +1218,7 @@ class StatusBot(
         print("Guilds evaluated:\n" + "\n".join([str(x) for x in ids]) + "\n")
 
         synced = await self.tree.sync()
-
-        print(f"Slash commands {synced = }\n")
+        print(f"{len(synced)} slash commands synced\n")
 
         act = discord.Activity(
             type=discord.ActivityType.watching,
@@ -1588,9 +1597,36 @@ class StatusBot(
             value = combine_end(wrap_list_values(names, "`"))[1:-1]
         await message.channel.send(f"Value of option `{option}`: `{value}`.")
 
-    async def get_option__dm(self, message: discord.message.Message) -> None:
+    async def get_option__dm_option_autocomplete(
+        self,
+        interaction: discord.Interaction[StatusBot],
+        current: str,
+    ) -> list[discord.app_commands.Choice[str]]:
+        """Autocomplete get option guild options."""
+        if interaction.guild_id is not None:
+            return []
+        configuration = self.get_dm_configuration()
+        valid = []
+        if interaction.user.id == OWNER_ID or (
+            "set-option-users" in configuration
+            and interaction.user.id in configuration["set-option-users"]
+        ):
+            valid += ["set-option-users", "update-users", "stop-users"]
+        return [
+            discord.app_commands.Choice(name=option.title(), value=option)
+            for option in valid
+            if current.lower() in option.lower()
+        ]
+
+    @discord.app_commands.autocomplete(  # type: ignore [type-var]
+        option=get_option__dm_option_autocomplete,
+    )
+    async def get_option__dm(
+        self,
+        message: discord.message.Message,
+        option: str | None = None,
+    ) -> None:
         """Get the value of the option given in the configuration."""
-        args = parse_args(message.content, 1)
         configuration = self.get_dm_configuration()
         valid = []
         if message.author.id == OWNER_ID or (
@@ -1604,30 +1640,31 @@ class StatusBot(
             return
         validops = get_valid_options(valid)
 
-        if len(args) == 0:
+        if not option:
             await message.channel.send("No option given." + validops)
             return
-        if valid:
-            option = args[0].lower()
-            if option in valid:
-                value = configuration.get(option)
-                if not value and value != 0:
-                    await message.channel.send(
-                        f"Option `{option}` is not set.",
-                    )
-                    return
-                if isinstance(value, (list, tuple)):
-                    names = await self.replace_ids_w_names(value)
-                    value = combine_end(wrap_list_values(names, "`"))[1:-1]
-                await message.channel.send(
-                    f"Value of option `{option}`: `{value}`.",
-                )
-                return
+        if not valid:
+            await message.channel.send(
+                "You do not have permission to view the values of any options.",
+            )
+            return
+        option = option.lower()
+        if option not in valid:
             await message.channel.send("Invalid option." + validops)
             return
+        value = configuration.get(option)
+        if not value and value != 0:
+            await message.channel.send(
+                f"Option `{option}` is not set.",
+            )
+            return
+        if isinstance(value, (list, tuple)):
+            names = await self.replace_ids_w_names(value)
+            value = combine_end(wrap_list_values(names, "`"))[1:-1]
         await message.channel.send(
-            "You do not have permission to view the values of any options.",
+            f"Value of option `{option}`: `{value}`.",
         )
+        return
 
     async def help_guild(self, message: discord.message.Message) -> None:
         """Get all valid options for guilds."""
@@ -1899,37 +1936,84 @@ class StatusBot(
         force_reset = option in ("address", "channel")
         await self.refresh(message, force_reset)
 
-    async def set_option__dm(self, message: discord.message.Message) -> None:
-        """Set a direct message configuration option."""
-        configuration = self.get_dm_configuration()
+    @staticmethod
+    def set_option__dm_valid_options(
+        user_id: int,
+        configuration: dict[str, Any],
+    ) -> list[str]:
+        """Return list of valid options to set for set option - guild."""
         valid = []
-        if message.author.id == OWNER_ID:
+
+        if user_id == OWNER_ID:
             valid += ["set-option-users", "update-users", "stop-users"]
         elif (
             "set-option-users" in configuration
-            and message.author.id in configuration["set-option-users"]
+            and user_id in configuration["set-option-users"]
         ):
             valid += ["update-users", "stop-users"]
+
+        return valid
+
+    async def set_option__dm_option_autocomplete(
+        self,
+        interaction: discord.Interaction[StatusBot],
+        current: str,
+    ) -> list[discord.app_commands.Choice[str]]:
+        """Autocomplete set option guild options."""
+        if interaction.guild_id is not None or interaction.user.id is None:
+            return []
+        configuration = self.get_dm_configuration()
+
+        valid = self.set_option__dm_valid_options(
+            interaction.user.id,
+            configuration,
+        )
+        interaction.extras["option"] = [
+            o for o in valid if current.replace(" ", "-").lower() in o.lower()
+        ]
+        return [
+            discord.app_commands.Choice(
+                name=option.replace("-", " ").title(),
+                value=option,
+            )
+            for option in interaction.extras["option"]
+        ]
+
+    @discord.app_commands.autocomplete(  # type: ignore[type-var]
+        option=set_option__dm_option_autocomplete,
+        # new_value=set_option__dm_value_autocomplete
+    )
+    async def set_option__dm(
+        self,
+        message: discord.message.Message,
+        option: str | None = None,
+        new_value: str | None = None,
+    ) -> None:
+        """Set a direct message configuration option."""
+        configuration = self.get_dm_configuration()
+        valid = self.set_option__dm_valid_options(
+            message.author.id,
+            configuration,
+        )
 
         if not valid:
             await message.channel.send(
                 "You do not have permission to set any options.",
             )
             return
-        args = parse_args(message.clean_content, 1)
         validops = get_valid_options(valid)
 
-        if not args:
+        if not option:
             await message.channel.send("Invalid option." + validops)
             return
 
-        option = args[0].lower()
+        option = option.lower()
 
         if option not in valid:
             await message.channel.send("Invalid option." + validops)
             return
 
-        if len(args) < 2:
+        if new_value is None:
             msg = f"Insufficiant arguments for {option}."
             base = (
                 "`clear`, a discord user id, or the username of a "
@@ -1944,7 +2028,7 @@ class StatusBot(
             msg += "\nArgument required: " + arghelp[option]
             await message.channel.send(msg)
             return
-        value: list[str] | list[int] | str | int = args[1]
+        value: list[str] | list[int] | str | int = new_value
         if not value:
             await message.channel.send("Value to set must not be blank!")
             return
@@ -2088,7 +2172,7 @@ class StatusBot(
         msg = f"Guild gained: {guild.name} (id: {guild.id})"
         print(msg)
         append_file(self.logpath, "#" * 8 + msg + "#" * 8 + "\n")
-        await self.register_commands(guild)
+        # await self.register_commands(guild)
         await self.eval_guild(guild.id, True)
 
     # Intents.guilds
@@ -2221,10 +2305,9 @@ def run() -> None:
     try:
         loop.run_until_complete(bot_run_task)
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt")
-    finally:
-        print("\nShutting down bot...")
+        print("Received KeyboardInterrupt\nShutting down bot...")
         loop.run_until_complete(bot.close())
+    finally:
         # cancel all lingering tasks
         loop.close()
         print("\nBot has been deactivated.")
