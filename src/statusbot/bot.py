@@ -76,6 +76,7 @@ OWNER_ID: Final = 344282497103691777
 GITHUB_URL: Final = f"https://github.com/{__author__}/{__title__}"
 # Branch is branch of GitHub repository to update from
 BRANCH: Final = "HEAD"
+SUPPORT_LINK: Final = "https://discord.gg/PuhVkTZaxt"
 
 
 def write_file(filename: str, data: str) -> None:
@@ -559,6 +560,9 @@ def slash_handle(
                 log_active_exception(logpath)
                 raise
             try:
+                print(
+                    f"Slash command: {interaction.command.name!r} Args: {kwargs}",
+                )
                 await message_command(msg, *args[2:], **kwargs)
             except Exception:
                 await msg.channel.send(
@@ -907,9 +911,12 @@ class WaitRestartState(statemachine.AsyncState[GuildServerPinger]):
                 f"with a ping of `{self.ping}ms`.",
             )
         else:
-            await self.machine.channel.send(
-                "Could not re-establish connection to server.",
-            )
+            try:
+                await self.machine.channel.send(
+                    "Could not re-establish connection to server.",
+                )
+            except discord.errors.Forbidden:
+                print("Cannot send message in lost guild")
 
 
 class StatusBot(
@@ -946,6 +953,7 @@ class StatusBot(
             Callable[[discord.message.Message], Coroutine[Any, Any, Any]],
         ] = {
             "current-version": self.current_vers,
+            "support": self.support,
             "online-version": self.online_vers,
             "my-id": self.my_id,
             "json": self.json,
@@ -963,6 +971,7 @@ class StatusBot(
             Callable[[discord.message.Message], Coroutine[Any, Any, Any]],
         ] = {
             "current-version": self.current_vers,
+            "support": self.support,
             "online-version": self.online_vers,
             "my-id": self.my_id,
             "stop": self.stop,
@@ -1453,6 +1462,15 @@ class StatusBot(
         if not version:
             return tuple(map(int, __version__.strip().split(".")))
         return tuple(map(int, version.strip().split(".")))
+
+    async def support(
+        self,
+        message: discord.message.Message,
+    ) -> None:
+        """Get link to the Official StatusBot Support Server."""
+        await message.channel.send(
+            f"Support Server Guild Link: {SUPPORT_LINK}",
+        )
 
     async def online_vers(
         self,
@@ -2101,6 +2119,8 @@ class StatusBot(
         commands = (self.dcommands, self.gcommands)[midx]
         # Get content of message.
         content = message.content
+
+        print(f"Command Message: {content!r}")
 
         # If no space in message
         if " " not in content:

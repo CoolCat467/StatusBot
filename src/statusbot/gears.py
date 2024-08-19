@@ -209,7 +209,7 @@ class Timer(Gear):
                     if self.task is None:
                         return True
                     async with async_timeout.timeout(self.delay):
-                        while not self.task.cancelled():
+                        while not self.task.cancelled():  # noqa: ASYNC110
                             await asyncio.sleep(0.1)
                 except asyncio.TimeoutError:
                     pass
@@ -300,9 +300,9 @@ class StateTimer(Timer):
         self.ticks = math.inf
 
         async def wait_stop() -> None:
-            while self.running:
+            while self.running:  # noqa: ASYNC110
                 await asyncio.sleep(self.min_delay)
-            while not self.stopped:
+            while not self.stopped:  # noqa: ASYNC110
                 await asyncio.sleep(1)
 
         try:
