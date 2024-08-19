@@ -560,9 +560,13 @@ def slash_handle(
                 log_active_exception(logpath)
                 raise
             try:
-                print(
-                    f"Slash command: {interaction.command.name!r} Args: {kwargs}",
-                )
+                if isinstance(
+                    interaction.command,
+                    discord.app_commands.commands.Command,
+                ):
+                    print(
+                        f"Slash command: {interaction.command.name!r} Args: {kwargs}",
+                    )
                 await message_command(msg, *args[2:], **kwargs)
             except Exception:
                 await msg.channel.send(
