@@ -726,7 +726,9 @@ class GuildServerPinger(gears.StateTimer):
 class PingState(statemachine.AsyncState[GuildServerPinger]):
     """State where we ping server."""
 
-    __slots__ = ("failed", "exit_ex")
+    __slots__ = ("failed", "exit_ex", "failures_in_row")
+
+    fail_threshold = 2
 
     def __init__(self) -> None:
         """Initialize Ping State."""
@@ -734,22 +736,43 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
 
         self.failed = False
         self.exit_ex: str | None = None
+        self.failures_in_row = 0
 
     async def entry_actions(self) -> None:
         """Reset failed to false and exception to None."""
         self.failed = False
         self.exit_ex = None
+        self.failures_in_row = 0
         self.machine.last_delay = math.inf
-        self.machine.last_online = set()
+        self.machine.last_online: list[str] = []
 
-    async def handle_sample(self, players: set[str]) -> None:
+    async def handle_sample(self, players: list[str]) -> None:
         """Handle change in players by players sample."""
         # If different players,
         if players == self.machine.last_online:
             return
+
         # Find difference in players.
-        joined = tuple(players.difference(self.machine.last_online))
-        left = tuple(self.machine.last_online.difference(players))
+        players_set = set(players) - {"Anonymous Player"}
+        last_set = set(self.machine.last_online) - {"Anonymous Player"}
+        joined = tuple(players_set.difference(last_set))
+        left = tuple(last_set.difference(players_set))
+
+        # Find difference in anonymous players
+        anonymous_players = players.count("Anonymous Player")
+        last_anonymous_players = self.machine.last_online.count(
+            "Anonymous Player",
+        )
+        anonymous_delta = anonymous_players - last_anonymous_players
+        anonymous_joined = max(0, anonymous_delta)
+        anonymous_left = abs(min(0, anonymous_delta))
+
+        if anonymous_joined:
+            extra = "" if anonymous_joined < 2 else f"{anonymous_joined}x "
+            joined += (f"{extra}Anonymous Player",)
+        if anonymous_left:
+            extra = "" if anonymous_left < 2 else f"{anonymous_left}x "
+            left += (f"{extra}Anonymous Player",)
 
         def users_mesg(action: str, users: Iterable[str]) -> str:
             """Return [{action}]: {users}."""
@@ -795,15 +818,15 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
         """Ping server. If failure, self.failed = True and if exceptions, save."""
         try:
             response = await self.machine.server.async_status()
-        except Exception as ex:  # pylint: disable=broad-except
-            self.exit_ex = f"`A {type(ex).__name__} Exception Has Occored"
-            if ex.args:
-                sargs = list(map(str, ex.args))
+        except Exception as exc:  # pylint: disable=broad-except
+            error = pretty_exception_name(exc)
+            self.exit_ex = f"`A {error} Error Has Occored"
+            if exc.args:
+                sargs = list(map(str, exc.args))
                 self.exit_ex += ": " + combine_end(
                     wrap_list_values(sargs, '"'),
                 )
             self.exit_ex += "`"
-            self.failed = True
             # No need to record detailed errors for timeouts.
             ignore = (
                 concurrent.futures.TimeoutError,
@@ -811,16 +834,22 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
                 ConnectionRefusedError,
                 IOError,
             )
-            if not isinstance(ex, ignore):
+            self.failures_in_row += 1
+            if not isinstance(exc, ignore):
+                self.failed = True
                 log_active_exception(self.machine.bot.logpath)
+            else:
+                self.failed = self.failures_in_row >= self.fail_threshold
             return
+        else:
+            self.failures_in_row = 0
         json_data = decode_mods.process_response(response.raw)
         ping = round(response.latency, 3)
         # If success, get players.
         self.machine.last_json = json_data
         self.machine.last_delay = ping
 
-        players: set[str] = set()
+        players: list[str] = []
         online = 0
 
         if "players" not in json_data:
@@ -833,7 +862,7 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
         if "sample" in json_data["players"]:
             for player in json_data["players"]["sample"]:
                 if "name" in player:
-                    players.add(player["name"])
+                    players.append(player["name"])
 
         if not players and online:
             await self.handle_count(online)
@@ -1414,7 +1443,7 @@ class StatusBot(
         if pinger is None:
             return
 
-        players = list(pinger.last_online)
+        players = tuple(pinger.last_online)
         if players:
             player_text = combine_end(wrap_list_values(players, "`"))
             await send_over_2000(
