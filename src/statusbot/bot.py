@@ -668,7 +668,7 @@ class GuildServerPinger(gears.StateTimer):
         self.bot: StatusBot
         self.last_json: dict[str, Any] = {}
         self.last_delay: int | float = 0
-        self.last_online: set[str] = set()
+        self.last_online: list[str] = []
         self.last_online_count: int = 0
         self.channel: discord.abc.Messageable
 
@@ -744,7 +744,7 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
         self.exit_ex = None
         self.failures_in_row = 0
         self.machine.last_delay = math.inf
-        self.machine.last_online: list[str] = []
+        self.machine.last_online.clear()
 
     async def handle_sample(self, players: list[str]) -> None:
         """Handle change in players by players sample."""
