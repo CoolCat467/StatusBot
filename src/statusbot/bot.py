@@ -21,7 +21,7 @@ from __future__ import annotations
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 
 import asyncio
 import base64
@@ -2295,12 +2295,16 @@ Deleting guild settings"""
         print("\nShutting down gears.")
         await gears.BaseBot.close(self)
         print("\nGears shut down...\n")
-        # # Telling guilds bot is shutting down.\n')
-        # async def tell_guild_shutdown(guild: discord.guild.Guild) -> None:
-        # channel = self.guess_guild_channel(guild.id)
-        # await channel.send(f'{__title__} is shutting down.')
-        # coros = (tell_guild_shutdown(guild) for guild in self.guilds)
-        # await asyncio.gather(*coros)
+
+        # Telling guilds bot is shutting down.\n')
+        async def tell_guild_shutdown(guild: discord.guild.Guild) -> None:
+            channel = self.guess_guild_channel(guild.id)
+            await channel.send(
+                f"This instance of {__title__} is shutting down and presumably should be restarting shortly.",
+            )
+
+        coros = (tell_guild_shutdown(guild) for guild in self.guilds)
+        await asyncio.gather(*coros)
 
         print("Waiting to acquire updating lock...\n")
         while self.updating.locked():
