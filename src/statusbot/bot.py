@@ -1197,25 +1197,26 @@ class StatusBot(
         """(Re)Start guild machine if able or alert need of settings change."""
         guildconfiguration = self.get_guild_configuration(guild_id)
         channel = self.guess_guild_channel(guild_id)
-        if "channel" not in guildconfiguration:
-            await channel.send(
-                "This is where I will post leave-join messages "
-                "until an admin sets my `channel` option.",
-            )
-        if "address" in guildconfiguration:
-            action = await self.add_guild_pinger(guild_id, force_reset)
-            if action != "none":
-                await channel.send(f"Server pinger {action}.")
+        with contextlib.suppress(discord.errors.Forbidden):
+            if "channel" not in guildconfiguration:
+                await channel.send(
+                    "This is where I will post leave-join messages "
+                    "until an admin sets my `channel` option.",
+                )
+            if "address" in guildconfiguration:
+                action = await self.add_guild_pinger(guild_id, force_reset)
+                if action != "none":
+                    await channel.send(f"Server pinger {action}.")
+                else:
+                    await channel.send(
+                        "Server pinger is still running, non-critical configuration change.",
+                    )
             else:
                 await channel.send(
-                    "Server pinger is still running, non-critical configuration change.",
+                    "Server address not set, pinger not started. "
+                    f"Please set it with `{self.prefix} set-option "
+                    "address <address>`.",
                 )
-        else:
-            await channel.send(
-                "Server address not set, pinger not started. "
-                f"Please set it with `{self.prefix} set-option "
-                "address <address>`.",
-            )
         return guild_id
 
     async def eval_guilds(self, force_reset: bool = False) -> list[int]:
