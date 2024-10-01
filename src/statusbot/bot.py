@@ -1958,11 +1958,15 @@ class StatusBot(
                         return
                     id_value = member.id
                 # member = message.guild.get_member(value)
-                # member = self.get_user(value)
-                name: str | None = getattr(  # noqa: B009
-                    message.guild.get_member(id_value),
-                    "name",
-                )
+                member = message.guild.get_member(id_value)
+                name: str | None = None
+                if member is not None:
+                    # member = self.get_user(value)
+                    name = getattr(
+                        member,
+                        "name",
+                        None,
+                    )
                 if name is None:
                     await message.channel.send(
                         "User not found / User not in this guild.",
