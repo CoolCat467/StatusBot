@@ -693,6 +693,7 @@ class GuildServerPinger(gears.StateTimer):
                 f"[{self.__class__.__name__} start] Channel for {self.guild_id!r} is None, not starting.",
             )
             await self.set_state("Hault")
+            return
         self.channel = channel
         if "address" not in configuration:
             await self.channel.send(

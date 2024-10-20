@@ -11,17 +11,17 @@ authors = [
 description = "Discord bot to watch people play minecraft and report"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Natural Language :: English",
     "Intended Audience :: End Users/Desktop",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Utilities",
     "Operating System :: OS Independent",
@@ -40,7 +40,6 @@ dependencies = [
 version = {attr = "statusbot.bot.__version__"}
 
 [project.urls]
-"Homepage" = "https://github.com/CoolCat467/StatusBot"
 "Source" = "https://github.com/CoolCat467/StatusBot"
 "Bug Tracker" = "https://github.com/CoolCat467/StatusBot/issues"
 
@@ -51,7 +50,7 @@ StatusBot = ["py.typed"]
 run_statusbot = "statusbot:run"
 
 [tool.mypy]
-mypy_path = "src"
+files = ["src/statusbot/",]
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_untyped_calls = true
@@ -79,7 +78,6 @@ disable_all_dunder_policy = true
 
 [tool.black]
 line-length = 79
-target-version = ['py311']
 
 [tool.ruff]
 line-length = 79
@@ -121,33 +119,33 @@ select = [
     "YTT",   # flake8-2020
 ]
 extend-ignore = [
-    "D203",     # One blank line before class
-    "D204",     # blank line thing
+    "D203",     # one-blank-line-before-class
+    "D204",     # one-blank-line-after-class
     "D211",     # no-blank-line-before-class
     "D213",     # multi-line-summary-second-line
-    "D417",     # "Missing argument descriptions"
+    "D417",     # undocumented-param "Missing argument descriptions"
     "E501",     # line-too-long
-    "S101",     # use of assert for tests and type narrowing
+    "S101",     # assert (use of assert for tests and type narrowing)
     "ASYNC109", # trio-async-function-with-timeout
-    "SIM117",   # Use multiple with statements at the same time
+    "SIM117",   # multiple-with-statements
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
     "D100",  # undocumented-public-module
     "D103",  # undocumented-public-function
-    "D107",  # Missing docstring
+    "D107",  # undocumented-public-init
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov-report term-missing --cov=statusbot"
+addopts = "--cov-report=term-missing --cov=statusbot"
 testpaths = [
     "tests",
 ]
 
 [tool.coverage.run]
 branch = true
-source = ["src"]
+source_pkgs = ["statusbot"]
 omit = [
     "__init__.py",
 ]
