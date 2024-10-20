@@ -1256,9 +1256,6 @@ class StatusBot(
         guilddir = os.path.join(configurationdir, "guilds")
         if not os.path.exists(guilddir):
             os.mkdir(guilddir)
-        favicondir = os.path.join(self.rootdir, "favicon")
-        if not os.path.exists(favicondir):
-            os.mkdir(favicondir)
 
         print(f"\n{self.user} is connected to the following guilds:\n")
         guildnames = []
