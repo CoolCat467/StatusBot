@@ -687,7 +687,13 @@ class GuildServerPinger(gears.StateTimer):
     async def start(self) -> None:
         """If configuration is good, run."""
         configuration = self.bot.get_guild_configuration(self.guild_id)
-        self.channel = self.bot.guess_guild_channel(self.guild_id)
+        channel = self.bot.guess_guild_channel(self.guild_id)
+        if channel is None:
+            print(
+                f"[{self.__class__.__name__} start] Channel for {self.guild_id!r} is None, not starting.",
+            )
+            await self.set_state("Hault")
+        self.channel = channel
         if "address" not in configuration:
             await self.channel.send(
                 "No address for this guild defined, pinger not started.",
@@ -1125,8 +1131,8 @@ class StatusBot(
         dmfile = self.get_dm_configuration_file()
         write_file(dmfile, json.dumps(configuration, indent=2))
 
-    def guess_guild_channel(self, gid: int) -> discord.abc.Messageable:
-        """Guess guild channel and return channel."""
+    def guess_guild_channel(self, gid: int) -> discord.abc.Messageable | None:
+        """Guess guild channel and return channel. Return None on failure."""
         guild = self.get_guild(gid)
         if guild is None:
             raise RuntimeError(f"Could not get guild of id `{gid}`")
@@ -1146,6 +1152,8 @@ class StatusBot(
         for channel in guild.text_channels:
             if channel.name in expect:
                 return channel
+        if not guild.text_channels:
+            return None
         return random.choice(guild.text_channels)  # noqa: S311
 
     async def search_for_member_in_guilds(
@@ -1197,6 +1205,11 @@ class StatusBot(
         """(Re)Start guild machine if able or alert need of settings change."""
         guildconfiguration = self.get_guild_configuration(guild_id)
         channel = self.guess_guild_channel(guild_id)
+        if channel is None:
+            print(
+                f"[eval_guild] Channel is None for guild {guild_id!r}, strange case.",
+            )
+            return guild_id
         with contextlib.suppress(discord.errors.Forbidden):
             if "channel" not in guildconfiguration:
                 await channel.send(
@@ -2304,6 +2317,8 @@ Deleting guild settings"""
         # Telling guilds bot is shutting down.\n')
         async def tell_guild_shutdown(guild: discord.guild.Guild) -> None:
             channel = self.guess_guild_channel(guild.id)
+            if channel is None:
+                return
             await channel.send(
                 f"This instance of {__title__} is shutting down and presumably should be restarting shortly.",
             )
