@@ -16,6 +16,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Natural Language :: English",
     "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -33,7 +34,7 @@ dependencies = [
     "python-dotenv~=1.0.0",
     "httpx[http2]~=0.27.0",
     "mcstatus~=11.1.1",
-    "async-timeout~=4.0.3",
+    "async-timeout>=4.0.3",
 ]
 
 [tool.setuptools.dynamic]
@@ -43,11 +44,11 @@ version = {attr = "statusbot.bot.__version__"}
 "Source" = "https://github.com/CoolCat467/StatusBot"
 "Bug Tracker" = "https://github.com/CoolCat467/StatusBot/issues"
 
-[tool.setuptools.package-data]
-StatusBot = ["py.typed"]
-
 [project.scripts]
 run_statusbot = "statusbot:run"
+
+[tool.setuptools.package-data]
+StatusBot = ["py.typed"]
 
 [tool.mypy]
 files = ["src/statusbot/",]
@@ -138,7 +139,7 @@ extend-ignore = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov-report=term-missing --cov=statusbot"
+addopts = "--cov-report=xml --cov-report=term-missing --cov=statusbot"
 testpaths = [
     "tests",
 ]
@@ -172,33 +173,3 @@ partial_branches = [
     "if .* or not _t.TYPE_CHECKING:",
     "if .* or not t.TYPE_CHECKING:",
 ]
-
-[tool.tox]
-legacy_tox_ini = """
-    [tox]
-    envlist = py38, py39, py310, py311, py312, pytest, mypy
-    isolated_build = false
-
-    [gh-actions]
-    python =
-        3.8: py38, pytest
-        3.9: py39, pytest
-        3.10: py310, pytest
-        3.11: py311, pytest
-        3.12: py312, pytest, mypy
-
-    [testenv]
-    setenv =
-        PYTHONPATH = {toxinidir}
-
-    [testenv:pytest]
-    deps =
-        pytest
-        pytest-cov
-    commands = pytest --basetemp={envtmpdir}
-
-    [testenv:mypy]
-    deps =
-        mypy
-    commands = mypy src
-"""
