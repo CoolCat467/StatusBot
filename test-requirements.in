@@ -15,9 +15,12 @@ codespell
 mypy-extensions
 typing-extensions
 
-# Checker's own dependencies
+# StatusBot's own dependencies
+#<TOML_DEPENDENCIES>
+async-timeout>=4.0.3
+audioop-lts; python_version>='3.13'
 discord.py~=2.4.0
-python-dotenv~=1.0.0
 httpx[http2]~=0.27.0
 mcstatus~=11.1.1
-async-timeout>=4.0.3
+python-dotenv~=1.0.0
+#</TOML_DEPENDENCIES>

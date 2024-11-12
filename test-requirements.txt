@@ -16,6 +16,8 @@ asyncio-dgram==2.2.0
     # via mcstatus
 attrs==24.2.0
     # via aiohttp
+audioop-lts==0.2.1 ; python_full_version >= '3.13'
+    # via -r test-requirements.in
 black==24.10.0 ; implementation_name == 'cpython'
     # via -r test-requirements.in
 certifi==2024.8.30

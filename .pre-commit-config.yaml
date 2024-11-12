@@ -43,3 +43,11 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
+  - repo: local
+    hooks:
+      - id: project-requirements
+        name: regenerate requirements.in
+        language: system
+        entry: python tools/project_requirements.py
+        pass_filenames: false
+        files: ^(test-requirements.in)|(pyproject.toml)$
