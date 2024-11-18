@@ -2,13 +2,13 @@
 #    uv pip compile --universal --python-version=3.10 test-requirements.in -o test-requirements.txt
 aiohappyeyeballs==2.4.3
     # via aiohttp
-aiohttp==3.10.10
+aiohttp==3.11.2
     # via discord-py
 aiosignal==1.3.1
     # via aiohttp
 anyio==4.6.2.post1
     # via httpx
-async-timeout==4.0.3
+async-timeout==5.0.1
     # via
     #   -r test-requirements.in
     #   aiohttp
@@ -32,7 +32,7 @@ colorama==0.4.6 ; (implementation_name != 'cpython' and sys_platform == 'win32')
     # via
     #   click
     #   pytest
-coverage==7.6.4
+coverage==7.6.7
     # via
     #   -r test-requirements.in
     #   pytest-cov
@@ -54,7 +54,7 @@ h2==4.1.0
     # via httpx
 hpack==4.0.0
     # via h2
-httpcore==1.0.6
+httpcore==1.0.7
     # via httpx
 httpx==0.27.2
     # via -r test-requirements.in
@@ -93,7 +93,9 @@ platformdirs==4.3.6 ; implementation_name == 'cpython'
 pluggy==1.5.0
     # via pytest
 propcache==0.2.0
-    # via yarl
+    # via
+    #   aiohttp
+    #   yarl
 pytest==8.3.3
     # via
     #   -r test-requirements.in
@@ -102,9 +104,9 @@ pytest-cov==6.0.0
     # via -r test-requirements.in
 python-dotenv==1.0.1
     # via -r test-requirements.in
-ruff==0.7.3
+ruff==0.7.4
     # via -r test-requirements.in
-setuptools==75.4.0
+setuptools==75.5.0
     # via asyncio-dgram
 sniffio==1.3.1
     # via
@@ -123,7 +125,7 @@ typing-extensions==4.12.2
     #   black
     #   multidict
     #   mypy
-uv==0.5.1
+uv==0.5.2
     # via -r test-requirements.in
-yarl==1.17.1
+yarl==1.17.2
     # via aiohttp
