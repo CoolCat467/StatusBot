@@ -648,14 +648,14 @@ class GuildServerPinger(gears.StateTimer):
     """Server ping machine for guild."""
 
     __slots__ = (
-        "guild_id",
-        "server",
-        "last_online",
-        "last_json",
-        "last_delay",
-        "last_online_count",
-        "last_online",
         "channel",
+        "guild_id",
+        "last_delay",
+        "last_json",
+        "last_online",
+        "last_online",
+        "last_online_count",
+        "server",
     )
     tick_speed: int = 60
     wait_ticks: int = 5
@@ -733,7 +733,7 @@ class GuildServerPinger(gears.StateTimer):
 class PingState(statemachine.AsyncState[GuildServerPinger]):
     """State where we ping server."""
 
-    __slots__ = ("failed", "exit_ex", "failures_in_row")
+    __slots__ = ("exit_ex", "failed", "failures_in_row")
 
     fail_threshold = 2
 
@@ -895,7 +895,7 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
 class WaitRestartState(statemachine.AsyncState[GuildServerPinger]):
     """State where we wait for server to restart."""
 
-    __slots__ = ("ignore_ticks", "success", "ticks", "ping")
+    __slots__ = ("ignore_ticks", "ping", "success", "ticks")
 
     def __init__(self, ignore_ticks: int) -> None:
         """Initialize await_restart state."""
