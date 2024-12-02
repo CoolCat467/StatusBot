@@ -9,30 +9,22 @@ aiosignal==1.3.1
 anyio==4.6.2.post1
     # via httpx
 async-timeout==5.0.1
-    # via
-    #   -r test-requirements.in
-    #   aiohttp
+    # via -r test-requirements.in
 asyncio-dgram==2.2.0
     # via mcstatus
 attrs==24.2.0
     # via aiohttp
-audioop-lts==0.2.1 ; python_full_version >= '3.13'
-    # via -r test-requirements.in
-black==24.10.0 ; implementation_name == 'cpython'
+black==24.10.0 ; implementation_name == "cpython"
     # via -r test-requirements.in
 certifi==2024.8.30
     # via
     #   httpcore
     #   httpx
-click==8.1.7 ; implementation_name == 'cpython'
+click==8.1.7
     # via black
 codespell==2.3.0
     # via -r test-requirements.in
-colorama==0.4.6 ; (implementation_name != 'cpython' and sys_platform == 'win32') or (platform_system != 'Windows' and sys_platform == 'win32') or (implementation_name == 'cpython' and platform_system == 'Windows')
-    # via
-    #   click
-    #   pytest
-coverage==7.6.8
+coverage[toml]==7.6.8
     # via
     #   -r test-requirements.in
     #   pytest-cov
@@ -40,10 +32,6 @@ discord-py==2.4.0
     # via -r test-requirements.in
 dnspython==2.7.0
     # via mcstatus
-exceptiongroup==1.2.2 ; python_full_version < '3.11'
-    # via
-    #   anyio
-    #   pytest
 frozenlist==1.5.0
     # via
     #   aiohttp
@@ -56,7 +44,7 @@ hpack==4.0.0
     # via h2
 httpcore==1.0.7
     # via httpx
-httpx==0.27.2
+httpx[http2]==0.27.2
     # via -r test-requirements.in
 hyperframe==6.0.1
     # via h2
@@ -80,15 +68,15 @@ mypy-extensions==1.0.0
     #   -r test-requirements.in
     #   black
     #   mypy
-orjson==3.10.12 ; implementation_name == 'cpython'
+orjson==3.10.12 ; implementation_name == "cpython"
     # via -r test-requirements.in
 packaging==24.2
     # via
     #   black
     #   pytest
-pathspec==0.12.1 ; implementation_name == 'cpython'
+pathspec==0.12.1
     # via black
-platformdirs==4.3.6 ; implementation_name == 'cpython'
+platformdirs==4.3.6
     # via black
 pluggy==1.5.0
     # via pytest
@@ -96,7 +84,7 @@ propcache==0.2.0
     # via
     #   aiohttp
     #   yarl
-pytest==8.3.3
+pytest==8.3.4
     # via
     #   -r test-requirements.in
     #   pytest-cov
@@ -106,24 +94,13 @@ python-dotenv==1.0.1
     # via -r test-requirements.in
 ruff==0.8.1
     # via -r test-requirements.in
-setuptools==75.6.0
-    # via asyncio-dgram
 sniffio==1.3.1
     # via
     #   anyio
     #   httpx
-tomli==2.2.1 ; python_full_version <= '3.11'
-    # via
-    #   black
-    #   coverage
-    #   mypy
-    #   pytest
 typing-extensions==4.12.2
     # via
     #   -r test-requirements.in
-    #   anyio
-    #   black
-    #   multidict
     #   mypy
 uv==0.5.5
     # via -r test-requirements.in
