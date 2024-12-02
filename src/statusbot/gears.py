@@ -40,11 +40,11 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
 
 __all__ = [
-    "Gear",
     "BaseBot",
-    "Timer",
+    "Gear",
     "StateTimer",
     "StateTimerExitState",
+    "Timer",
 ]
 
 
@@ -87,7 +87,7 @@ class Gear(AsyncStateMachine):
 class BaseBot:
     """Bot base class."""
 
-    __slots__ = ("loop", "gears")
+    __slots__ = ("gears", "loop")
 
     def __init__(self, eventloop: asyncio.AbstractEventLoop) -> None:
         """Initialize with event loop and no gears."""
