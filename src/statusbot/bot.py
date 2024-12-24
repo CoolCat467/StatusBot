@@ -1425,20 +1425,23 @@ class StatusBot(
             return
 
         #     channels = forge_data['channels']
-        mods: dict[str, str] = forge_data["mods"]
+        mods: dict[str, str] | list[dict[str, str]] = forge_data["mods"]
 
         mod_data: list[dict[str, str]] = []
-        for name, version in mods.items():
-            #         required = True
-            #         if version == '<not required for client>':
-            #             version = '<unknown>'
-            #             required = False
-            mod_item = {
-                "name": name,
-                "version": version,
-                #             'required': required
-            }
-            mod_data.append(mod_item)
+        if isinstance(mods, dict):
+            for name, version in mods.items():
+                #         required = True
+                #         if version == '<not required for client>':
+                #             version = '<unknown>'
+                #             required = False
+                mod_item = {
+                    "name": name,
+                    "version": version,
+                    #             'required': required
+                }
+                mod_data.append(mod_item)
+        elif isinstance(mods, list):
+            mod_data = mods
 
         msg = json.dumps(mod_data, sort_keys=True, indent=2)
         await send_over_2000(
