@@ -21,7 +21,7 @@ from __future__ import annotations
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
-__version__ = "0.8.9"
+__version__ = "0.9.0"
 
 import asyncio
 import base64
@@ -1019,6 +1019,7 @@ class StatusBot(
             "set-global-option": self.set_option__dm,
             "get-global-option": self.get_option__dm,
             "global-help": self.help_dm,
+            "system-alert": self.system_alert,
         }
         gears.BaseBot.__init__(self, self.loop)
 
@@ -1497,6 +1498,66 @@ class StatusBot(
             return
         await message.channel.send(
             "You do not have permission to run this command.",
+        )
+
+    async def send_guild_system_alert(
+        self,
+        guild_id: int,
+        alert_text: str,
+    ) -> int:
+        """Send guild system alert."""
+        # guildconfiguration = self.get_guild_configuration(guild_id)
+        channel = self.guess_guild_channel(guild_id)
+        if channel is None:
+            print(
+                f"[eval_guild] Channel is None for guild {guild_id!r}, strange case.",
+            )
+            return guild_id
+        with contextlib.suppress(discord.errors.Forbidden):
+            await channel.send(
+                f"[System Alert Message]:\n```\n{alert_text}\n```",
+            )
+        return guild_id
+
+    async def system_alert(
+        self,
+        message: discord.message.Message,
+        alert_text: str | None = None,
+    ) -> None:
+        """Send a system alert to all guilds."""
+        configuration = self.get_dm_configuration()
+        if "system-alert-users" not in configuration:
+            await message.channel.send(
+                "No one has permission to run this command.",
+            )
+            return
+
+        if message.author.id not in configuration["system-alert-users"]:
+            await message.channel.send(
+                "You do not have permission to run this command.",
+            )
+            return
+
+        if alert_text is None:
+            await message.channel.send(
+                "Please enter alert text, cannot be blank.",
+            )
+            return
+        await message.channel.send("Sending system alert...")
+
+        ids = []
+        for guild in self.guilds:
+            ids.append(self.send_guild_system_alert(guild.id, alert_text))
+
+        finished = await asyncio.gather(*ids)
+
+        msg = json.dumps(finished, sort_keys=True, indent=2)
+        await send_over_2000(
+            message.channel.send,  # type: ignore
+            msg,
+            "json\n",
+            "```",
+            start="Sent alert text to following guild ids:\n",
         )
 
     async def current_vers(
@@ -2015,12 +2076,17 @@ class StatusBot(
         valid = []
 
         if user_id == OWNER_ID:
-            valid += ["set-option-users", "update-users", "stop-users"]
+            valid += [
+                "set-option-users",
+                "update-users",
+                "stop-users",
+                "system-alert-users",
+            ]
         elif (
             "set-option-users" in configuration
             and user_id in configuration["set-option-users"]
         ):
-            valid += ["update-users", "stop-users"]
+            valid += ["update-users", "stop-users", "system-alert-users"]
 
         return valid
 
@@ -2094,6 +2160,7 @@ class StatusBot(
                 "update-users": base + "update the bot.",
                 "set-option-users": base
                 + "change stop and update permissions.",
+                "system-alert-users": base + "send system alerts.",
             }
             msg += "\nArgument required: " + arghelp[option]
             await message.channel.send(msg)
@@ -2320,9 +2387,10 @@ Deleting guild settings"""
             channel = self.guess_guild_channel(guild.id)
             if channel is None:
                 return
-            await channel.send(
-                f"This instance of {__title__} is shutting down and presumably should be restarting shortly.",
-            )
+            with contextlib.suppress(discord.errors.Forbidden):
+                await channel.send(
+                    f"This instance of {__title__} is shutting down and presumably should be restarting shortly.",
+                )
 
         coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
