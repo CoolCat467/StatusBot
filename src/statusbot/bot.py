@@ -894,7 +894,8 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
     async def exit_actions(self) -> None:
         """When exiting, if we collected an exception, send it to channel."""
         if self.exit_ex is not None:
-            await self.machine.channel.send(self.exit_ex)
+            with contextlib.suppress(discord.errors.Forbidden):
+                await self.machine.channel.send(self.exit_ex)
 
 
 class WaitRestartState(statemachine.AsyncState[GuildServerPinger]):
@@ -1198,11 +1199,11 @@ class StatusBot(
             return "restarted"
         return "none"
 
-    async def register_commands(self, guild: discord.Guild) -> None:
-        """Register commands for guild."""
-        self.tree.copy_global_to(guild=guild)
-
-        await self.tree.sync(guild=guild)
+    ##async def register_commands(self, guild: discord.Guild) -> None:
+    ##    """Register commands for guild."""
+    ##    #self.tree.copy_global_to(guild=guild)
+    ##
+    ##    await self.tree.sync(guild=guild)
 
     async def eval_guild(
         self,
@@ -1220,8 +1221,9 @@ class StatusBot(
         with contextlib.suppress(discord.errors.Forbidden):
             if "channel" not in guildconfiguration:
                 await channel.send(
-                    "This is where I will post leave-join messages "
-                    "until an admin sets my `channel` option.",
+                    "This is where I will post join-leave messages "
+                    "until an admin sets my `channel` option. "
+                    f"Set it with `{self.prefix} set-option channel <channel>`.",
                 )
             if "address" in guildconfiguration:
                 action = await self.add_guild_pinger(guild_id, force_reset)
@@ -1565,17 +1567,24 @@ class StatusBot(
             start="Sent alert text to following guild ids:\n",
         )
 
+    async def current_vers_channel(
+        self,
+        messageable: discord.abc.Messageable,
+    ) -> tuple[int, ...]:
+        """Send and return this instance of StatusBot's version."""
+        proj_root = os.path.dirname(os.path.dirname(self.rootdir))
+        version = read_file(os.path.join(proj_root, "version.txt"))
+        await messageable.send(f"Current version: {version}")
+        if not version:
+            return tuple(map(int, __version__.strip().split(".")))
+        return tuple(map(int, version.strip().split(".")))
+
     async def current_vers(
         self,
         message: discord.message.Message,
     ) -> tuple[int, ...]:
         """Get the version of this instance of StatusBot."""
-        proj_root = os.path.dirname(os.path.dirname(self.rootdir))
-        version = read_file(os.path.join(proj_root, "version.txt"))
-        await message.channel.send(f"Current version: {version}")
-        if not version:
-            return tuple(map(int, __version__.strip().split(".")))
-        return tuple(map(int, version.strip().split(".")))
+        return await self.current_vers_channel(message.channel)
 
     async def support(
         self,
@@ -2413,6 +2422,7 @@ Deleting guild settings"""
                 await channel.send(
                     f"This instance of {__title__} is shutting down and presumably should be restarting shortly.",
                 )
+                await self.current_vers_channel(channel)
 
         coros = (tell_guild_shutdown(guild) for guild in self.guilds)
         await asyncio.gather(*coros)
