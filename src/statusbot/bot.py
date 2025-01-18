@@ -21,7 +21,7 @@ from __future__ import annotations
 __title__ = "StatusBot"
 __author__ = "CoolCat467"
 __license__ = "Apache License 2.0"
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 
 import asyncio
 import base64
@@ -38,6 +38,7 @@ import random
 import sys
 import traceback
 from collections.abc import Awaitable, Callable
+from datetime import datetime
 from threading import Event, Lock
 from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
 
@@ -564,8 +565,12 @@ def slash_handle(
                     interaction.command,
                     discord.app_commands.commands.Command,
                 ):
+                    name = ""
+                    with contextlib.suppress(Exception):
+                        name = interaction.user.name
+                    timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
                     print(
-                        f"Slash command: {interaction.command.name!r} Args: {kwargs}",
+                        f"[{timestamp}] Slash Command: {interaction.command.name!r} Args: {kwargs} from {name!r}",
                     )
                 await message_command(msg, *args[2:], **kwargs)
             except Exception:
@@ -2239,7 +2244,11 @@ class StatusBot(
         # Get content of message.
         content = message.content
 
-        print(f"Command Message: {content!r}")
+        timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+        name = ""
+        with contextlib.suppress(Exception):
+            name = message.author.name
+        print(f"[{timestamp}] Command Message: {content!r} from {name!r}")
 
         # If no space in message
         if " " not in content:
@@ -2345,10 +2354,23 @@ Deleting guild settings"""
                 pfx = args[0] == self.prefix if len(args) >= 1 else False
                 # of it starts with us being mentioned,
                 mentioned = self.user.mentioned_in(message)
+                # Skip messages mentioning @everyone or @here
+                if mentioned and (
+                    "@everyone" in message.content
+                    or "@here" in message.content
+                ):
+                    mentioned = False
                 if pfx or mentioned:
-                    # we are, in reality, the fastest typer in world. aw yep.
-                    async with message.channel.typing():
-                        # Process message as guild
+                    try:
+                        # we are, in reality, the fastest typer in world. aw yep.
+                        async with message.channel.typing():
+                            # Process message as guild
+                            await self.process_command_message(
+                                message,
+                                "guild",
+                            )
+                    except discord.errors.Forbidden:
+                        # For some reason typing not allowed sometimes
                         await self.process_command_message(message, "guild")
                 return
             # Otherwise, it's a direct message, so process it as one.
