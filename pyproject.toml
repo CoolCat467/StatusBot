@@ -41,6 +41,22 @@ dependencies = [
 [tool.setuptools.dynamic]
 version = {attr = "statusbot.bot.__version__"}
 
+[project.optional-dependencies]
+user = ["idleuserextend~=0.0.1"]
+tests = [
+    "pytest>=5.0",
+    "pytest-cov>=6.0.0",
+    "pytest-trio>=0.8.0",
+    "coverage>=7.2.5",
+    "uv>=0.5.21",
+]
+tools = [
+    'black>=24.10.0; implementation_name == "cpython"',
+    "ruff>=0.9.2",
+    "codespell>=2.3.0",
+    "mypy>=1.15.0",
+]
+
 [project.urls]
 "Source" = "https://github.com/CoolCat467/StatusBot"
 "Bug Tracker" = "https://github.com/CoolCat467/StatusBot/issues"
@@ -50,6 +66,9 @@ run_statusbot = "statusbot:run"
 
 [tool.setuptools.package-data]
 StatusBot = ["py.typed"]
+
+[tool.uv]
+package = true
 
 [tool.mypy]
 files = ["src/statusbot/",]
@@ -151,6 +170,9 @@ source_pkgs = ["statusbot"]
 omit = [
     "__init__.py",
 ]
+parallel = true
+relative_files = true
+source = ["."]
 
 [tool.coverage.report]
 precision = 1

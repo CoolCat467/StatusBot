@@ -170,16 +170,16 @@ def log_active_exception(
     msg += "Exception class:\n" + str(values[0]) + "\n"
     msg += "Exception text:\n" + str(values[1]) + "\n"
 
-    with io.StringIO() as yes_totaly_a_file:
+    with io.StringIO() as yes_totally_a_file:
         traceback.print_exception(
             None,
             value=values[1],
             tb=values[2],
             limit=None,
-            file=yes_totaly_a_file,
+            file=yes_totally_a_file,
             chain=True,
         )
-        msg += "\n" + yes_totaly_a_file.getvalue() + "\n" + "#" * 16 + "\n"
+        msg += "\n" + yes_totally_a_file.getvalue() + "\n" + "#" * 16 + "\n"
     print(msg)
     if logpath is not None:
         append_file(logpath, msg)
@@ -1997,7 +1997,7 @@ class StatusBot(
             return
 
         if value is None:
-            msg = f"Insufficiant arguments for `{option}`."
+            msg = f"Insufficient arguments for `{option}`."
             base = (
                 "`clear`, a discord id, or the username of a new "
                 "user to add to the "
@@ -2164,7 +2164,7 @@ class StatusBot(
             return
 
         if new_value is None:
-            msg = f"Insufficiant arguments for {option}."
+            msg = f"Insufficient arguments for {option}."
             base = (
                 "`clear`, a discord user id, or the username of a "
                 "new user to add to the permission list of users who can "
