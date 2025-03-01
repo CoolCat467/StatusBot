@@ -30,7 +30,7 @@ classifiers = [
 ]
 keywords = ["discord", "bot", "minecraft"]
 dependencies = [
-    "discord.py~=2.4.0",
+    "discord.py~=2.5.0",
     "audioop-lts; python_version>='3.13'",
     "python-dotenv~=1.0.0",
     "httpx[http2]~=0.28.1",
