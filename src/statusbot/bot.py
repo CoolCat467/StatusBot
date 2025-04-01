@@ -804,7 +804,7 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
         if message:
             await send_over_2000(
                 cast(
-                    Callable[[str], Awaitable[None]],
+                    "Callable[[str], Awaitable[None]]",
                     self.machine.channel.send,
                 ),
                 message,

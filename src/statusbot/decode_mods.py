@@ -92,7 +92,7 @@ IGNORESERVERONLY = "<not required for client>"
 
 def process_response(response: RawJavaResponse) -> dict[str, Any]:
     """Decode encoded forgeData if present."""
-    data: dict[str, Any] = cast(dict[str, Any], response)
+    data: dict[str, Any] = cast("dict[str, Any]", response)
 
     if "forgeData" not in response:
         return data
