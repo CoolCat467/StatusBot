@@ -37,7 +37,6 @@ import os
 import random
 import sys
 import traceback
-from collections.abc import Awaitable, Callable
 from datetime import datetime
 from threading import Event, Lock
 from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
@@ -56,7 +55,7 @@ from statusbot import decode_mods, gears, statemachine, update
 from statusbot.utils import combine_end, format_time, pretty_exception_name
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Iterable
+    from collections.abc import Awaitable, Callable, Coroutine, Iterable
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
