@@ -1848,7 +1848,7 @@ class StatusBot(
         await message.channel.send("Guild has been re-evaluated.")
 
     @staticmethod
-    def set_option__guild_valid_options(
+    def set_option__guild_valid_options(  # type: ignore[misc]
         user_id: int,
         guild_admins: set[int],
         configuration: dict[str, Any],
@@ -2081,7 +2081,7 @@ class StatusBot(
         await self.refresh(message, force_reset)
 
     @staticmethod
-    def set_option__dm_valid_options(
+    def set_option__dm_valid_options(  # type: ignore[misc]
         user_id: int,
         configuration: dict[str, Any],
     ) -> list[str]:
