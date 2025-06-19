@@ -2,7 +2,7 @@
 
 # Programmed by CoolCat467
 
-# Copyright 2021-2024 CoolCat467
+# Copyright 2021-2025 CoolCat467
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -1848,7 +1848,7 @@ class StatusBot(
         await message.channel.send("Guild has been re-evaluated.")
 
     @staticmethod
-    def set_option__guild_valid_options(  # type: ignore[misc]
+    def set_option__guild_valid_options(
         user_id: int,
         guild_admins: set[int],
         configuration: dict[str, Any],
@@ -2081,7 +2081,7 @@ class StatusBot(
         await self.refresh(message, force_reset)
 
     @staticmethod
-    def set_option__dm_valid_options(  # type: ignore[misc]
+    def set_option__dm_valid_options(
         user_id: int,
         configuration: dict[str, Any],
     ) -> list[str]:
