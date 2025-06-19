@@ -44,7 +44,7 @@ class ExtraConnection(Connection):
 
     def read_bool(self) -> bool:
         """Return `True` or `False`. Read 1 byte."""
-        return self._unpack("?", self.read(1)) == 1
+        return self._unpack("?", bytes(self.read(1))) == 1
 
 
 def decode_optimized(string: str) -> ExtraConnection:
