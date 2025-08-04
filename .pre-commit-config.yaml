@@ -23,9 +23,9 @@ repos:
     hooks:
       - id: black
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
+    rev: v0.12.7
     hooks:
-      - id: ruff
+      - id: ruff-check
         types: [file]
         types_or: [python, pyi, toml]
         args: ["--show-fixes"]
@@ -39,11 +39,11 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
-  - repo: https://github.com/crate-ci/typos
-    rev: typos-dict-v0.12.5
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.34.0
     hooks:
       - id: typos
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.3.1
+    rev: v1.11.0
     hooks:
       - id: zizmor

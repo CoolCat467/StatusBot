@@ -2,7 +2,7 @@
 
 # Programmed by CoolCat467
 
-# Copyright 2021-2024 CoolCat467
+# Copyright 2021-2025 CoolCat467
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -37,7 +37,6 @@ import os
 import random
 import sys
 import traceback
-from collections.abc import Awaitable, Callable
 from datetime import datetime
 from threading import Event, Lock
 from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
@@ -56,7 +55,7 @@ from statusbot import decode_mods, gears, statemachine, update
 from statusbot.utils import combine_end, format_time, pretty_exception_name
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Iterable
+    from collections.abc import Awaitable, Callable, Coroutine, Iterable
 
 # https://discordpy.readthedocs.io/en/latest/index.html
 # https://discord.com/developers
@@ -804,7 +803,7 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
         if message:
             await send_over_2000(
                 cast(
-                    Callable[[str], Awaitable[None]],
+                    "Callable[[str], Awaitable[None]]",
                     self.machine.channel.send,
                 ),
                 message,

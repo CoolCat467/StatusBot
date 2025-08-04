@@ -30,9 +30,9 @@ classifiers = [
 ]
 keywords = ["discord", "bot", "minecraft"]
 dependencies = [
-    "discord.py~=2.5.0",
+    "discord-py==2.5.2",
     "audioop-lts; python_version>='3.13'",
-    "python-dotenv~=1.0.0",
+    "python-dotenv~=1.0.1",
     "httpx[http2]~=0.28.1",
     "mcstatus~=11.1.1",
     "async-timeout>=4.0.3",
@@ -42,7 +42,6 @@ dependencies = [
 version = {attr = "statusbot.bot.__version__"}
 
 [project.optional-dependencies]
-user = ["idleuserextend~=0.0.1"]
 tests = [
     "pytest>=5.0",
     "pytest-cov>=6.0.0",
@@ -72,23 +71,16 @@ package = true
 
 [tool.mypy]
 files = ["src/statusbot/",]
-check_untyped_defs = true
-disallow_any_generics = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-ignore_missing_imports = true
-no_implicit_optional = true
-no_implicit_reexport = true
 show_column_numbers = true
 show_error_codes = true
 show_traceback = true
+disallow_any_decorated = true
+disallow_any_unimported = true
+ignore_missing_imports = true
+local_partial_types = true
+no_implicit_optional = true
 strict = true
-strict_equality = true
-warn_redundant_casts = true
-warn_return_any = true
 warn_unreachable = true
-warn_unused_configs = true
-warn_unused_ignores = true
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

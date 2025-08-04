@@ -44,7 +44,7 @@ class ExtraConnection(Connection):
 
     def read_bool(self) -> bool:
         """Return `True` or `False`. Read 1 byte."""
-        return self._unpack("?", self.read(1)) == 1
+        return self._unpack("?", bytes(self.read(1))) == 1
 
 
 def decode_optimized(string: str) -> ExtraConnection:
@@ -92,7 +92,7 @@ IGNORESERVERONLY = "<not required for client>"
 
 def process_response(response: RawJavaResponse) -> dict[str, Any]:
     """Decode encoded forgeData if present."""
-    data: dict[str, Any] = cast(dict[str, Any], response)
+    data: dict[str, Any] = cast("dict[str, Any]", response)
 
     if "forgeData" not in response:
         return data
