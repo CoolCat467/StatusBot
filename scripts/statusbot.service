@@ -1,8 +1,8 @@
 [Unit]
 Description=StatusBot Autostart
 After=network.target
-StartLimitIntervalSec=0
-RestartSec=1
+StartLimitIntervalSec=10
+RestartSec=10
 
 [Service]
 Type=forking

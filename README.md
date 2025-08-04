@@ -1,17 +1,16 @@
 # StatusBot
-StatusBot is a discord bot that will post information about a given Java Editon minecraft server in a given channel once configured.
+StatusBot is a discord bot that will post information about a given Java Edition minecraft server in a given channel once configured.
 
 <!-- BADGIE TIME -->
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![code style: black](https://img.shields.io/badge/code_style-black-000000.svg)](https://github.com/psf/black)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- END BADGIE TIME -->
 
 ## Invite to your server
 Invite StatusBot to your discord server:
-[Invite link](https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=68608&scope=bot)
+[Invite link](https://discord.com/api/oauth2/authorize?client_id=859890649535873044&permissions=274877910016&scope=bot)
 Note, there may be random downtimes if problems occur, and because of the nature of
 this bot whoever runs the bot will have access to the address of your minecraft server and
 the name of the channel the bot will be sending messages in.
@@ -76,7 +75,7 @@ As of version 0.5.0, the following describes StatusBot's commands.
   If you are StatusBot's owner, you are the guild owner, or you are in the
   `set-option-users` list, the following settings can be modified:
 
-   `address` - Address of the java editon minecraft server StatusBot should monitor
+   `address` - Address of the java edition minecraft server StatusBot should monitor
 
    `channel` - Name of the discord channel StatusBot should post player leave-join messages in.
 

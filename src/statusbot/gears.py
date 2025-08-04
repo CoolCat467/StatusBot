@@ -40,11 +40,11 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
 
 __all__ = [
-    "Gear",
     "BaseBot",
-    "Timer",
+    "Gear",
     "StateTimer",
     "StateTimerExitState",
+    "Timer",
 ]
 
 
@@ -87,7 +87,7 @@ class Gear(AsyncStateMachine):
 class BaseBot:
     """Bot base class."""
 
-    __slots__ = ("loop", "gears")
+    __slots__ = ("gears", "loop")
 
     def __init__(self, eventloop: asyncio.AbstractEventLoop) -> None:
         """Initialize with event loop and no gears."""
@@ -209,7 +209,7 @@ class Timer(Gear):
                     if self.task is None:
                         return True
                     async with async_timeout.timeout(self.delay):
-                        while not self.task.cancelled():
+                        while not self.task.cancelled():  # noqa: ASYNC110
                             await asyncio.sleep(0.1)
                 except asyncio.TimeoutError:
                     pass
@@ -228,7 +228,11 @@ class Timer(Gear):
                 waited = self.min_delay * self.ticks
                 stop = False
                 if waited >= self.delay:
-                    stop = await self.tick()
+                    try:
+                        stop = await self.tick()
+                    except Exception:
+                        self.running = False
+                        raise
                     self.ticks = 0
                     waited = 0
                 if stop or self.bot.gear_close:
@@ -296,9 +300,9 @@ class StateTimer(Timer):
         self.ticks = math.inf
 
         async def wait_stop() -> None:
-            while self.running:
+            while self.running:  # noqa: ASYNC110
                 await asyncio.sleep(self.min_delay)
-            while not self.stopped:
+            while not self.stopped:  # noqa: ASYNC110
                 await asyncio.sleep(1)
 
         try:

@@ -4,5 +4,5 @@
 
 while true
 do
-    ~/Desktop/Bots/StatusBot/scripts/run.sh
+    ~/Applications/StatusBot/scripts/run.sh
 done

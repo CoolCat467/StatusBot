@@ -1,4 +1,5 @@
 import pytest
+
 from statusbot.statemachine import AsyncState, State
 
 
