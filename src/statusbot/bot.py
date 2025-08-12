@@ -854,6 +854,9 @@ class PingState(statemachine.AsyncState[GuildServerPinger]):
             return
         else:
             self.failures_in_row = 0
+        # TODO: Change this now that
+        # https://github.com/py-mine/mcstatus/pull/578
+        # was included in a release finally
         json_data = decode_mods.process_response(response.raw)
         ping = round(response.latency, 3)
         # If success, get players.
