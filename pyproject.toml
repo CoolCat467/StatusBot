@@ -32,9 +32,9 @@ keywords = ["discord", "bot", "minecraft"]
 dependencies = [
     "discord-py==2.5.2",
     "audioop-lts; python_version>='3.13'",
-    "python-dotenv~=1.0.1",
+    "python-dotenv~=1.1.1",
     "httpx[http2]~=0.28.1",
-    "mcstatus~=11.1.1",
+    "mcstatus~=12.0.3",
     "async-timeout>=4.0.3",
 ]
 

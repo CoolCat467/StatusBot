@@ -1,5 +1,5 @@
 # StatusBot
-StatusBot is a discord bot that will post information about a given Java Edition minecraft server in a given channel once configured.
+StatusBot will post a message whenever anyone joins or leaves the Java Edition Minecraft server configured with `!status set-option address mc_server_address_here:25565` in the discord channel specified by `!status set-option channel discord_channel_name_here`.
 
 <!-- BADGIE TIME -->
 

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, cast
 from mcstatus.protocol.connection import Connection
 
 if TYPE_CHECKING:
-    from mcstatus.status_response import RawJavaResponse
+    from mcstatus.responses import RawJavaResponse
 
 
 class ExtraConnection(Connection):
