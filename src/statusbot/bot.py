@@ -42,6 +42,7 @@ from threading import Event, Lock
 from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
 
 import discord
+import discord.client
 import mcstatus
 
 # from discord.ext import tasks, commands
@@ -982,8 +983,7 @@ class StatusBot(
         **kwargs: Any,
     ) -> None:
         """Initialize StatusBot."""
-        self.loop = loop
-
+        discord.client._loop = loop
         discord.Client.__init__(
             self,
             *args,
