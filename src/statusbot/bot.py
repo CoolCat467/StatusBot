@@ -42,6 +42,7 @@ from threading import Event, Lock
 from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
 
 import discord
+import discord.client
 import mcstatus
 import outcome
 import trio
@@ -336,7 +337,7 @@ def interaction_to_message(
                     else None
                 ),
                 "joined_at": (
-                    interaction.user.joined_at.isoformat()  # type: ignore[typeddict-item]
+                    interaction.user.joined_at.isoformat()
                     if isinstance(interaction.user, discord.Member)
                     and interaction.user.joined_at
                     else None
@@ -986,17 +987,18 @@ class StatusBot(
         **kwargs: Any,
     ) -> None:
         """Initialize StatusBot."""
-        self.loop = loop
         self.nursery = main_nursery
         self.trio_finish_event = trio_finish
 
+        discord.client._loop = loop
         discord.Client.__init__(
             self,
             *args,
-            loop=self.loop,
             intents=intents,
             **kwargs,
         )
+        self.loop = loop
+
         self.stopped = Event()
         self.updating = Lock()
         self.prefix = prefix

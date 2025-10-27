@@ -10,7 +10,7 @@ def test_state() -> None:
 
     with pytest.raises(
         RuntimeError,
-        match="^State has no statemachine bound$",
+        match=r"^State has no statemachine bound$",
     ):
         print(state.machine)
 
@@ -22,6 +22,6 @@ def test_async_state() -> None:
 
     with pytest.raises(
         RuntimeError,
-        match="^State has no statemachine bound$",
+        match=r"^State has no statemachine bound$",
     ):
         print(state.machine)
