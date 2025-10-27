@@ -44,6 +44,8 @@ from typing import TYPE_CHECKING, Any, Final, cast, get_args, get_type_hints
 import discord
 import discord.client
 import mcstatus
+import outcome
+import trio
 
 # from discord.ext import tasks, commands
 from aiohttp.client_exceptions import ClientConnectorError
@@ -978,11 +980,16 @@ class StatusBot(
         self,
         prefix: str,
         loop: asyncio.AbstractEventLoop,
+        main_nursery: trio.Nursery,
+        trio_finish: trio.Event,
         *args: Any,
         intents: discord.Intents,
         **kwargs: Any,
     ) -> None:
         """Initialize StatusBot."""
+        self.nursery = main_nursery
+        self.trio_finish_event = trio_finish
+
         discord.client._loop = loop
         discord.Client.__init__(
             self,
@@ -2411,6 +2418,7 @@ Deleting guild settings"""
     # Default, not affected by intents
     async def close(self) -> None:
         """Tell guilds bot shutting down."""
+        self.trio_finish_event.set()
         self.stopped.set()
         print("\nShutting down gears.")
         await gears.BaseBot.close(self)
@@ -2439,13 +2447,20 @@ Deleting guild settings"""
 
 
 def setup_bot(loop: asyncio.AbstractEventLoop) -> tuple[
-    StatusBot,
-    asyncio.Task[None],
+    tuple[
+        StatusBot,
+        asyncio.Task[None],
+    ],
+    tuple[
+        trio.Event,
+        asyncio.Future[outcome.Outcome],
+        asyncio.Future[trio.Nursery],
+    ],
 ]:
     """Return StatusBot run parts."""
     if TOKEN is None:
         raise RuntimeError(
-            """No token set!
+            """\nNo token set!
 Either add ".env" file in bots folder with DISCORD_TOKEN=<token here> line,
 or set DISCORD_TOKEN environment variable.""",
         )
@@ -2461,18 +2476,64 @@ or set DISCORD_TOKEN environment variable.""",
     )
     # 4867
 
+    trio_finish = trio.Event()
+
     bot_run_task: asyncio.Task[None] | None = None
+
+    trio_done_future = loop.create_future()
+
+    def trio_done_callback(trio_outcome: outcome.Outcome) -> None:
+        trio_done_future.set_result(trio_outcome)
+        print("Trio complete")
+        if (
+            isinstance(trio_outcome, outcome.Error)
+            and bot_run_task is not None
+        ):
+            print("[Trio] Canceling Bot Run")
+            # bot_run_task.set_exception(trio_outcome.error)
+            bot_run_task.cancel(
+                msg="".join(traceback.format_exception(trio_outcome.error)),
+            )
+        else:
+            trio_outcome.unwrap()
+
+    main_nursery: trio.Nursery | None = None
+
+    trio_nursery_future = loop.create_future()
+
+    @trio.lowlevel.disable_ki_protection
+    async def trio_async_root() -> None:
+        print("Trio start ticking.")
+        nonlocal main_nursery
+        async with trio.open_nursery() as nursery:
+            main_nursery = nursery
+            trio_nursery_future.set_result(nursery)
+            await trio_finish.wait()
+
+    trio.lowlevel.start_guest_run(
+        trio_async_root,
+        run_sync_soon_threadsafe=loop.call_soon_threadsafe,
+        run_sync_soon_not_threadsafe=loop.call_soon,
+        strict_exception_groups=True,
+        done_callback=trio_done_callback,
+    )
+
+    main_nursery = loop.run_until_complete(trio_nursery_future)
+
+    assert main_nursery is not None
 
     bot = StatusBot(
         BOT_PREFIX,
         loop=loop,
         intents=intents,
+        main_nursery=main_nursery,
+        trio_finish=trio_finish,
     )
 
     bot_run_task = loop.create_task(bot.start(TOKEN))
     assert bot_run_task is not None
 
-    return bot, bot_run_task
+    return (bot, bot_run_task), (trio_finish, trio_done_future, main_nursery)
 
 
 def run() -> None:
@@ -2481,14 +2542,23 @@ def run() -> None:
 
     loop = asyncio.new_event_loop()
 
-    bot, bot_run_task = setup_bot(loop)
+    (bot, bot_run_task), (trio_finish, trio_done_future, main_nursery) = (
+        setup_bot(loop)
+    )
 
     try:
         loop.run_until_complete(bot_run_task)
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt\nShutting down bot...")
-        loop.run_until_complete(bot.close())
+        trio_finish.set()
     finally:
+        print("\nShutting down bot...")
+        trio_finish.set()
+        loop.run_until_complete(bot.close())
+        # Cancel trio nursery
+        main_nursery.cancel_scope.cancel()
+        # Ensure closed
+        loop.run_until_complete(trio_done_future)
         # cancel all lingering tasks
         loop.close()
         print("\nBot has been deactivated.")
