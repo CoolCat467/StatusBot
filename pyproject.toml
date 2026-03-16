@@ -11,18 +11,18 @@ authors = [
 description = "Discord bot to watch people play minecraft and report"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Natural Language :: English",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Utilities",
     "Operating System :: OS Independent",
@@ -30,12 +30,12 @@ classifiers = [
 ]
 keywords = ["discord", "bot", "minecraft"]
 dependencies = [
-    "discord-py==2.7.1",
+    "discord-py~=2.7.1",
     "audioop-lts; python_version>='3.13'",
-    "python-dotenv~=1.2.1",
+    "python-dotenv~=1.2.2",
     "httpx[http2]~=0.28.1",
-    "mcstatus~=12.0.3",
-    "async-timeout>=4.0.3",
+    "mcstatus~=13.0.0",
+    "async-timeout>=5.0.1",
 ]
 
 [tool.setuptools.dynamic]
@@ -43,17 +43,17 @@ version = {attr = "statusbot.bot.__version__"}
 
 [project.optional-dependencies]
 tests = [
-    "pytest>=5.0",
+    "pytest>=5.0.0",
     "pytest-cov>=6.0.0",
     "pytest-trio>=0.8.0",
     "coverage>=7.2.5",
-    "uv>=0.5.21",
 ]
 tools = [
-    'black>=24.10.0; implementation_name == "cpython"',
+    "uv>=0.10.0",
+    "mypy>=1.19.0",
     "ruff>=0.9.2",
     "codespell>=2.3.0",
-    "mypy>=1.15.0",
+    "pre-commit>=4.2.0",
 ]
 
 [project.urls]

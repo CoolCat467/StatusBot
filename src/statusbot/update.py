@@ -125,7 +125,7 @@ async def update_file(
 ) -> bool:
     """Update file. Return False on exception, otherwise True."""
     url = get_address(user, repo, branch, path)
-    savepath = os.path.abspath(os.path.join(basepath, *(path.split("/"))))
+    savepath = os.path.abspath(os.path.join(basepath, *(path.split("/"))))  # noqa: ASYNC240
     try:
         with open(savepath, "wb") as sfile:  # noqa: ASYNC230
             sfile.write(
@@ -156,7 +156,7 @@ async def update_files(
 
     async def update_single(path: str) -> str:
         """Update a single file."""
-        savepath = os.path.abspath(os.path.join(basepath, path))
+        savepath = os.path.abspath(os.path.join(basepath, path))  # noqa: ASYNC240
         # Ensure folder for it exists too.
         make_dirpath_exist(savepath)
         url = urlbase + path

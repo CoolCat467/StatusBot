@@ -162,24 +162,17 @@ def log_active_exception(
 ) -> None:
     """Log active exception."""
     # Get values from exc_info
-    values = sys.exc_info()
+    ex_type, ex_value, _ex_traceback = sys.exc_info()
     # Get error message.
     msg = "#" * 16 + "\n"
     if extra is not None:
         msg += f"{extra}\n"
-    msg += "Exception class:\n" + str(values[0]) + "\n"
-    msg += "Exception text:\n" + str(values[1]) + "\n"
+    msg += "Exception class:\n" + str(ex_type) + "\n"
+    msg += "Exception text:\n" + str(ex_value) + "\n\n"
 
-    with io.StringIO() as yes_totally_a_file:
-        traceback.print_exception(
-            None,
-            value=values[1],
-            tb=values[2],
-            limit=None,
-            file=yes_totally_a_file,
-            chain=True,
-        )
-        msg += "\n" + yes_totally_a_file.getvalue() + "\n" + "#" * 16 + "\n"
+    msg += "".join(traceback.format_exception(ex_value))
+    msg += "\n" + "#" * 16 + "\n"
+
     print(msg)
     if logpath is not None:
         append_file(logpath, msg)
@@ -388,11 +381,11 @@ def interaction_to_message(
                 "avatar": interaction.user._avatar,
                 "bot": interaction.user.bot,
                 "system": interaction.user.system,
-                ##                "roles": (
-                ##                    []
-                ##                    if isinstance(interaction.user, discord.User)
-                ##                    else [role.id for role in interaction.user.roles]
-                ##                ),
+                ##"roles": (
+                ##    []
+                ##    if isinstance(interaction.user, discord.User)
+                ##    else [role.id for role in interaction.user.roles]
+                ##),
             },
         },
         # 'message_reference': None,
@@ -555,12 +548,7 @@ def slash_handle(
                 await interaction.response.defer()
             try:
                 msg = interaction_to_message(interaction, should_defer)
-            except Exception:
-                root = os.path.split(os.path.abspath(__file__))[0]
-                logpath = os.path.join(root, "log.txt")
-                log_active_exception(logpath)
-                raise
-            try:
+                await message_command(msg, *args[2:], **kwargs)
                 if isinstance(
                     interaction.command,
                     discord.app_commands.commands.Command,
@@ -572,10 +560,12 @@ def slash_handle(
                     print(
                         f"[{timestamp}] Slash Command: {interaction.command.name!r} Args: {kwargs} from {name!r}",
                     )
-                await message_command(msg, *args[2:], **kwargs)
-            except Exception:
+            except Exception as exc:
+                root = os.path.split(os.path.abspath(__file__))[0]  # noqa: ASYNC240
+                logpath = os.path.join(root, "log.txt")
+                log_active_exception(logpath)
                 await msg.channel.send(
-                    "An error occurred processing the slash command",
+                    f"An error occurred processing the slash command:\n```\n{exc}\n```",
                 )
                 if hasattr(interaction._client, "on_error"):
                     await interaction._client.on_error(
@@ -1263,10 +1253,10 @@ class StatusBot(
         print(f"Root Dir: {self.rootdir}")
 
         configurationdir = os.path.join(self.rootdir, "config")
-        if not os.path.exists(configurationdir):
+        if not os.path.exists(configurationdir):  # noqa: ASYNC240
             os.mkdir(configurationdir)
         guilddir = os.path.join(configurationdir, "guilds")
-        if not os.path.exists(guilddir):
+        if not os.path.exists(guilddir):  # noqa: ASYNC240
             os.mkdir(guilddir)
 
         print(f"\n{self.user} is connected to the following guilds:\n")
@@ -1650,7 +1640,7 @@ class StatusBot(
                         await message.channel.send(
                             "Could not read file list. Aborting update.",
                         )
-                        log_active_exception()
+                        log_active_exception(self.logpath)
                         return
                     # Get max amount of time this could take.
                     maxtime = format_time(timeout * len(paths))
@@ -2298,9 +2288,9 @@ class StatusBot(
         annotations = get_type_hints(command_func)
         params = {}
         for name, typeval in annotations.items():
-            if name in {"return"}:
+            if name == "return":
                 continue
-            if typeval in {discord.Message}:
+            if typeval == discord.Message:
                 continue
 
             params[name] = typeval
@@ -2308,6 +2298,7 @@ class StatusBot(
         try:
             command_args = process_arguments(params, args[2:], message)
         except ValueError:
+            log_active_exception(self.logpath)
             names = combine_end(
                 [
                     (
@@ -2438,7 +2429,9 @@ Deleting guild settings"""
         await discord.Client.close(self)
 
 
-def setup_bot(loop: asyncio.AbstractEventLoop) -> tuple[
+def setup_bot(
+    loop: asyncio.AbstractEventLoop,
+) -> tuple[
     StatusBot,
     asyncio.Task[None],
 ]:

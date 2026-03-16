@@ -27,27 +27,13 @@ __version__ = "0.0.2"
 import io
 from typing import TYPE_CHECKING, Any, cast
 
-from mcstatus.protocol.connection import Connection
+from mcstatus._protocol.connection import Connection
 
 if TYPE_CHECKING:
-    from mcstatus.responses import RawJavaResponse
+    from mcstatus.responses._raw import RawJavaResponse
 
 
-class ExtraConnection(Connection):
-    """Connection but with missing boolean handlers."""
-
-    __slots__ = ()
-
-    def write_bool(self, value: bool) -> None:
-        """Write 1 byte for boolean `True` or `False`."""
-        self.write(self._pack("?", value))
-
-    def read_bool(self) -> bool:
-        """Return `True` or `False`. Read 1 byte."""
-        return self._unpack("?", bytes(self.read(1))) == 1
-
-
-def decode_optimized(string: str) -> ExtraConnection:
+def decode_optimized(string: str) -> Connection:
     """Decode buffer from string."""
     text = io.StringIO(string)
 
@@ -59,7 +45,7 @@ def decode_optimized(string: str) -> ExtraConnection:
 
     size = read() | (read() << 15)
 
-    buffer = ExtraConnection()
+    buffer = Connection()
     value = 0
     bits = 0
     for _ in range(len(string) - 2):
