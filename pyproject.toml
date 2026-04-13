@@ -44,7 +44,7 @@ version = {attr = "statusbot.bot.__version__"}
 [project.optional-dependencies]
 tests = [
     "pytest>=5.0.0",
-    "pytest-cov>=6.0.0",
+    "pytest-cov>=7.1.0",
     "pytest-trio>=0.8.0",
     "coverage>=7.2.5",
 ]
