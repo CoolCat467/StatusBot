@@ -34,7 +34,7 @@ dependencies = [
     "audioop-lts; python_version>='3.13'",
     "python-dotenv~=1.2.2",
     "httpx[http2]~=0.28.1",
-    "mcstatus~=13.0.0",
+    "mcstatus~=13.0.1",
     "async-timeout>=5.0.1",
 ]
 
