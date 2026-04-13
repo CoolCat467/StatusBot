@@ -34,7 +34,7 @@ dependencies = [
     "audioop-lts; python_version>='3.13'",
     "python-dotenv~=1.2.2",
     "httpx[http2]~=0.28.1",
-    "mcstatus~=13.0.0",
+    "mcstatus~=13.0.1",
     "async-timeout>=5.0.1",
 ]
 
@@ -43,17 +43,17 @@ version = {attr = "statusbot.bot.__version__"}
 
 [project.optional-dependencies]
 tests = [
-    "pytest>=5.0.0",
-    "pytest-cov>=6.0.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
     "pytest-trio>=0.8.0",
-    "coverage>=7.2.5",
+    "coverage>=7.13.5",
 ]
 tools = [
-    "uv>=0.10.0",
-    "mypy>=1.19.0",
-    "ruff>=0.9.2",
-    "codespell>=2.3.0",
-    "pre-commit>=4.2.0",
+    "uv>=0.11.6",
+    "mypy>=1.20.0",
+    "ruff>=0.15.10",
+    "codespell>=2.4.2",
+    "pre-commit>=4.5.1",
 ]
 
 [project.urls]
