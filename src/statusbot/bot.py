@@ -2447,10 +2447,10 @@ or set DISCORD_TOKEN environment variable.""",
         dm_messages=True,
         guild_messages=True,
         messages=True,
-        guilds=True,
+        #guilds=True,
         guild_typing=True,
-        members=True,
-        message_content=True,
+        #members=True,
+        #message_content=True,
     )
     # 4867
 
