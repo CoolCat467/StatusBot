@@ -2,7 +2,7 @@
 
 # Programmed by CoolCat467
 
-# Copyright 2021-2025 CoolCat467
+# Copyright 2021-2026 CoolCat467
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -2447,10 +2447,10 @@ or set DISCORD_TOKEN environment variable.""",
         dm_messages=True,
         guild_messages=True,
         messages=True,
-        #guilds=True,
+        # guilds=True,
         guild_typing=True,
-        #members=True,
-        #message_content=True,
+        # members=True,
+        # message_content=True,
     )
     # 4867
 
